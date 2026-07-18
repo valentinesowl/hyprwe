@@ -58,8 +58,10 @@ jobs:
         run: >
           pacman -Syu --noconfirm --needed
           git just shellcheck ruff python python-pytest python-jinja python-numpy
-          imagemagick bats bats-assert bats-support actionlint yamllint
+          imagemagick fontconfig ttf-dejavu bats bats-assert bats-support actionlint yamllint
       - uses: actions/checkout@v5
+      # Container uid mismatch → git "dubious ownership"; the suite shells to git.
+      - run: git config --global --add safe.directory '*'
       # Never publish a tag that does not pass its own gates.
       - run: just check
 

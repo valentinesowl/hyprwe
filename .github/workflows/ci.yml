@@ -44,11 +44,19 @@ jobs:
     steps:
       # python-jinja and python-numpy are what the theme renderer and the
       # wallpaper generator actually import; imagemagick backs the preview cards.
+      # fontconfig + ttf-dejavu: genpreview resolves a font via fc-match and falls
+      # back to DejaVu-Sans-Bold — magick needs both installed or the card render
+      # (test_every_shipped_theme_renders_a_card) exits non-zero.
       - name: Install tools
         run: >
           pacman -Syu --noconfirm --needed
           git just ruff python python-pytest python-jinja python-numpy imagemagick
+          fontconfig ttf-dejavu
       - uses: actions/checkout@v5
+      # actions/checkout in a container leaves the tree owned by a uid the (root)
+      # job isn't — git then refuses with "dubious ownership" and `git ls-files`
+      # exits 128, erroring the repo-hygiene tests. Trust the ephemeral checkout.
+      - run: git config --global --add safe.directory '*'
       - run: just lint-py
       - run: just test-py
 
