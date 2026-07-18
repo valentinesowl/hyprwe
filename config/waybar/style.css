@@ -1,0 +1,119 @@
+/* waybar/style.css — the HWE bar: thin, monochrome, minimal.
+   Glyphs read crisp, the active workspace glows in the theme accent, only ALERTS
+   earn colour. The bar is glued & flat by default; a theme can float it into a
+   frosted island via `bar_float` (geometry in the generated theme.css + margins).
+   Colours come from the generated colors.css (via `hwe theme`). */
+
+@import "colors.css";
+@import "theme.css";
+
+/* NOTE: font-family + font-size come from the GENERATED theme.css (imported
+   above) so the bar font tracks the theme's [font] contract — don't set them
+   here or they'd override it. */
+* {
+    font-weight: 500;
+    min-height: 0;
+    border: none;
+    border-radius: 0;
+}
+
+/* The island: a rounded, frosted, gently floating strip. margin-* in
+   config.jsonc detaches it from the screen edges so the rounding reads;
+   the layerrule blurs whatever is behind the translucent backdrop. */
+window#waybar {
+    /* Base look. The backdrop alpha AND the island geometry (rounding/border/
+       shadow) are themed in the GENERATED theme.css (imported after this file):
+       `bar_opacity` sets the glass, `bar_float` the geometry. Don't set
+       `background` here — theme.css owns it, same trap as font-family above. */
+    color: @fg_normal;
+}
+
+.modules-left,
+.modules-center,
+.modules-right {
+    background: transparent;
+    padding: 0 8px;
+}
+
+/* NOTE: the whole #workspaces block (including how the focused tag is marked)
+   lives in the GENERATED theme.css, driven by the theme's `bar_ws_indicator`
+   param — don't restate it here or it would override the theme, same trap as
+   font-family above. */
+
+/* Indicators: flat, monochrome, crisp on the glass. They brighten on hover
+   so the bar feels responsive without ever shouting colour. */
+#clock,
+#battery,
+#pulseaudio,
+#backlight,
+#custom-cpu,
+#custom-memory,
+#custom-temp,
+#tray {
+    padding: 0 6px;
+    color: @fg_normal;
+    background: transparent;
+    transition: color 0.2s ease;
+}
+
+#battery:hover,
+#pulseaudio:hover,
+#backlight:hover,
+#custom-cpu:hover,
+#custom-memory:hover,
+#custom-temp:hover {
+    color: @fg_bright;
+}
+
+/* CPU/RAM: the glyph itself morphs with load (config.jsonc format-icons), so it
+   reads at @fg_normal like every other indicator — it inherits that from the
+   rule above, deliberately. It used to be pinned to @fg_dim, which was right for
+   the old sparkline (dim, but eight blocks of ink); on a single glyph the same
+   colour just looked broken, at half the brightness of its neighbours.
+   Load BRIGHTENS it, and colour stays what it is everywhere else on this bar: an
+   alert. (@accent is not used for `busy`: in half the themes it is DARKER than
+   @fg_normal — default 36 vs 153 — so a working CPU would recede, not surface.
+   @fg_bright outranks @fg_normal in every shipped theme.)
+   Slower easing than the rest, so a load spike swells in rather than blinks. */
+#custom-cpu,
+#custom-memory,
+#custom-temp { transition: color 0.4s ease; }
+#custom-cpu.busy,
+#custom-memory.busy,
+#custom-temp.busy       { color: @fg_bright; }
+#custom-cpu.warning,
+#custom-memory.warning,
+#custom-temp.warning    { color: @orange; }
+#custom-cpu.critical,
+#custom-memory.critical,
+#custom-temp.critical   { color: @urgent; }
+
+/* The one focal element: the clock, a touch brighter. */
+#clock {
+    color: @fg_bright;
+    font-weight: 600;
+}
+
+/* Recording indicator: only visible while capturing, so it always earns colour. */
+#custom-record {
+    padding: 0 8px;
+    color: @urgent;
+    font-weight: 600;
+}
+
+/* Colour is reserved for things that actually need attention. */
+#battery.warning      { color: @orange; }
+#battery.critical     { color: @urgent; }
+#battery.charging     { color: @accent; }
+#pulseaudio.muted     { color: @fg_dim; }
+
+tooltip {
+    background: @bg_dark;
+    border: 1px solid @bg_lighter;
+    border-radius: 10px;
+    color: @fg_bright;
+}
+
+tooltip label {
+    color: @fg_bright;
+}

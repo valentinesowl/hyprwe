@@ -1,0 +1,55 @@
+#cloud-config
+# HWE cloud-init — runs once on first boot. Double-at tokens are filled in by
+# lib/vm.sh before the seed ISO is built.
+
+hostname: @@HOSTNAME@@
+manage_etc_hosts: true
+
+users:
+  - name: @@USER@@
+    groups: [wheel, video, input, audio, storage, network]
+    shell: /usr/bin/bash
+    lock_passwd: false
+    plain_text_passwd: @@PASSWORD@@
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    ssh_authorized_keys:
+@@SSH_KEYS@@
+
+# Password SSH is enabled ONLY when no host key was shipped (SSH_KEYS empty),
+# so the well-known default password can't be used to log in over the network
+# when key auth is already available. lib/vm.sh fills this in.
+ssh_pwauth: @@SSH_PWAUTH@@
+package_update: true
+
+# Minimal set needed before the HWE installer can take over.
+packages:
+  - git
+  - qemu-guest-agent
+  - sudo
+
+runcmd:
+  - [systemctl, enable, --now, qemu-guest-agent]
+  - |
+    set -euxo pipefail
+    # The chosen local branch was shipped as a git bundle on the seed ISO.
+    seed="$(blkid -L CIDATA 2>/dev/null || echo /dev/sr0)"
+    mkdir -p /mnt/hwe-seed
+    mount -o ro "$seed" /mnt/hwe-seed
+    install -d -o @@USER@@ -g @@USER@@ /home/@@USER@@/hwe
+    sudo -u @@USER@@ git clone -b '@@BRANCH@@' /mnt/hwe-seed/hwe.bundle /home/@@USER@@/hwe
+    umount /mnt/hwe-seed || true
+    # Hand off to the HWE installer (packages + config + Hyprland session).
+    sudo -u @@USER@@ env HWE_ASSUME_YES=1 HWE_UNATTENDED=1 \
+      /home/@@USER@@/hwe/bin/hwe install
+
+final_message: "HWE provisioned after $UPTIME s — rebooting into the Hyprland session"
+
+# Reboot once after provisioning. The tty1 autologin drop-in the installer writes
+# only takes effect on a fresh getty, so the FIRST boot otherwise leaves a bare
+# `login:` that wants the (untypeable, un-pasteable) console password. One reboot
+# activates autologin -> Hyprland, so the VM's first presented state is the
+# graphical session and the password never appears in the normal flow.
+power_state:
+  mode: reboot
+  message: "HWE provisioned — rebooting into the Hyprland session"
+  condition: true

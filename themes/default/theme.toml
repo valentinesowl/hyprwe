@@ -1,0 +1,90 @@
+# themes/default/theme.toml — the baseline HWE theme.
+# A restrained crimson-on-graphite desktop: neutral cool-grey surfaces, one
+# deep-red accent. The calm baseline the other moods diverge from.
+#
+# Note the role contract at work: border is the theme's dim border, NOT the
+# accent — the accent lives in the animated col.active_border instead.
+
+name = "Default Crimson"
+
+# ── Private palette (reference only; templates read [sem]) ────────────────
+[palette]
+crimson     = "#ca2626"
+crimson_lit = "#c43e3e"
+
+# ── Semantic contract — the only thing templates consume ──────────────────
+[sem]
+# surfaces (dark -> light): neutral cool graphite
+bg_dark    = "#1a1b20"
+bg_normal  = "#222328"
+bg_light   = "#2c2d34"
+bg_lighter = "#363740"
+# text (dim -> max contrast)
+fg_dim     = "#6f7382"
+fg_normal  = "#9399ad"
+fg_bright  = "#c8cdd8"
+fg_white   = "#e8eaf0"
+# accent — deep crimson. Lifted from #a70000 so it reads as a GLYPH (active
+# workspace number, rofi prompt) on the near-black bar/menu: #a70000 on bg_dark
+# was 2.16:1, below the 3.0 UI floor. #ca2626 is the deepest crimson that clears
+# it (3.12:1) while staying unmistakably deep-red, not coral.
+accent      = "#ca2626"
+accent_soft = "#c43e3e"
+# raw colours
+red     = "#e04040"
+green   = "#5f8700"
+yellow  = "#d4a843"
+orange  = "#d08770"
+blue    = "#4a7eac"
+magenta = "#8b5583"
+cyan    = "#3e8f8f"
+# service — quiet dim border (accent lives in the animated col.active_border)
+border = "#3a3b44"
+urgent = "#e04040"
+
+# ── Non-colour parameters ─────────────────────────────────────────────────
+[params]
+font          = "JetBrainsMono Nerd Font"
+rounding      = 10
+gaps_in       = 4
+gaps_out      = 6
+border_size   = 1
+blur_passes   = 2
+blur_size     = 3
+# ── Waybar geometry (glued & flat by default; set bar_float = true to float) ──
+bar_height  = 26
+bar_float   = false
+bar_gap     = 6      # top gap when floating
+bar_gap_x   = 8      # side gap when floating
+bar_radius  = 14     # corner radius when floating
+# ── Waybar workspace focus: how the ACTIVE tag is marked ──────────────────
+# glow: accent halo on the number | underline: rule growing from the centre
+# pill: the tag widens into a chip | dot: a mark rising from below.
+# (No style slides between tags — GTK3 CSS has no transform; see theme.css.j2.)
+bar_ws_indicator = "glow"
+bar_ws_speed     = 220   # ms for the indicator to settle
+
+
+# Translucency (rendered by `hwe theme` into hypr/theme.conf + kitty/colors.conf).
+opacity       = 0.80   # base window translucency (all windows + kitty background)
+# Whole-window alpha applied to EVERY window (so blur shows through). Omit to
+# inherit `opacity` / `opacity - 0.04`; set explicitly only to decouple them.
+active_opacity   = 0.80   # focused window
+inactive_opacity = 0.80   # unfocused window
+
+# ── Typography (contract): font family + per-surface sizes ────────────────
+# Templates read these ONLY (never hardcode a font); omit any line to inherit
+# the renderer default. Sizes are pt (px for the bar); terminal accepts decimals.
+[font]
+family   = "JetBrainsMono Nerd Font"
+ui_family = "Sans"   # GTK/UI apps (size from `gtk`)
+terminal = 9.5    # kitty
+bar      = 12     # waybar
+launcher = 11     # rofi menus (base; pickers scale ± from this)
+notify   = 11     # mako
+gtk      = 11     # GTK apps (family stays Sans)
+
+# ── Wallpaper (scripts/genwall.py) ───────────────────────────────────────
+# style: mesh | aurora | voronoi | grid | signal. seed rerolls the composition.
+[wallpaper]
+style = "mesh"

@@ -1,0 +1,56 @@
+# pkg/dev.lst — opinionated best-practice developer toolchain for hacking on HWE.
+# Chosen to beat the stock combo: modern Rust CLIs, a real editor, task runner,
+# and shell-script quality gates (HWE is mostly bash + hypr configs).
+
+# --- Build & version control ---
+base-devel
+git
+github-cli                   # `gh` for PRs/issues
+lazygit                      # fast terminal git UI
+git-delta                    # gorgeous git diffs
+
+# --- Editor & multiplexer ---
+neovim
+tmux
+
+# --- Shell & prompt ---
+zsh
+zsh-autosuggestions          # fish-style history suggestions
+zsh-syntax-highlighting      # colour commands as you type
+starship                     # cross-shell prompt (single-line, themeable)
+zoxide                       # smarter `cd`
+fzf                          # fuzzy finder
+
+# --- Modern CLI replacements ---
+ripgrep                      # rg  (grep)
+fd                           # fd  (find)
+bat                          # bat (cat with highlighting)
+eza                          # eza (ls)
+jq                           # JSON wrangling
+
+# --- Quality gates (`just check` runs all of these; CI runs the same) ---
+# Everything below is what CI installs too — a green `just check` locally means
+# a green pipeline, with no "works on my machine" gap.
+shellcheck                   # bash linter        (just lint)
+shfmt                        # bash formatter     (just fmt / fmt-check)
+bats                         # bash test runner   (just test-sh)
+bats-assert                  # assert_success / assert_output helpers
+bats-support                 # required by bats-assert
+ruff                         # python lint+format (just lint-py / fmt-py)
+python-pytest                # python tests       (just test-py)
+actionlint                   # GitHub Actions workflow linter (just lint-ci)
+yamllint                     # YAML linter        (just lint-ci)
+
+# --- Theme asset generation (maintainer-only; outputs are committed) ---
+python-numpy                 # scripts/genwall.py — procedural wallpapers
+imagemagick                  # scripts/genpreview.py — theme preview cards
+
+# --- Task runner & docs ---
+just                         # command runner (see justfile)
+man-db
+man-pages
+
+# --- Everyday ---
+btop                         # system monitor
+wget
+unzip

@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+# hwe — Hyprland Workstation Environment control CLI.
+#
+# Subcommands:
+#   vm       Manage the libvirt/virt-manager-compatible dev VM (see: hwe vm help)
+#   install  Install packages + deploy configs onto THIS machine (bare metal or guest)
+#   doctor   Check that the host has everything needed to run the VM
+#   version  Print version
+#
+# Run `hwe <subcommand> help` for details.
+set -euo pipefail
+
+# The single source of truth for the version. The release workflow refuses to
+# publish a tag that disagrees with it, and tests/test_release.py pins it to the
+# newest CHANGELOG entry — so these three can never drift apart.
+HWE_VERSION="1.0.0"
+
+# Resolve the repo root from this script's location (bin/hwe -> repo root).
+_self="$(readlink -f "${BASH_SOURCE[0]}")"
+HWE_ROOT="$(cd "$(dirname "$_self")/.." && pwd)"
+export HWE_ROOT HWE_VERSION
+
+# shellcheck source=lib/common.sh
+source "$HWE_ROOT/lib/common.sh"
+
+usage() {
+    cat >&2 <<EOF
+${C_BOLD}hwe${C_RESET} — Hyprland Workstation Environment (v${HWE_VERSION})
+
+${C_BOLD}Usage:${C_RESET} hwe <command> [args]
+
+${C_BOLD}Commands:${C_RESET}
+  ${C_CYAN}vm${C_RESET} <up|ssh|console|status|list|down|destroy|rebuild>
+              Manage the local dev VM (libvirt + cloud-init, shows in virt-manager)
+  ${C_CYAN}install${C_RESET}   Install packages and deploy configs onto the current machine
+  ${C_CYAN}uninstall${C_RESET} Revert config symlinks + login shell (leaves packages/services)
+  ${C_CYAN}theme${C_RESET} <list|apply|pick|validate|current|sddm>
+              Generate every component's colours from a theme's parameters
+  ${C_CYAN}wall${C_RESET} <list|set|random|pick|current|restore>
+              Set the desktop wallpaper (per-theme gradient or your own photos)
+  ${C_CYAN}power${C_RESET}     Themed rofi session menu (lock/logout/suspend/reboot/shutdown)
+  ${C_CYAN}keys${C_RESET}      Keybind cheatsheet overlay (rofi; SUPER+/)
+  ${C_CYAN}clip${C_RESET} <show|wipe>
+              Clipboard-history picker (cliphist + rofi; SUPER+C)
+  ${C_CYAN}record${C_RESET} <toggle|region>
+              Toggle screen recording (wf-recorder -> ~/Videos)
+  ${C_CYAN}checkconfig${C_RESET}  Report Hyprland config errors from the running compositor
+  ${C_CYAN}doctor${C_RESET}    Verify host prerequisites for the VM workflow
+  ${C_CYAN}version${C_RESET}   Print version
+
+${C_BOLD}Examples:${C_RESET}
+  hwe doctor
+  hwe vm up                 # deploy current local branch into a fresh VM
+  hwe vm up feature-x       # deploy a specific local branch
+  hwe vm ssh                # ssh into the running VM
+  hwe install               # provision the current machine (bare metal)
+EOF
+}
+
+cmd="${1:-}"; shift || true
+case "$cmd" in
+    vm)
+        # shellcheck source=lib/vm.sh
+        source "$HWE_ROOT/lib/vm.sh"
+        vm_main "$@"
+        ;;
+    install)
+        # shellcheck source=provision/guest-install.sh
+        HWE_INSTALL_STANDALONE=1 source "$HWE_ROOT/provision/guest-install.sh"
+        install_main "$@"
+        ;;
+    uninstall)
+        # shellcheck source=provision/guest-install.sh
+        HWE_INSTALL_STANDALONE=1 source "$HWE_ROOT/provision/guest-install.sh"
+        uninstall_main "$@"
+        ;;
+    doctor)
+        # shellcheck source=lib/vm.sh
+        source "$HWE_ROOT/lib/vm.sh"
+        vm_doctor
+        ;;
+    theme)
+        # shellcheck source=lib/theme.sh
+        source "$HWE_ROOT/lib/theme.sh"
+        theme_main "$@"
+        ;;
+    wall)
+        # shellcheck source=lib/wall.sh
+        source "$HWE_ROOT/lib/wall.sh"
+        wall_main "$@"
+        ;;
+    power)
+        # shellcheck source=lib/power.sh
+        source "$HWE_ROOT/lib/power.sh"
+        power_main "$@"
+        ;;
+    keys)
+        # shellcheck source=lib/keys.sh
+        source "$HWE_ROOT/lib/keys.sh"
+        keys_main "$@"
+        ;;
+    clip)
+        # shellcheck source=lib/clip.sh
+        source "$HWE_ROOT/lib/clip.sh"
+        clip_main "$@"
+        ;;
+    record)
+        # shellcheck source=lib/record.sh
+        source "$HWE_ROOT/lib/record.sh"
+        record_main "$@"
+        ;;
+    welcome)
+        # shellcheck source=lib/welcome.sh
+        source "$HWE_ROOT/lib/welcome.sh"
+        welcome_main "$@"
+        ;;
+    checkconfig)
+        # shellcheck source=lib/checkconfig.sh
+        source "$HWE_ROOT/lib/checkconfig.sh"
+        checkconfig_main "$@"
+        ;;
+    version|--version|-V)
+        echo "hwe $HWE_VERSION"
+        ;;
+    ""|help|-h|--help)
+        usage
+        ;;
+    *)
+        err "unknown command: $cmd"
+        usage
+        exit 1
+        ;;
+esac

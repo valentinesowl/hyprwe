@@ -1,0 +1,95 @@
+# pkg/core.lst — Wayland + Hyprland session and desktop essentials.
+# One package per line. '#' starts a comment. Trim freely.
+
+# --- Compositor & Hyprland ecosystem ---
+hyprland                     # the Wayland compositor
+hyprpaper                    # wallpaper daemon
+hypridle                     # idle management
+hyprlock                     # screen locker
+hyprpolkitagent              # polkit auth agent
+xdg-desktop-portal-hyprland  # screenshare / file pickers
+uwsm                         # universal wayland session manager (growth path)
+
+# --- Login / display manager ---
+sddm                         # graphical greeter (bare metal); VM uses tty autologin
+
+# --- Session plumbing ---
+polkit
+python-jinja                 # theme generator (hwe theme) — Jinja2 templates
+qt5-wayland
+qt6-wayland
+qt6ct                        # Qt app theming (Dolphin, SDDM, …) — QT_QPA_PLATFORMTHEME
+kvantum                      # Qt/SVG style engine — HWE's Qt/KDE theming path (Dolphin icon-view labels etc.); style=kvantum in qt6ct.conf
+adwaita-icon-theme           # icon set for GTK apps (referenced by gtk settings.ini)
+xdg-user-dirs
+xdg-utils
+
+# --- Terminal, bar, launcher, notifications, files (the "starter" set) ---
+kitty                        # terminal
+waybar                       # status bar
+rofi-wayland                 # application launcher (rofi with native layer-shell)
+mako                         # notification daemon
+dolphin                      # GUI file manager (SUPER+N) — Qt, themed via qt6ct/Fusion
+gwenview                     # image viewer — default for image/* opened from Dolphin;
+                             # KDE-native (kvantum-themed), thumbnails + folder browsing.
+                             # Most of its KF6 deps already arrive via dolphin.
+firefox                      # web browser (SUPER+B)
+
+# --- Audio (PipeWire stack) ---
+pipewire
+pipewire-pulse
+pipewire-alsa
+wireplumber
+
+# --- Networking ---
+networkmanager
+network-manager-applet
+
+# --- Utilities used by keybinds / bar ---
+brightnessctl                # backlight control
+grim                         # screenshots
+slurp                        # region selection
+satty                        # screenshot annotation (grim | satty)
+wl-clipboard                 # clipboard
+cliphist                     # clipboard history (hwe clip, SUPER+C)
+hyprpicker                   # screen colour picker (SUPER+SHIFT+C)
+wf-recorder                  # screen recording (hwe record)
+swayosd                      # on-screen volume/brightness/caps OSD
+playerctl                    # media keys (play/pause/next/prev)
+imagemagick                  # wallpaper-picker thumbnails (hwe wall pick)
+wdisplays                    # GUI monitor layout (wlr-output-management)
+lm_sensors                   # `sensors` — for humans checking temps on a new box.
+                             # The BAR does not need it: the coretemp/k10temp
+                             # drivers ship with the kernel and autoload off the
+                             # hardware's own alias, and wbstat.py reads sysfs
+                             # directly. Declared because it otherwise arrives
+                             # only as a transitive dep of mesa.
+
+# --- Bluetooth ---
+bluez                        # bluetooth stack
+bluez-utils                  # bluetoothctl
+blueman                      # bluetooth tray applet
+
+# --- Audio / disks / maintenance ---
+pavucontrol                  # GUI audio mixer
+udiskie                      # automount removable media + tray
+pacman-contrib               # paccache, checkupdates, rankmirrors
+
+# --- Fonts (icons + emoji for bar/prompt) ---
+ttf-jetbrains-mono-nerd      # default theme + renderer fallback
+noto-fonts
+noto-fonts-emoji
+
+# Per-theme mono typefaces — each shipped theme selects its [font].family from
+# these (themes/*/theme.toml). All Nerd-patched so bar/prompt glyphs render.
+ttf-cascadia-code-nerd       # mocha    (CaskaydiaCove)
+otf-geist-mono-nerd          # frost    (GeistMono)
+ttf-intone-nerd              # ember    (IntoneMono / Intel One)
+otf-monaspace-nerd           # garden (Argon) + amethyst (Neon)
+ttf-0xproto-nerd             # neon     (0xProto)
+ttf-lilex-nerd               # void     (Lilex)
+ttf-ibmplex-mono-nerd        # paper    (BlexMono / IBM Plex Mono)
+ttf-iawriter-nerd            # linen    (iMWriting / iA Writer)
+
+# --- Remote access (client + optional server; daemon enabled only in the VM) ---
+openssh

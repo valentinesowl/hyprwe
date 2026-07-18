@@ -1,0 +1,76 @@
+# themes/frost/theme.toml — polar night.
+# Cold dark surfaces, an icy-blue accent, clean cool text. Nord-adjacent, but
+# tuned to its own palette rather than tracking Nord exactly.
+
+name = "Frost"
+
+[palette]
+ice     = "#88c0d0"
+glacier = "#81a1c1"
+amber   = "#ebcb8b"
+
+[sem]
+# surfaces (dark -> light): polar night
+bg_dark    = "#0d1117"
+bg_normal  = "#151b26"
+bg_light   = "#1c2333"
+bg_lighter = "#243044"
+# text (dim -> max contrast): cold, clean
+fg_dim     = "#697a8c"
+fg_normal  = "#b0bec5"
+fg_bright  = "#e5eaf0"
+fg_white   = "#f0f4f8"
+# accent — icy blue
+accent      = "#88c0d0"
+accent_soft = "#5eb7ce"
+# raw colours — nordic aurora
+red     = "#bf616a"
+green   = "#a3be8c"
+yellow  = "#ebcb8b"
+orange  = "#d08770"
+blue    = "#81a1c1"
+magenta = "#b48ead"
+cyan    = "#88c0d0"
+# service
+border = "#243044"
+urgent = "#bf616a"
+
+[params]
+font          = "JetBrainsMono Nerd Font"
+rounding      = 10
+gaps_in       = 5
+gaps_out      = 12
+border_size   = 1
+opacity       = 0.94
+blur_passes   = 3
+blur_size     = 6
+# ── Waybar geometry (glued & flat by default; set bar_float = true to float) ──
+bar_height  = 26
+bar_float   = false
+bar_gap     = 6      # top gap when floating
+bar_gap_x   = 8      # side gap when floating
+bar_radius  = 14     # corner radius when floating
+# ── Waybar workspace focus: how the ACTIVE tag is marked ──────────────────
+# glow: accent halo on the number | underline: rule growing from the centre
+# pill: the tag widens into a chip | dot: a mark rising from below.
+# (No style slides between tags — GTK3 CSS has no transform; see theme.css.j2.)
+bar_ws_indicator = "glow"
+bar_ws_speed     = 220   # ms for the indicator to settle
+
+
+# ── Typography (contract): font family + per-surface sizes ────────────────
+# Templates read these ONLY (never hardcode a font); omit any line to inherit
+# the renderer default. Sizes are pt (px for the bar); terminal accepts decimals.
+[font]
+family    = "GeistMono Nerd Font"
+ui_family = "Sans"   # GTK/UI apps (size from `gtk`)
+terminal = 9.5    # kitty
+bar      = 12     # waybar
+launcher = 11     # rofi menus (base; pickers scale ± from this)
+notify   = 11     # mako
+gtk      = 11     # GTK apps (family stays Sans)
+
+# ── Wallpaper (scripts/genwall.py) ───────────────────────────────────────
+# style: mesh | aurora | voronoi | grid | signal. seed rerolls the composition.
+[wallpaper]
+style = "voronoi"

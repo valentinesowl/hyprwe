@@ -1,0 +1,80 @@
+# themes/garden/theme.toml — night forest.
+# Warm dark-green surfaces, an emerald accent, teal + gold supporting hues.
+# Soft and organic.
+
+name = "Garden"
+
+[palette]
+emerald = "#50c878"
+teal    = "#4ab8a0"
+gold    = "#c8b468"
+
+[sem]
+# surfaces (dark -> light): warm dark green, like a night forest
+bg_dark    = "#0a0e0b"
+bg_normal  = "#10160f"
+bg_light   = "#182017"
+bg_lighter = "#222e24"
+# text (dim -> max contrast): soft, warm
+fg_dim     = "#506858"
+fg_normal  = "#82a890"
+fg_bright  = "#b0d0bc"
+fg_white   = "#dceee4"
+# accent — emerald green
+accent      = "#50c878"
+accent_soft = "#3da86a"
+# raw colours — soft, muted
+red     = "#d47272"
+green   = "#6acc8a"
+yellow  = "#d4c06a"
+orange  = "#d09050"
+blue    = "#6aa0d0"
+magenta = "#c080b8"
+cyan    = "#5cc8b8"
+# service
+border = "#1e3024"
+urgent = "#d47272"
+
+[params]
+font          = "JetBrainsMono Nerd Font"
+rounding      = 10
+gaps_in       = 4
+gaps_out      = 6
+border_size   = 1
+opacity       = 0.94
+blur_passes   = 2
+blur_size     = 3
+# ── Waybar geometry (glued & flat by default; set bar_float = true to float) ──
+bar_height  = 26
+bar_float   = false
+bar_gap     = 6      # top gap when floating
+bar_gap_x   = 8      # side gap when floating
+bar_radius  = 14     # corner radius when floating
+# ── Waybar workspace focus: how the ACTIVE tag is marked ──────────────────
+# glow: accent halo on the number | underline: rule growing from the centre
+# pill: the tag widens into a chip | dot: a mark rising from below.
+# (No style slides between tags — GTK3 CSS has no transform; see theme.css.j2.)
+bar_ws_indicator = "glow"
+bar_ws_speed     = 220   # ms for the indicator to settle
+
+
+# ── Typography (contract): font family + per-surface sizes ────────────────
+# Templates read these ONLY (never hardcode a font); omit any line to inherit
+# the renderer default. Sizes are pt (px for the bar); terminal accepts decimals.
+[font]
+family    = "MonaspiceAr Nerd Font"
+ui_family = "Sans"   # GTK/UI apps (size from `gtk`)
+terminal = 9.5    # kitty
+bar      = 12     # waybar
+launcher = 11     # rofi menus (base; pickers scale ± from this)
+notify   = 11     # mako
+gtk      = 11     # GTK apps (family stays Sans)
+
+# ── Wallpaper (scripts/genwall.py) ───────────────────────────────────────
+# style: mesh | aurora | voronoi | grid | signal. seed rerolls the composition.
+[wallpaper]
+style = "aurora"
+# A night forest is mostly dark: at full volume the aurora becomes a wall of green
+# instead of mist between trees. Seed picked for a composition that leaves emptiness.
+seed      = 31
+intensity = 0.5

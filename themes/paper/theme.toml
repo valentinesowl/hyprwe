@@ -1,0 +1,84 @@
+# themes/paper/theme.toml — daylight.
+# The set's first LIGHT theme, and the proof that the [sem] contract is
+# scheme-neutral: nothing here is a special case, it's the same 19 roles filled
+# from the light end of the range plus `scheme = "light"`. Warm paper surfaces,
+# dark slate ink, one ink-blue accent.
+#
+# What `scheme = "light"` actually flips (everything else is just the palette):
+#   * GTK/libadwaita prefer-dark -> off, and `gsettings color-scheme` -> prefer-light
+#   * kitty's ANSI black/white swap ends so "black" text stays dark on paper
+# The role ORDER never changes: bg_dark is still the darkest surface (here a soft
+# grey), fg_white still the max-contrast ink (here near-black).
+
+name = "Paper"
+
+[palette]
+ink   = "#255f9e"
+slate = "#3a414d"
+paper = "#eceff4"
+
+[sem]
+# surfaces (dark -> light): soft grey -> near white
+bg_dark    = "#dde1e8"
+bg_normal  = "#eceff4"
+bg_light   = "#f4f6fa"
+bg_lighter = "#fbfcfe"
+# text (dim -> max contrast): grey -> near-black slate ink
+fg_dim     = "#767d8a"
+fg_normal  = "#3a414d"
+fg_bright  = "#232833"
+fg_white   = "#12151b"
+# accent — ink blue (dark enough to read as a glyph on the pale bar)
+accent      = "#255f9e"
+accent_soft = "#3f82c8"
+# raw colours — darkened so they read on paper, not just on black
+red     = "#c33025"
+green   = "#3d8a3d"
+yellow  = "#a6791a"
+orange  = "#c26a2c"
+blue    = "#2f6fb0"
+magenta = "#9a4593"
+cyan    = "#227f7f"
+# service
+border = "#c6cbd4"
+urgent = "#c33025"
+
+[params]
+scheme        = "light"      # the switch: GTK prefer-dark off, kitty ANSI swap
+font          = "JetBrainsMono Nerd Font"
+rounding      = 10
+gaps_in       = 5
+gaps_out      = 12
+border_size   = 1
+# Light glass wants to stay fairly solid — heavy translucency over a bright
+# wallpaper reads as washed-out, not frosted.
+opacity       = 0.92
+bar_opacity   = 0.78
+blur_passes   = 3
+blur_size     = 6
+bar_height    = 26
+bar_float     = false
+bar_gap       = 6
+bar_gap_x     = 8
+bar_radius    = 14
+# pill shows the new solid-chip focus: an ink-blue chip with auto on_accent ink,
+# which reads cleanly on the pale bar where a glow would be faint.
+bar_ws_indicator = "pill"
+bar_ws_speed     = 220
+
+# ── Typography (contract) ─────────────────────────────────────────────────
+[font]
+family    = "BlexMono Nerd Font"
+ui_family = "Sans"
+terminal  = 9.5
+bar       = 12
+launcher  = 11
+notify    = 11
+gtk       = 11
+
+# ── Wallpaper (scripts/genwall.py) ───────────────────────────────────────
+[wallpaper]
+style     = "mesh"
+# A light palette at full volume makes a near-white wash; ease it so the mesh
+# reads as soft daylight, not blank paper.
+intensity = 0.7

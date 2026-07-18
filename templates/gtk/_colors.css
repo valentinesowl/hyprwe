@@ -1,0 +1,76 @@
+{# templates/gtk/_colors.css — shared @define-color block, included by both
+   gtk-3.0/gtk.css.j2 and gtk-4.0/gtk.css.j2 so the palette lives in ONE place.
+   NOT a *.j2 file on purpose: the renderer only walks *.j2, so this partial is
+   never written out as a config on its own — it's only pulled in via {% include %}.
+
+   Two naming worlds are covered from the SAME [sem] roles:
+     • libadwaita named colors (accent_color, window_bg_color, …) — the ONLY
+       recolour hook GTK4/libadwaita apps honour, and also what adw-gtk3 reads.
+     • legacy GTK3 named colors (theme_bg_color, …) — so plain Adwaita-dark
+       recolours too, with NO extra theme package (adw-gtk3 stays optional). #}
+
+/* ── libadwaita / adw-gtk3 named colors ─────────────────────────────────── */
+@define-color accent_color {{ sem.accent }};
+@define-color accent_bg_color {{ sem.accent }};
+@define-color accent_fg_color {{ sem.bg_dark }};
+
+@define-color destructive_color {{ sem.red }};
+@define-color destructive_bg_color {{ sem.red }};
+@define-color destructive_fg_color {{ sem.bg_dark }};
+
+@define-color success_color {{ sem.green }};
+@define-color success_bg_color {{ sem.green }};
+@define-color success_fg_color {{ sem.bg_dark }};
+
+@define-color warning_color {{ sem.yellow }};
+@define-color warning_bg_color {{ sem.yellow }};
+@define-color warning_fg_color {{ sem.bg_dark }};
+
+@define-color error_color {{ sem.red }};
+@define-color error_bg_color {{ sem.red }};
+@define-color error_fg_color {{ sem.bg_dark }};
+
+@define-color window_bg_color {{ sem.bg_normal }};
+@define-color window_fg_color {{ sem.fg_bright }};
+@define-color view_bg_color {{ sem.bg_dark }};
+@define-color view_fg_color {{ sem.fg_bright }};
+
+@define-color headerbar_bg_color {{ sem.bg_dark }};
+@define-color headerbar_fg_color {{ sem.fg_bright }};
+@define-color headerbar_border_color {{ sem.fg_bright }};
+@define-color headerbar_backdrop_color {{ sem.bg_normal }};
+@define-color headerbar_shade_color rgba(0, 0, 0, 0.25);
+
+@define-color card_bg_color {{ sem.bg_light }};
+@define-color card_fg_color {{ sem.fg_bright }};
+@define-color card_shade_color rgba(0, 0, 0, 0.25);
+
+@define-color dialog_bg_color {{ sem.bg_normal }};
+@define-color dialog_fg_color {{ sem.fg_bright }};
+
+@define-color popover_bg_color {{ sem.bg_light }};
+@define-color popover_fg_color {{ sem.fg_bright }};
+
+@define-color sidebar_bg_color {{ sem.bg_dark }};
+@define-color sidebar_fg_color {{ sem.fg_bright }};
+@define-color sidebar_backdrop_color {{ sem.bg_normal }};
+@define-color sidebar_shade_color rgba(0, 0, 0, 0.25);
+@define-color secondary_sidebar_bg_color {{ sem.bg_dark }};
+@define-color secondary_sidebar_fg_color {{ sem.fg_bright }};
+
+@define-color scrollbar_outline_color {{ sem.bg_dark }};
+
+/* ── legacy GTK3 (plain Adwaita) named colors ───────────────────────────── */
+@define-color theme_bg_color {{ sem.bg_normal }};
+@define-color theme_fg_color {{ sem.fg_bright }};
+@define-color theme_base_color {{ sem.bg_dark }};
+@define-color theme_text_color {{ sem.fg_bright }};
+@define-color theme_selected_bg_color {{ sem.accent }};
+@define-color theme_selected_fg_color {{ sem.bg_dark }};
+@define-color theme_tooltip_bg_color {{ sem.bg_light }};
+@define-color theme_tooltip_fg_color {{ sem.fg_bright }};
+@define-color insensitive_bg_color {{ sem.bg_normal }};
+@define-color insensitive_fg_color {{ sem.fg_dim }};
+@define-color insensitive_base_color {{ sem.bg_dark }};
+@define-color borders {{ sem.bg_lighter }};
+@define-color unfocused_borders {{ sem.bg_light }};

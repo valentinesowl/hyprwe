@@ -1,0 +1,6 @@
+# pkg/vm.lst — guest integration packages, installed ONLY when running inside a
+# virtual machine (guest-install.sh gates this on `systemd-detect-virt`).
+# Never installed on bare metal.
+
+qemu-guest-agent    # host<->guest agent: IP reporting, graceful shutdown, `virsh` ops
+spice-vdagent       # SPICE integration: clipboard sharing + auto display resize

@@ -1,0 +1,129 @@
+/* rofi/config.rasi — HWE launcher. Launched via `rofi -show drun` (SUPER+R).
+ * Static chrome; colours come from the generated colors.rasi (hwe theme apply),
+ * so the launcher recolours with the active theme. Docs: `man rofi-theme`.
+ *
+ * Look: flat idle rows, a single accent pill for the selection (Spotlight/Raycast
+ * style). rofi loads its built-in theme first, so EVERY element leaf-state below
+ * sets its own background-color — otherwise the default theme's light
+ * `normal-background` / `alternate-normal-background` leak through as pale rows. */
+
+configuration {
+    modi: "drun,run,window";
+    show-icons: true;
+    drun-display-format: "{name}";
+    display-drun: "  Apps";
+    display-run: "  Run";
+    display-window: "  Windows";
+    window-format: "{w} · {c} · {t}";
+    hover-select: true;
+    me-accept-entry: "MousePrimary";
+    me-select-entry: "";
+}
+
+@import "colors.rasi"
+
+* {
+    background-color: transparent;
+    text-color:       @fg;
+}
+
+window {
+    width:            640px;
+    border:           2px;
+    border-color:     @accent;
+    border-radius:    16px;
+    background-color: @bg;
+    padding:          0;
+}
+
+mainbox {
+    padding:          14px;
+    spacing:          12px;
+    children:         [ inputbar, listview ];
+    background-color: transparent;
+}
+
+/* Search bar — a slightly raised panel with a magnifier prompt. */
+inputbar {
+    background-color: @bg-alt;
+    border-radius:    12px;
+    padding:          12px 16px;
+    spacing:          12px;
+    children:         [ prompt, entry ];
+}
+
+prompt {
+    text-color:       @accent;
+    /* font inherited from colors.rasi's `*` (themed via the [font] contract) */
+    vertical-align:   0.5;
+}
+
+entry {
+    placeholder:       "Search apps…";
+    placeholder-color: @fg-dim;
+    vertical-align:    0.5;
+    text-color:        @fg;
+    cursor:            text;
+}
+
+listview {
+    lines:            8;
+    columns:          1;
+    scrollbar:        false;
+    spacing:          4px;
+    padding:          2px 0px 0px 0px;
+    fixed-height:     false;
+    dynamic:          true;
+    background-color: transparent;
+}
+
+element {
+    padding:          9px 12px;
+    border-radius:    10px;
+    spacing:          12px;
+    background-color: transparent;
+    text-color:       @fg;
+    cursor:           pointer;
+}
+
+/* Idle rows: explicitly flat so the built-in theme's pale backgrounds never
+ * bleed in. The selected row is the only splash of accent. */
+element normal.normal,
+element alternate.normal {
+    background-color: transparent;
+    text-color:       @fg;
+}
+
+element selected.normal {
+    background-color: @accent;
+    text-color:       @bg-dark;
+}
+
+/* Running windows / urgent entries keep the same flat idle look. */
+element normal.active,
+element alternate.active {
+    background-color: transparent;
+    text-color:       @accent;
+}
+element normal.urgent,
+element alternate.urgent {
+    background-color: transparent;
+    text-color:       @urgent;
+}
+element selected.active { background-color: @accent; text-color: @bg-dark; }
+element selected.urgent { background-color: @urgent; text-color: @bg-dark; }
+
+element-icon {
+    size:             28px;
+    vertical-align:   0.5;
+    background-color: transparent;
+    cursor:           inherit;
+}
+
+element-text {
+    vertical-align:   0.5;
+    highlight:        bold;
+    background-color: transparent;
+    text-color:       inherit;
+    cursor:           inherit;
+}

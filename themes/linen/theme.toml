@@ -1,0 +1,82 @@
+# themes/linen/theme.toml — warm dim daylight.
+# The light theme for a dark room: `paper` proves the contract can go light and
+# does it at full luminance (a flashbang at night); linen is the one you actually
+# live in — warm oatmeal surfaces at a LOW peak brightness (about Solarized
+# base2), a calm indigo accent, soft brown-charcoal ink. Still a true light theme
+# (dark text on light paper), just not one that sears.
+#
+# Same [sem] contract, same `scheme = "light"` switches as paper; only the
+# palette is dimmer and warmer.
+
+name = "Linen"
+
+[palette]
+flax   = "#dbd5c6"
+indigo = "#3d5f88"
+bark   = "#4a463b"
+
+[sem]
+# surfaces (dark -> light): warm taupe -> soft flax. Peak (bg_lighter) is oatmeal,
+# NOT white — that low ceiling is the whole point of the theme.
+bg_dark    = "#cdc7b6"
+bg_normal  = "#dbd5c6"
+bg_light   = "#e3ddce"
+bg_lighter = "#ebe6d8"
+# text (dim -> max contrast): warm brown-charcoal ink, never pure black
+fg_dim     = "#786f52"
+fg_normal  = "#4a463b"
+fg_bright  = "#302d25"
+fg_white   = "#1c1a14"
+# accent — calm indigo (linen + blue thread); dark enough to read on the flax bar
+accent      = "#3d5f88"
+accent_soft = "#5b7da6"
+# raw colours — muted and warm so they sit on paper, not shout
+red     = "#a8443a"
+green   = "#5c7a3f"
+yellow  = "#8a7020"
+orange  = "#a86436"
+blue    = "#4a6b93"
+magenta = "#875073"
+cyan    = "#3d7a72"
+# service
+border = "#c4bda8"
+urgent = "#a8443a"
+
+[params]
+scheme        = "light"
+font          = "JetBrainsMono Nerd Font"
+rounding      = 10
+gaps_in       = 5
+gaps_out      = 12
+border_size   = 1
+# A dim light theme wants to stay fairly solid — heavy glass over a warm wall
+# reads as muddy, not frosted.
+opacity       = 0.94
+bar_opacity   = 0.80
+blur_passes   = 3
+blur_size     = 6
+bar_height    = 26
+bar_float     = false
+bar_gap       = 6
+bar_gap_x     = 8
+bar_radius    = 14
+# underline: a calm indigo rule under the active tag — quieter than a filled chip,
+# which suits the restful mood.
+bar_ws_indicator = "underline"
+bar_ws_speed     = 220
+
+# ── Typography (contract) ─────────────────────────────────────────────────
+[font]
+family    = "iMWritingMono Nerd Font"
+ui_family = "Sans"
+terminal  = 9.5
+bar       = 12
+launcher  = 11
+notify    = 11
+gtk       = 11
+
+# ── Wallpaper (scripts/genwall.py) ───────────────────────────────────────
+[wallpaper]
+style     = "mesh"
+# Warm palette, gentle volume — soft daylight through linen, not a bright wash.
+intensity = 0.6

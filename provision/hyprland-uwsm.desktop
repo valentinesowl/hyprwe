@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Hyprland (uwsm)
+Comment=Hyprland launched via uwsm — proper systemd user session + env import
+Exec=uwsm start hyprland.desktop
+Type=Application
+DesktopNames=Hyprland
+Keywords=tiling;wayland;compositor;

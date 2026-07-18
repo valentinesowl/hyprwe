@@ -1,0 +1,11 @@
+[SddmGreeterTheme]
+Name=HWE
+Description=Hyprland Workstation Environment — palette-driven greeter
+Author=HWE
+License=MIT
+Type=sddm-theme
+Version=1.0
+MainScript=Main.qml
+ConfigFile=theme.conf
+Theme-Id=hwe
+Theme-API=2.0

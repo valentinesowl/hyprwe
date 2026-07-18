@@ -1,0 +1,15 @@
+# pkg/aur.lst — AUR packages installed via paru (bootstrapped automatically the
+# first time this list is non-empty). Left empty by default to keep provisioning
+# fast and dependency-light. Uncomment / add what you want.
+
+# Examples:
+# visual-studio-code-bin       # VS Code (official binary)
+# hyprshot                     # convenience screenshot wrapper for Hyprland
+# wlogout                      # logout menu
+# catppuccin-cursors-mocha     # cursor theme
+
+# adw-gtk3 — unified libadwaita look for GTK3 apps (Dolphin is Qt, but firefox/
+# pavucontrol/blueman/wdisplays are GTK3). OPTIONAL: HWE's generated gtk.css
+# already recolours plain Adwaita-dark with zero AUR. Uncomment this AND set
+# gtk-theme-name=adw-gtk3-dark in config/gtk-3.0/settings.ini for the nicer look.
+# adw-gtk3

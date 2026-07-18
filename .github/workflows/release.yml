@@ -1,0 +1,111 @@
+# Release — publish a GitHub release when a vX.Y.Z tag is pushed.
+#
+# Cutting a release:
+#   1. bump HWE_VERSION in bin/hwe
+#   2. add the matching `## [X.Y.Z] — YYYY-MM-DD` section to CHANGELOG.md
+#   3. git tag vX.Y.Z && git push origin vX.Y.Z
+#
+# The verify job below refuses to publish if those disagree with each other or
+# with the tag. That check is the whole point of this workflow: a tag is
+# effectively permanent once anyone has fetched it, so the time to catch a
+# mistyped version is BEFORE the release exists, not after.
+---
+name: Release
+
+"on":
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write  # required to create the release
+
+jobs:
+  verify:
+    name: Verify the tag matches the code
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - name: Install tools
+        run: pacman -Syu --noconfirm --needed git
+      - uses: actions/checkout@v5
+
+      - name: Tag, bin/hwe and CHANGELOG must agree
+        id: check
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME#v}"
+          declared="$(grep -oP '^HWE_VERSION="\K[^"]+' bin/hwe)"
+          if [[ "$tag" != "$declared" ]]; then
+            echo "::error::tag v$tag does not match HWE_VERSION=$declared in bin/hwe"
+            exit 1
+          fi
+          if ! grep -qE "^## \[$tag\] — [0-9]{4}-[0-9]{2}-[0-9]{2}$" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no dated '## [$tag] — YYYY-MM-DD' section"
+            exit 1
+          fi
+          echo "version=$tag" >> "$GITHUB_OUTPUT"
+
+  test:
+    name: Full suite
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      # Same packages CI uses, for the same reason: what `hwe install` gives a
+      # contributor is what the gate runs.
+      - name: Install tools
+        run: >
+          pacman -Syu --noconfirm --needed
+          git just shellcheck ruff python python-pytest python-jinja python-numpy
+          imagemagick bats bats-assert bats-support actionlint yamllint
+      - uses: actions/checkout@v5
+      # Never publish a tag that does not pass its own gates.
+      - run: just check
+
+  publish:
+    name: Publish
+    needs: [verify, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Extract this version's CHANGELOG section
+        env:
+          # Via env, never inline in the script: an ${{ }} expansion is spliced
+          # into the shell as text before it runs, so a crafted value would be
+          # code, not data. (`version` is gated to match the repo, but the safe
+          # shape costs nothing and doesn't rely on that staying true.)
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          # Everything between this version's heading and the next `## ` heading.
+          awk -v ver="$VERSION" '
+            $0 ~ "^## \\[" ver "\\]" { grab = 1; next }
+            grab && /^## / { exit }
+            grab { print }
+          ' CHANGELOG.md > release-notes.md
+          if [[ ! -s release-notes.md ]]; then
+            echo "::error::extracted empty release notes"
+            exit 1
+          fi
+
+      # `gh` is preinstalled on the runner. Deliberately NOT a third-party release
+      # action: this job holds contents:write, and a project that pins a GPG key
+      # to verify its base image should not hand that token to code it does not
+      # audit. The CLI ships with the runner and is covered by GitHub's own trust.
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # Passed as data, not spliced into the script — see the Extract step.
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          # A vX.Y.Z-rc1 style tag is a prerelease; a plain vX.Y.Z is not.
+          prerelease=()
+          [[ "${GITHUB_REF_NAME}" == *-* ]] && prerelease=(--prerelease)
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "HWE $VERSION" \
+            --notes-file release-notes.md \
+            --verify-tag \
+            "${prerelease[@]}"

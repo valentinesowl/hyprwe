@@ -1,0 +1,89 @@
+# themes/amethyst/theme.toml — the signature HWE look.
+# Monochrome amethyst desktop, quiet everywhere — with ONE loud detail: a
+# rainbow border that flows around the focused window (a native `borderangle`
+# loop). Everything else stays tonal violet.
+#
+# (This look used to ship as "neon"; it moved here under its own name once
+# `neon` became the synthwave theme. Collapse the two if you ever want one.)
+
+name = "Amethyst"
+
+# ── Private palette (reference only; templates read [sem]) ────────────────
+[palette]
+void    = "#130f1c"
+amethyst = "#b46bff"
+violet  = "#8a5cf6"
+
+# ── Semantic contract ─────────────────────────────────────────────────────
+[sem]
+# surfaces (dark -> light): deep violet-black, everything tinted one hue
+bg_dark    = "#0f0b17"
+bg_normal  = "#171122"
+bg_light   = "#241834"
+bg_lighter = "#372850"
+# text (dim -> max contrast), lavender-tinted
+fg_dim     = "#796a9c"
+fg_normal  = "#b7a7d6"
+fg_bright  = "#e8dcff"
+fg_white   = "#ffffff"
+# accent — neon amethyst
+accent      = "#b46bff"
+accent_soft = "#8a5cf6"
+# raw colours — jewel tones that still read on violet
+red     = "#ff5c8a"
+green   = "#7bffb0"
+yellow  = "#ffd76b"
+orange  = "#ff9e64"
+blue    = "#7aa2ff"
+magenta = "#e06bff"
+cyan    = "#6bf0ff"
+# service
+border = "#b46bff"
+urgent = "#ff5c8a"
+
+# ── Parameters ────────────────────────────────────────────────────────────
+[params]
+font          = "JetBrainsMono Nerd Font"
+rounding      = 10
+gaps_in       = 5
+gaps_out      = 12
+border_size   = 1
+opacity       = 0.92
+blur_passes   = 3
+blur_size     = 6
+# ── Waybar geometry (glued & flat by default; set bar_float = true to float) ──
+bar_height  = 26
+bar_float   = false
+bar_gap     = 6      # top gap when floating
+bar_gap_x   = 8      # side gap when floating
+bar_radius  = 14     # corner radius when floating
+# ── Waybar workspace focus: how the ACTIVE tag is marked ──────────────────
+# glow: accent halo on the number | underline: rule growing from the centre
+# pill: the tag widens into a chip | dot: a mark rising from below.
+# (No style slides between tags — GTK3 CSS has no transform; see theme.css.j2.)
+bar_ws_indicator = "glow"
+bar_ws_speed     = 220   # ms for the indicator to settle
+
+
+# The signature: a full-spectrum gradient that rotates fast = colours flow
+# around the focused window. Lower border_animate = faster/louder.
+border_gradient = ["#ff2d6b", "#ff9e2d", "#ffe62d", "#3dff6b", "#2dffe6", "#2d8bff", "#b46bff", "#ff2df0"]
+border_angle    = 270
+border_animate  = 25
+
+# ── Typography (contract): font family + per-surface sizes ────────────────
+# Templates read these ONLY (never hardcode a font); omit any line to inherit
+# the renderer default. Sizes are pt (px for the bar); terminal accepts decimals.
+[font]
+family    = "MonaspiceNe Nerd Font"
+ui_family = "Sans"   # GTK/UI apps (size from `gtk`)
+terminal = 9.5    # kitty
+bar      = 12     # waybar
+launcher = 11     # rofi menus (base; pickers scale ± from this)
+notify   = 11     # mako
+gtk      = 11     # GTK apps (family stays Sans)
+
+# ── Wallpaper (scripts/genwall.py) ───────────────────────────────────────
+# style: mesh | aurora | voronoi | grid | signal. seed rerolls the composition.
+[wallpaper]
+style = "aurora"

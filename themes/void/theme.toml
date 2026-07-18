@@ -1,0 +1,82 @@
+# themes/void/theme.toml — deep void, bright cyber aurora.
+# Near-absolute black surfaces with phosphor-cold text and an electric neon-cyan
+# accent. The loudest contrast in the set.
+
+name = "Void"
+
+[palette]
+neon_cyan = "#00ffd2"
+indigo    = "#448aff"
+
+[sem]
+# surfaces (dark -> light): from absolute black to a hint of indigo
+bg_dark    = "#050508"
+bg_normal  = "#0a0a10"
+bg_light   = "#101018"
+bg_lighter = "#181824"
+# text (dim -> max contrast): cold, phosphor. Even a void needs readable text:
+# the old #2a2a40/#5a5a78 were 1.41:1 / 2.98:1 on this near-black — invisible and
+# sub-AA. Lifted just enough (3.14:1 / 4.67:1) to stay phosphor-cold but legible.
+fg_dim     = "#5c5c88"
+fg_normal  = "#78789c"
+fg_bright  = "#9a9ab8"
+fg_white   = "#d0d0e8"
+# accent — neon cyan
+accent      = "#00ffd2"
+accent_soft = "#00b894"
+# raw colours — cyber aurora
+red     = "#ff3860"
+green   = "#00e676"
+yellow  = "#ffd600"
+orange  = "#ff9100"
+blue    = "#448aff"
+magenta = "#d500f9"
+cyan    = "#00ffd2"
+# service
+border = "#111120"
+urgent = "#ff3860"
+
+[params]
+font          = "JetBrainsMono Nerd Font"
+rounding      = 8
+gaps_in       = 5
+gaps_out      = 8
+border_size   = 1
+opacity       = 0.75
+active_opacity = 0.75
+inactive_opacity = 0.75
+blur_passes   = 1
+blur_size     = 6
+# ── Waybar geometry (glued & flat by default; set bar_float = true to float) ──
+bar_height  = 26
+bar_float   = false
+bar_gap     = 6      # top gap when floating
+bar_gap_x   = 8      # side gap when floating
+bar_radius  = 14     # corner radius when floating
+# ── Waybar workspace focus: how the ACTIVE tag is marked ──────────────────
+# glow: accent halo on the number | underline: rule growing from the centre
+# pill: the tag widens into a chip | dot: a mark rising from below.
+# (No style slides between tags — GTK3 CSS has no transform; see theme.css.j2.)
+bar_ws_indicator = "glow"
+bar_ws_speed     = 220   # ms for the indicator to settle
+
+
+# ── Typography (contract): font family + per-surface sizes ────────────────
+# Templates read these ONLY (never hardcode a font); omit any line to inherit
+# the renderer default. Sizes are pt (px for the bar); terminal accepts decimals.
+[font]
+family    = "Lilex Nerd Font"
+ui_family = "Sans"   # GTK/UI apps (size from `gtk`)
+terminal = 9   # kitty
+bar      = 10     # waybar
+launcher = 10     # rofi menus (base; pickers scale ± from this)
+notify   = 10     # mako
+gtk      = 10     # GTK apps (family stays Sans)
+
+# ── Wallpaper (scripts/genwall.py) ───────────────────────────────────────
+# style: mesh | aurora | voronoi | grid | signal. seed rerolls the composition.
+[wallpaper]
+style = "signal"
+# Near-black bg + an electric cyan accent = extreme contrast; at full intensity
+# the trace shouts over the desktop instead of sitting behind it.
+intensity = 0.65

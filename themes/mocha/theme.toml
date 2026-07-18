@@ -1,0 +1,90 @@
+# themes/mocha/theme.toml — HWE theme = a set of parameters, nothing hand-duplicated.
+# `hwe theme apply mocha` renders every component's colours from this file.
+#
+# Palette is the theme's private kitchen; [sem] is the CONTRACT that templates
+# read (via semantic roles, never raw palette names). Add a theme by copying this
+# file and changing values — no config or template edits needed.
+
+name = "Catppuccin Mocha"
+
+# ── Private palette (reference only; templates must read [sem], not this) ──
+[palette]
+base     = "#1e1e2e"
+mantle   = "#181825"
+crust    = "#11111b"
+surface0 = "#313244"
+surface1 = "#45475a"
+surface2 = "#585b70"
+overlay  = "#6c7086"
+subtext  = "#a6adc8"
+text     = "#cdd6f4"
+mauve    = "#cba6f7"
+lavender = "#b4befe"
+
+# ── Semantic contract — the only thing templates consume ──────────────────
+[sem]
+# surfaces (dark -> light)
+bg_dark    = "#181825"
+bg_normal  = "#1e1e2e"
+bg_light   = "#313244"
+bg_lighter = "#45475a"
+# text (dim -> max contrast)
+fg_dim     = "#6c7086"
+fg_normal  = "#a6adc8"
+fg_bright  = "#cdd6f4"
+fg_white   = "#ffffff"
+# accent
+accent      = "#cba6f7"
+accent_soft = "#b4befe"
+# raw colours
+red     = "#f38ba8"
+green   = "#a6e3a1"
+yellow  = "#f9e2af"
+orange  = "#fab387"
+blue    = "#89b4fa"
+magenta = "#f5c2e7"
+cyan    = "#94e2d5"
+# service
+border = "#cba6f7"
+urgent = "#f38ba8"
+
+# ── Non-colour parameters shared across components ────────────────────────
+[params]
+font          = "JetBrainsMono Nerd Font"
+rounding      = 10
+gaps_in       = 5
+gaps_out      = 12
+border_size   = 1
+opacity       = 0.94
+blur_passes   = 3
+blur_size     = 6
+# ── Waybar geometry (glued & flat by default; set bar_float = true to float) ──
+bar_height  = 26
+bar_float   = false
+bar_gap     = 6      # top gap when floating
+bar_gap_x   = 8      # side gap when floating
+bar_radius  = 14     # corner radius when floating
+# ── Waybar workspace focus: how the ACTIVE tag is marked ──────────────────
+# glow: accent halo on the number | underline: rule growing from the centre
+# pill: the tag widens into a chip | dot: a mark rising from below.
+# (No style slides between tags — GTK3 CSS has no transform; see theme.css.j2.)
+bar_ws_indicator = "glow"
+bar_ws_speed     = 220   # ms for the indicator to settle
+
+
+# ── Typography (contract): font family + per-surface sizes ────────────────
+# Templates read these ONLY (never hardcode a font); omit any line to inherit
+# the renderer default. Sizes are pt (px for the bar); terminal accepts decimals.
+[font]
+family    = "CaskaydiaCove Nerd Font"
+ui_family = "Sans"   # GTK/UI apps (size from `gtk`)
+terminal = 9.5    # kitty
+bar      = 12     # waybar
+launcher = 11     # rofi menus (base; pickers scale ± from this)
+notify   = 11     # mako
+gtk      = 11     # GTK apps (family stays Sans)
+
+# ── Wallpaper (scripts/genwall.py) ───────────────────────────────────────
+# style: mesh | aurora | voronoi | grid | signal. seed rerolls the composition.
+[wallpaper]
+style = "mesh"

@@ -1,0 +1,18 @@
+# yamllint config for .github/workflows.
+#
+# The default profile is written for hand-authored config files and fights the
+# GitHub Actions schema in two specific places; everything else stays strict.
+extends: default
+
+rules:
+  # Workflows legitimately run wide: a `pacman -Syu --needed a b c …` line or a
+  # long ${{ }} expression is clearer whole than folded.
+  line-length:
+    max: 120
+  # `on:` is required by the Actions schema, but YAML 1.1 reads a bare `on` as
+  # the boolean true — hence the quoted "on": in the workflows. Without this,
+  # yamllint then objects to the quotes it just forced us to add.
+  truthy:
+    check-keys: false
+  comments:
+    min-spaces-from-content: 1

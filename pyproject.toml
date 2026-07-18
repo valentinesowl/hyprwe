@@ -1,0 +1,47 @@
+# pyproject.toml — tool configuration only.
+#
+# HWE is not a Python package: `scripts/*.py` are standalone tools invoked by the
+# bash CLI (and one of them, wbstat.py, by waybar). Nothing here is installable or
+# published to PyPI. This file exists so ruff and pytest read the same settings
+# locally (`just lint-py` / `just test-py`) and in CI, instead of a pile of flags.
+
+[tool.ruff]
+line-length = 100
+# tomllib (render-theme.py, genwall.py) landed in 3.11 — that is our floor.
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "W",    # pycodestyle warnings
+    "I",    # import sorting
+    "UP",   # pyupgrade
+    "B",    # bugbear
+    "SIM",  # simplify
+    "RUF",  # ruff-specific
+]
+ignore = [
+    # The generators lay colour tables and palettes out in visually aligned
+    # columns; that alignment is the documentation. Both rules fight it.
+    "E241",  # multiple spaces after comma
+    "E501",  # line too long — line-length is enforced by the formatter's judgement
+]
+
+[tool.ruff.lint.isort]
+# conftest.py is ours, not a third-party package — without this it gets sorted in
+# among pytest/numpy, which reads as if it were one.
+known-first-party = ["conftest"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests reach into the scripts' private helpers on purpose — that is the unit
+# under test, not an encapsulation break.
+"tests/*" = ["E402"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# -q: the signal is which test failed, not a 200-line collection banner.
+addopts = "-q --strict-markers"
+markers = [
+    "slow: renders every theme through the full template tree (a few seconds)",
+]

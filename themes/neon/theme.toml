@@ -1,0 +1,90 @@
+# themes/neon/theme.toml — cyberpunk / neon-noir.
+# Deep cosmic-violet surfaces, an electric hot-pink accent, electric violet + cyan
+# supports — a rain-dark city lit by neon signs. Loud where it counts, and it keeps
+# HWE's signature rainbow border, which suits the electric mood.
+#
+# (The monochrome violet look that used to live here is now its own theme:
+# `amethyst`.)
+
+name = "Neon"
+
+# ── Private palette (reference only; templates read [sem]) ────────────────
+[palette]
+hotpink = "#ff2975"
+violet  = "#7b2fff"
+cyan    = "#00e5ff"
+
+# ── Semantic contract ─────────────────────────────────────────────────────
+[sem]
+# surfaces (dark -> light): deep cosmic violet
+bg_dark    = "#0a0a1a"
+bg_normal  = "#12102a"
+bg_light   = "#1a1640"
+bg_lighter = "#231e52"
+# text (dim -> max contrast): lavender, ghostly
+fg_dim     = "#6e5f99"
+fg_normal  = "#a899cc"
+fg_bright  = "#e0d6ff"
+fg_white   = "#f0eaff"
+# accent — electric hot pink
+accent      = "#ff2975"
+accent_soft = "#cc2060"
+# raw colours — neon
+red     = "#ff1744"
+green   = "#39ff14"
+yellow  = "#f5e642"
+orange  = "#ff8c00"
+blue    = "#4361ee"
+magenta = "#e930c3"
+cyan    = "#00e5ff"
+# service — quiet dim border (the loud colour is the animated gradient below)
+border = "#2d2566"
+urgent = "#ff1744"
+
+# ── Parameters ────────────────────────────────────────────────────────────
+[params]
+font          = "JetBrainsMono Nerd Font"
+rounding      = 6
+gaps_in       = 4
+gaps_out      = 6
+border_size   = 1
+opacity       = 0.75
+blur_passes   = 3
+blur_size     = 6
+# ── Waybar geometry (glued & flat by default; set bar_float = true to float) ──
+bar_height  = 26
+bar_float   = false
+bar_gap     = 6      # top gap when floating
+bar_gap_x   = 8      # side gap when floating
+bar_radius  = 14     # corner radius when floating
+# ── Waybar workspace focus: how the ACTIVE tag is marked ──────────────────
+# glow: accent halo on the number | underline: rule growing from the centre
+# pill: the tag widens into a chip | dot: a mark rising from below.
+# (No style slides between tags — GTK3 CSS has no transform; see theme.css.j2.)
+bar_ws_indicator = "glow"
+bar_ws_speed     = 220   # ms for the indicator to settle
+
+
+# Signature rainbow border: a full-spectrum gradient that rotates fast so the
+# colours flow around the focused window. Lower border_animate = faster/louder.
+border_gradient = ["#ff2d6b", "#ff9e2d", "#ffe62d", "#3dff6b", "#2dffe6", "#2d8bff", "#b46bff", "#ff2df0"]
+border_angle    = 270
+border_animate  = 25
+
+# ── Typography (contract): font family + per-surface sizes ────────────────
+# Templates read these ONLY (never hardcode a font); omit any line to inherit
+# the renderer default. Sizes are pt (px for the bar); terminal accepts decimals.
+[font]
+family    = "0xProto Nerd Font"
+ui_family = "Sans"   # GTK/UI apps (size from `gtk`)
+terminal = 9.5    # kitty
+bar      = 12     # waybar
+launcher = 11     # rofi menus (base; pickers scale ± from this)
+notify   = 11     # mako
+gtk      = 11     # GTK apps (family stays Sans)
+
+# ── Wallpaper (scripts/genwall.py) ───────────────────────────────────────
+# style: mesh | aurora | voronoi | grid | signal | skyline. seed rerolls the composition.
+[wallpaper]
+style = "skyline"
+seed  = 2024

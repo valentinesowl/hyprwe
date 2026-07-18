@@ -1,0 +1,77 @@
+# CI — every gate `just check` runs locally, run again on PRs and on main.
+#
+# Runs on Arch (the only distro HWE targets) via the official container image. Each
+# job installs just the tools its gate needs inline — the same tools a contributor
+# gets from `hwe install` (pkg/dev.lst), but as a per-job subset. Keep the two in
+# sync when adding a gate.
+#
+# The jobs are split by tool rather than lumped into one `just check` so a red
+# tick names the thing that broke without anyone opening the log.
+---
+name: CI
+
+"on":
+  pull_request:
+  push:
+    branches: [main]
+  # Lets a maintainer re-run the suite from the Actions tab without an empty commit.
+  workflow_dispatch:
+
+# A new push to a PR makes the previous run's answer worthless — drop it rather
+# than pay for it. `github.ref` keeps main's runs from cancelling each other.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  shell:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - name: Install tools
+        run: pacman -Syu --noconfirm --needed git just shellcheck
+      - uses: actions/checkout@v5
+      - run: just lint
+
+  python:
+    name: ruff + pytest
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      # python-jinja and python-numpy are what the theme renderer and the
+      # wallpaper generator actually import; imagemagick backs the preview cards.
+      - name: Install tools
+        run: >
+          pacman -Syu --noconfirm --needed
+          git just ruff python python-pytest python-jinja python-numpy imagemagick
+      - uses: actions/checkout@v5
+      - run: just lint-py
+      - run: just test-py
+
+  shell-tests:
+    name: bats
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - name: Install tools
+        run: >
+          pacman -Syu --noconfirm --needed
+          git just bats bats-assert bats-support python python-jinja
+      - uses: actions/checkout@v5
+      # The suite runs `hwe theme validate` against every shipped theme, which
+      # shells out to the Python renderer — hence python-jinja above.
+      - run: just test-sh
+
+  workflows:
+    name: actionlint + yamllint
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      - name: Install tools
+        run: pacman -Syu --noconfirm --needed git just actionlint yamllint
+      - uses: actions/checkout@v5
+      - run: just lint-ci
