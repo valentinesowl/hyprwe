@@ -272,6 +272,41 @@ _install_vm_packages() {
     _pacman_install vm.lst
 }
 
+# --- Packaged session units that duplicate our autostart ------------------
+# Debian/Ubuntu ship systemd USER units for session programs and enable them the
+# moment the package installs; Arch ships none of these. HWE starts the same
+# programs itself from config/hypr/autostart.conf, so on apt you end up running
+# two of each: two bars (you can see it on screen), two idle daemons racing to
+# lock, two wallpaper daemons fighting over the same output.
+#
+# Neither owner is wrong — there are simply two of them. autostart.conf is the
+# one this project documents, themes and reloads, so the packaged units stand
+# down. hyprpolkitagent is deliberately NOT in this list: autostart.conf starts
+# that one BY unit, so the packaged unit is the intended owner there.
+#
+# `--global` edits /etc/systemd/user/*.wants, which is where these symlinks
+# actually live, and needs no running user session — this runs from cloud-init,
+# where there is none.
+HWE_DUPLICATE_USER_UNITS="waybar.service hypridle.service mako.service hyprpaper.service"
+
+_disable_duplicate_user_units() {
+    [[ "$(_distro_family)" == apt ]] || return 0
+    local u stood_down=()
+    for u in $HWE_DUPLICATE_USER_UNITS; do
+        # Any enablement symlink, not just graphical-session.target's — the
+        # target a package picks is its business, and may change.
+        find /etc/systemd/user -path '*.wants/*' -name "$u" -print -quit 2>/dev/null \
+            | grep -q . || continue
+        run sudo systemctl --global disable "$u" >/dev/null 2>&1 && stood_down+=("$u")
+        # If a session happens to be up (a plain `hwe install`, not provisioning)
+        # stop the copy already running instead of leaving it for a reboot.
+        systemctl --user stop "$u" >/dev/null 2>&1 || true
+    done
+    [[ ${#stood_down[@]} -eq 0 ]] && return 0
+    ok "stood down ${#stood_down[@]} packaged user units HWE starts itself"
+    info "${stood_down[*]}"
+}
+
 # --- GPU: NVIDIA on bare metal -------------------------------------------
 # Intel/AMD need nothing here — mesa arrives transitively with hyprland and the
 # open kernel drivers are in-tree. NVIDIA is the exception: proprietary/open
@@ -453,6 +488,24 @@ _setup_login() {
 }
 
 # Autologin on tty1 + start Hyprland — only inside the VM / unattended runs.
+# Stand down any display manager that got itself enabled, so tty1 autologin is
+# actually reached. Only ever called on the VM path — on bare metal the greeter
+# is the intended login route and _setup_login handles it, carefully.
+_autologin_disable_dm() {
+    local unit=""
+    # display-manager.service is an alias symlink; disabling the alias is not
+    # reliable, so act on the real unit it points at.
+    if [[ -L /etc/systemd/system/display-manager.service ]]; then
+        unit="$(basename "$(readlink -f /etc/systemd/system/display-manager.service)")"
+    fi
+    [[ -n "$unit" ]] || return 0
+    systemctl is-enabled "$unit" >/dev/null 2>&1 || return 0
+    warn "a display manager ($unit) is enabled in this VM — it would ask for a password"
+    info "this VM logs in automatically on tty1; disabling it"
+    run sudo systemctl disable --now "$unit" >/dev/null 2>&1 \
+        || warn "could not disable $unit — you may get a greeter instead of the session"
+}
+
 _setup_autologin() {
     [[ "${HWE_UNATTENDED:-0}" == 1 ]] || systemd-detect-virt --quiet 2>/dev/null || {
         info "not in a VM: skipping tty1 autologin (add 'exec Hyprland' to ~/.bash_profile yourself)"
@@ -460,11 +513,32 @@ _setup_autologin() {
     }
     local user; user="$(id -un)"
     log "Configuring tty1 autologin + Hyprland for '$user'"
+
+    # Debian/Ubuntu enable AND start a service when its package is installed;
+    # Arch does not. So on Ubuntu a greeter can seize the login path just by
+    # being pulled in — which is exactly what autologin exists to replace here.
+    # In a VM tty1 is ours, so take it back explicitly rather than losing a race.
+    _autologin_disable_dm
+
+    # agetty is /usr/bin on Arch and /usr/sbin on Debian/Ubuntu. Probe for it
+    # instead of hardcoding: the unit's `-` prefix makes a missing binary a
+    # SILENT failure, so a wrong path costs you the login with no error anywhere.
+    local agetty="" cand
+    for cand in /usr/bin/agetty /usr/sbin/agetty /sbin/agetty; do
+        [[ -x "$cand" ]] && { agetty="$cand"; break; }
+    done
+    if [[ -z "$agetty" ]]; then
+        warn "agetty not found — skipping tty1 autologin"
+        info "you will get an ordinary login prompt on this machine"
+        return 0
+    fi
+
     run sudo install -d /etc/systemd/system/getty@tty1.service.d
     # shellcheck disable=SC2016  # $TERM must reach the unit file LITERALLY —
     # systemd expands it at boot; expanding it here would freeze in our own value.
-    printf '[Service]\nExecStart=\nExecStart=-/usr/bin/agetty --autologin %s --noclear %%I $TERM\n' "$user" \
+    printf '[Service]\nExecStart=\nExecStart=-%s --autologin %s --noclear %%I $TERM\n' "$agetty" "$user" \
         | run sudo tee /etc/systemd/system/getty@tty1.service.d/autologin.conf >/dev/null
+    run sudo systemctl daemon-reload 2>/dev/null || true
 
     local prof="$HOME/.bash_profile"
     if ! grep -q 'HWE autostart' "$prof" 2>/dev/null; then
@@ -586,16 +660,32 @@ _install_preflight() {
         info "(or set HWE_FORCE=1 to override)"
         exit 1
     fi
+    # Named in the summary because it is the one line here that widens who can
+    # put software on this machine — it should not be the quiet one.
+    local comp="this distribution's own packages"
+    [[ "$HWE_HYPR_SOURCE" == ppa ]] \
+        && comp="${C_BOLD}third-party PPA ${HWE_HYPR_PPA}${C_RESET} ${C_DIM}(pinned to the Hyprland stack)${C_RESET}"
+    # apt-only, and worth saying: it turns OFF services the distribution turned on.
+    local dup=""
+    [[ "$(_distro_family)" == apt ]] \
+        && dup="
+  • stand down packaged user units HWE starts itself   ${C_DIM}(waybar, mako, hypridle, hyprpaper)${C_RESET}"
     local up="no  ${C_DIM}(HWE_FULL_UPGRADE=1 to enable)${C_RESET}"
-    [[ "${HWE_FULL_UPGRADE:-0}" == 1 || "${HWE_UNATTENDED:-0}" == 1 ]] && up="YES (pacman -Su)"
+    case "$(_distro_family)" in
+        pacman) local upcmd="pacman -Su" ;;
+        apt)    local upcmd="apt-get upgrade" ;;
+        *)      local upcmd="system upgrade" ;;
+    esac
+    [[ "${HWE_FULL_UPGRADE:-0}" == 1 || "${HWE_UNATTENDED:-0}" == 1 ]] && up="YES ($upcmd)"
     cat >&2 <<SUMMARY
 ${C_BOLD}HWE install will, on this machine:${C_RESET}
-  • install packages from pkg/core.lst + pkg/dev.lst   ${C_DIM}(sudo pacman)${C_RESET}
+  • install packages from pkg/core.lst + pkg/dev.lst   ${C_DIM}(sudo $(_distro_family))${C_RESET}
+  • take Hyprland from: ${comp}
   • full system upgrade: ${up}
   • symlink config/* into ~/.config                    ${C_DIM}(existing dirs -> *.hwe-bak)${C_RESET}
   • set gwenview as default image viewer                ${C_DIM}(merged into mimeapps.list)${C_RESET}
   • set your login shell to zsh                         ${C_DIM}(HWE_NO_ZSH=1 to skip)${C_RESET}
-  • enable NetworkManager${C_DIM}, and SDDM on bare metal${C_RESET}    ${C_DIM}(HWE_NO_NM=1 to skip NM)${C_RESET}
+  • enable NetworkManager${C_DIM}, and SDDM on bare metal${C_RESET}    ${C_DIM}(HWE_NO_NM=1 to skip NM)${C_RESET}${dup}
   • on an NVIDIA GPU: driver + initramfs setup      ${C_DIM}(bare metal; HWE_NO_NVIDIA=1 to skip)${C_RESET}
   • link 'hwe' into /usr/local/bin
 Revert later with:  hwe uninstall
@@ -609,6 +699,11 @@ install_main() {
 
     _install_preflight
     log "HWE install starting on $(uname -n)"
+    # Before anything is installed: if the compositor is to come from somewhere
+    # other than the distribution, that has to be settled while nothing has been
+    # fetched yet. Self-contained (it refreshes its own DB), so the sync below
+    # is the ordinary one either way.
+    _distro_compositor_source || return 1
     _pacman_sync
     # Before the package steps: your own lists have to exist before they can be
     # read, and hypr.conf before the compositor ever parses hyprland.conf.
@@ -630,6 +725,7 @@ install_main() {
     _set_default_apps
     _setup_shell
     _enable_services
+    _disable_duplicate_user_units
     _setup_login
 
     echo
