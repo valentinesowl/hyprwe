@@ -92,12 +92,17 @@ jobs:
     # `base` supplies them.
     container: ubuntu:26.04
     steps:
+      # ca-certificates is not decoration: --no-install-recommends drops it, and
+      # without it actions/checkout cannot clone over https at all ("Problem with
+      # the SSL CA cert"). The Arch image ships them, so only this job needs to
+      # say so — and only on a real runner, since a local container run mounts the
+      # tree instead of cloning it and never reaches the step that fails.
       - name: Install tools
         run: |
           apt-get update -qq
           apt-get install -y -q --no-install-recommends \
-            git just bats bats-assert bats-support python3 python3-jinja2 \
-            gnupg curl xz-utils
+            ca-certificates git just bats bats-assert bats-support \
+            python3 python3-jinja2 gnupg curl xz-utils
       - uses: actions/checkout@v5
       - run: git config --global --add safe.directory '*'
       - run: just test-sh
