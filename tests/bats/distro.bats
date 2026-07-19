@@ -244,3 +244,65 @@ run_install() {
     run bash -c "sed '/^#/d' '$HWE_ROOT/pkg/fonts.lock' | grep -c \$'\t\t'"
     assert_output "0"
 }
+
+# ── where the compositor comes from ───────────────────────────────────────
+# The default has to stay "the distribution's own package": this is the one
+# setting that widens who may put software on the machine, so drift toward
+# convenience here is the failure worth catching.
+
+# Read a variable from inside the sourced shell. `distro_fn bash -c ...` cannot:
+# it starts a FRESH bash, which does not inherit a plain (unexported) shell var,
+# so every such reading would come back empty — and an empty expected value is
+# how a test comes to pass without testing anything.
+distro_var() {
+    bash -c '
+        set -uo pipefail
+        HWE_ROOT="$HWE_REPO_ROOT"
+        source "$HWE_ROOT/lib/common.sh"
+        printf "%s\n" "${!1}"
+    ' _ "$1"
+}
+
+@test "the compositor comes from the distribution unless asked otherwise" {
+    run distro_var HWE_HYPR_SOURCE
+    assert_output "repo"
+}
+
+@test "the default source touches nothing" {
+    HWE_DISTRO=debian run distro_fn _distro_compositor_source
+    assert_success
+    assert_output ""
+}
+
+@test "an unrecognised compositor source is refused, not guessed at" {
+    HWE_HYPR_SOURCE=nonsense HWE_DISTRO=debian run distro_fn _distro_compositor_source
+    assert_failure
+    [[ "$output" == *"nonsense"* ]]
+}
+
+@test "the PPA is an apt-family option and is declined, not applied, on Arch" {
+    HWE_HYPR_SOURCE=ppa HWE_DISTRO=arch run distro_fn _distro_compositor_source
+    assert_success
+    [[ "$output" == *"apt-family"* ]]
+}
+
+@test "the PPA allowlist covers every Hyprland package HWE installs" {
+    # The pin is what stops a third-party key from supplying anything it likes.
+    # A package we install that the allowlist does not match would resolve from
+    # the archive instead — a silent, confusing downgrade rather than an error.
+    local pkgs pat p matched
+    pkgs="$(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' -e 's/[[:space:]]//g' \
+        "$HWE_ROOT/pkg/core.lst" | grep -E '^(hypr|xdg-desktop-portal-hyprland)' || true)"
+    [[ -n "$pkgs" ]] || skip "no Hyprland packages in core.lst"
+    pat="$(distro_var HWE_HYPR_PPA_PKGS)"
+    [[ -n "$pat" ]] || fail "the allowlist read back empty — the test would pass vacuously"
+    while read -r p; do
+        [[ -n "$p" ]] || continue
+        matched=0
+        for g in $pat; do
+            # shellcheck disable=SC2053  # glob match is the point
+            [[ "$p" == $g ]] && { matched=1; break; }
+        done
+        [[ "$matched" == 1 ]] || fail "$p is installed but the PPA pin would not allow it"
+    done <<< "$pkgs"
+}

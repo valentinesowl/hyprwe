@@ -201,4 +201,128 @@ _pm_install_hint() {
     esac
 }
 
+# --- where the compositor comes from --------------------------------------
+# On Arch this question does not exist: Hyprland is in the repos and tracks
+# upstream. On Ubuntu the archive's copy is 0.53.3 in `universe` — a community
+# package with no vendor security SLA, frozen for the life of the release.
+#
+# So HWE offers both, and makes the choice explicit rather than convenient:
+#
+#   repo (default)  the distribution's own package. Whatever it is, it is what
+#                   the machine already trusts. Nothing new is granted.
+#   ppa             a third-party archive with current Hyprland. NOT a default,
+#                   ever. Adding a PPA the ordinary way hands its key the right
+#                   to install ANY package on that machine, for good — a far
+#                   larger grant than the one package you wanted.
+#
+# Building from source is deliberately not offered: Hyprland's dependency
+# cluster (aquamarine, hyprutils, hyprlang, hyprgraphics, hyprwire, hyprtoolkit)
+# moves independently, and scripting it would make HWE a permanent build system
+# for someone else's compositor.
+#
+# Setting HWE_HYPR_SOURCE=ppa IS the consent. It is deliberately NOT covered by
+# HWE_ASSUME_YES: a blanket "yes to prompts" must never be what extends trust to
+# a stranger — that has to be its own act.
+: "${HWE_HYPR_SOURCE:=repo}"
+: "${HWE_HYPR_PPA:=cppiber/hyprland}"
+: "${HWE_HYPR_PPA_FP:=A54D23B62FF3FCC76EFF71E8FDBAAA1CF0CCF48E}"
+: "${HWE_HYPR_PPA_ORIGIN:=LP-PPA-cppiber-hyprland}"
+
+# The packages the PPA is ALLOWED to supply. Everything else stays the
+# distribution's, enforced by apt pinning rather than by good intentions — see
+# _hypr_ppa_enable. Measured, not guessed: with this list, installing the stack
+# on resolute draws 16 packages from the PPA out of 346, and all 16 are
+# Hyprland's own. libudis86 is on it because the PPA is the only place resolute
+# has it at all; wayland-protocols is NOT, because the archive has it and the
+# archive's copy is the one we want even though the PPA ships a newer one.
+HWE_HYPR_PPA_PKGS='hypr* libhypr* libaquamarine* libudis86* xdg-desktop-portal-hyprland*'
+
+_hypr_apt_keyring=/etc/apt/keyrings/hwe-hyprland.gpg
+_hypr_apt_source=/etc/apt/sources.list.d/hwe-hyprland.sources
+_hypr_apt_prefs=/etc/apt/preferences.d/hwe-hyprland
+
+# Say plainly what is being granted, to whom, and how far it reaches. This prints
+# even unattended: a grant nobody can find in the log is not much of a grant.
+_hypr_ppa_announce() {
+    warn "compositor source: THIRD-PARTY PPA ${C_BOLD}${HWE_HYPR_PPA}${C_RESET}, not Ubuntu"
+    info "signing key pinned to $HWE_HYPR_PPA_FP"
+    info "apt pinning confines it to: $HWE_HYPR_PPA_PKGS"
+    info "every other package on this machine stays Ubuntu's — including ones"
+    info "this PPA also publishes and versions it rates higher"
+    info "undo with: sudo rm $_hypr_apt_source $_hypr_apt_prefs $_hypr_apt_keyring"
+}
+
+# Fetch the pinned key BY FULL FINGERPRINT — a keyserver can hand us a key, but
+# never a DIFFERENT one, since the fingerprint is the key's own hash.
+_hypr_ppa_fetch_key() {
+    local ring ks ok=1
+    ring="$(mktemp -d)"; chmod 700 "$ring"
+    for ks in hkps://keyserver.ubuntu.com hkps://keys.openpgp.org; do
+        if gpg --homedir "$ring" --batch --no-tty --keyserver "$ks" \
+               --recv-keys "$HWE_HYPR_PPA_FP" >/dev/null 2>&1; then ok=0; break; fi
+    done
+    if [[ $ok -ne 0 ]]; then
+        rm -rf "$ring"; err "could not fetch the PPA signing key $HWE_HYPR_PPA_FP"; return 1
+    fi
+    # Prove we hold the key we asked for before it is allowed to vouch for bytes.
+    if ! gpg --homedir "$ring" --batch --no-tty --list-keys "$HWE_HYPR_PPA_FP" >/dev/null 2>&1; then
+        rm -rf "$ring"; err "keyserver returned a key that is not $HWE_HYPR_PPA_FP"; return 1
+    fi
+    run sudo install -d -m 0755 /etc/apt/keyrings
+    gpg --homedir "$ring" --batch --no-tty --export "$HWE_HYPR_PPA_FP" \
+        | run sudo tee "$_hypr_apt_keyring" >/dev/null
+    rm -rf "$ring"
+}
+
+_hypr_ppa_enable() {
+    local suite
+    suite="$(. /etc/os-release 2>/dev/null && printf '%s' "${VERSION_CODENAME:-}")"
+    [[ -n "$suite" ]] || { err "cannot read VERSION_CODENAME from /etc/os-release"; return 1; }
+
+    _hypr_ppa_announce
+    _hypr_ppa_fetch_key || return 1
+
+    printf '%s\n' \
+        'Types: deb' \
+        "URIs: https://ppa.launchpadcontent.net/${HWE_HYPR_PPA}/ubuntu" \
+        "Suites: $suite" \
+        'Components: main' \
+        "Signed-By: $_hypr_apt_keyring" \
+        | run sudo tee "$_hypr_apt_source" >/dev/null
+
+    # Default -1 (never), then an allowlist above the archive's 500. Without the
+    # first stanza this would be an ordinary PPA — that is, a general-purpose
+    # key on the machine, which is the thing we are declining to hand out.
+    printf '%s\n' \
+        'Package: *' \
+        "Pin: release o=$HWE_HYPR_PPA_ORIGIN" \
+        'Pin-Priority: -1' \
+        '' \
+        "Package: $HWE_HYPR_PPA_PKGS" \
+        "Pin: release o=$HWE_HYPR_PPA_ORIGIN" \
+        'Pin-Priority: 600' \
+        | run sudo tee "$_hypr_apt_prefs" >/dev/null
+
+    _pm_sync 0
+}
+
+# Called once by the installer, before anything is installed.
+_distro_compositor_source() {
+    case "$HWE_HYPR_SOURCE" in
+        repo) return 0 ;;
+        ppa)
+            if [[ "$(_distro_family)" != apt ]]; then
+                warn "HWE_HYPR_SOURCE=ppa is an apt-family option — ignoring it on ${HWE_DISTRO}"
+                info "on Arch, Hyprland comes from the distribution and already tracks upstream"
+                return 0
+            fi
+            _hypr_ppa_enable
+            ;;
+        *)
+            err "unknown HWE_HYPR_SOURCE='$HWE_HYPR_SOURCE' (expected 'repo' or 'ppa')"
+            return 1
+            ;;
+    esac
+}
+
 _distro_detect
