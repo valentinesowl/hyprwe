@@ -9,12 +9,43 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
-Groundwork for installing on distributions other than Arch. **Nothing here claims
-that works yet** — no other distribution has been installed on end to end, and the
-CLI, the install and the VM still target Arch. What landed is the machinery, and
-two changes that stand on their own regardless.
+## [1.3.0] — 2026-07-20
+
+**HWE installs on Ubuntu 26.04, not only on Arch.** Both were brought up end to end
+before this was written: the same `config/hypr/` parses with zero errors under
+Hyprland 0.53.3 (Ubuntu's own package) and 0.55.4 (Arch, and Ubuntu via an opt-in
+archive). The environment is described once and rendered the same on both.
+
+Where the compositor comes from is stated, not assumed — see **Installation** in the
+README. By default it is the distribution's own package and nothing new is trusted.
 
 ### Added
+
+- **`hwe vm` boots an Ubuntu guest.** `HWE_VM_DISTRO=ubuntu hwe vm up` provisions
+  Ubuntu 26.04 the same way it provisions Arch. Each distribution gets its own libvirt
+  domain and disk (`hwe-dev`, `hwe-dev-ubuntu`), so the two run side by side and can be
+  compared rather than replacing one another. The commands that act on an existing VM
+  find it when you have only one, and refuse to guess when you have several.
+
+- **The Ubuntu image is authenticated before it is booted**, by the shape Ubuntu
+  actually publishes: one `SHA256SUMS` covering the release directory, detach-signed
+  with `SHA256SUMS.gpg`. Both halves are load-bearing — the signature has to verify
+  *and* the image's own line has to be in the file that was signed. An image the
+  checksum file does not mention is refused rather than treated as unremarkable. The
+  signing key is pinned by fingerprint and shipped in `provision/`, as the arch-boxes
+  key already was.
+
+- **`HWE_HYPR_SOURCE` — where Hyprland comes from.** The default, `repo`, is the
+  distribution's own package: whatever it is, the machine already trusts it. `ppa`
+  opts in to a third-party archive with a current Hyprland, and setting that variable
+  *is* the consent — it is deliberately not covered by `HWE_ASSUME_YES`, because a
+  blanket yes to prompts should never be what extends trust to a stranger.
+
+  Such an archive is confined by apt pinning to the Hyprland stack, so its key cannot
+  supply anything else on the machine — normally, adding a PPA grants exactly that.
+  Building the compositor from source is not offered: its dependency cluster moves on
+  its own schedule, and scripting it would make HWE a build system for someone else's
+  compositor.
 
 - **The font a theme asks for and the icons it draws are now two separate
   things.** `[font]` gains `icon_family` (where the bar's and launcher's glyphs
@@ -51,6 +82,53 @@ two changes that stand on their own regardless.
   nothing changes — the map is a list of differences, and there are none.
   Arch-only steps (the AUR, the NVIDIA driver and its pacman hook) now say why
   they are skipped rather than failing.
+
+- **`pkg/*.lst` means the same thing on both package managers.** It is written in
+  Arch's vocabulary *and* Arch's semantics, where a listed package is what you get —
+  `pacman` never installs optional dependencies. apt installs `Recommends` by default,
+  so the identical list quietly described a different machine: a first Ubuntu build
+  came up with 1926 packages and a login screen nobody asked for, because one tray
+  applet recommends a desktop shell. Installation on apt now declines recommendations.
+  Anything genuinely needed belongs in `pkg/*.lst` by name, where it can be read.
+
+- **The tools HWE itself shells out to are now in `pkg/core.lst`** — `curl`,
+  `gnupg`, `tar`, `xz`. They were called by name and declared nowhere: Arch's
+  `base` supplies them, so nothing ever noticed, and on a minimal Ubuntu an
+  absent one is a failure in our code rather than a missing convenience.
+
+- **`pkg/map/apt.map` is watched, not just written.** It records facts about
+  someone else's archive, and archives rename and retire packages; a stale entry
+  has no symptom until `hwe install` fails on the first Ubuntu machine that tries.
+  A weekly job — and `just apt-map-check` locally — resolves the whole translated
+  list against a clean 26.04 container and checks that the packages the map calls
+  absent are still absent. It separates "the archive did not answer" from "the map
+  is wrong", and refuses to pass when it would have installed nothing, since a
+  resolution that does nothing proves nothing.
+
+- The shell suite runs on Ubuntu in CI as well as on Arch. It is the only job that
+  exercises the non-Arch paths, and it earned that immediately: adding it is what
+  found the four undeclared packages above.
+
+- Package installs on apt are no longer silent. Several wordless minutes on a slow
+  mirror are indistinguishable from a hang, and during provisioning the console is the
+  only feedback there is.
+
+### Fixed
+
+- **Two of everything on Ubuntu.** Debian-family packages ship systemd *user* units for
+  session programs and enable them on install; Arch ships none. HWE starts those same
+  programs from `config/hypr/autostart.conf`, so the machine ran two bars, two idle
+  daemons racing to lock the screen and two wallpaper daemons on one output. The
+  packaged units now stand down — `autostart.conf` is the one owner.
+
+- The VM's automatic login works on Ubuntu. `agetty` lives in a different directory
+  there, and the unit that starts it ignores a missing binary, so the tty1 autologin
+  simply never happened and said nothing about it. A greeter pulled in as a dependency
+  is also stood down, since in a VM the session is reached without a password by design.
+
+- Aliases survive Debian's renamed binaries: `bat` is `batcat` there and `fd` is
+  `fdfind`, because the short names were taken. The package map settles what gets
+  installed; only the caller can settle what gets run.
 
 ## [1.2.0] — 2026-07-19
 
