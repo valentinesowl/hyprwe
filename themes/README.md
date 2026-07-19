@@ -1,293 +1,296 @@
-# Темы HWE
+# HWE themes
 
-Тема — это **один** файл `themes/<name>/theme.toml`. Из него `hwe theme apply <name>`
-рендерит цвета и геометрию **всех** компонентов (hyprland, waybar, kitty, rofi, mako,
-GTK 3/4, Kvantum, starship, kdeglobals, hyprlock, SDDM) через шаблоны `templates/**/*.j2`.
-Никакого ручного дублирования палитры: правишь значения в одном месте — перерисовывается всё.
+**English** · [Русский](README.ru.md)
 
-## Где живут темы
+A theme is **one** file: `themes/<name>/theme.toml`. From it, `hwe theme apply <name>`
+renders the colors and geometry of **every** component (hyprland, waybar, kitty, rofi, mako,
+GTK 3/4, Kvantum, starship, kdeglobals, hyprlock, SDDM) through the `templates/**/*.j2` templates.
+No hand-duplicated palettes: you edit values in one place and everything is redrawn.
 
-Два корня, устройство одинаковое:
+## Where themes live
 
-| Корень | Что это |
+Two roots, identical layout:
+
+| Root | What it is |
 |---|---|
-| `themes/` (в репо) | темы, которые HWE шипует; трекаются в git |
-| `~/.local/share/hwe/themes/` | **твои** темы; git о них ничего не знает |
+| `themes/` (in the repo) | themes HWE ships; tracked in git |
+| `~/.local/share/hwe/themes/` | **your** themes; git knows nothing about them |
 
-Твои темы лежат **вне репо** намеренно: они не всплывают в `git status`, не конфликтуют
-на `git pull` и не исчезают при переустановке чекаута. Оба корня видны в `hwe theme list`
-(свои помечены `(yours)`), `apply`/`validate`/`pick`/`wall` работают одинаково с обоими.
+Your themes live **outside the repo** on purpose: they don't show up in `git status`, don't
+conflict on `git pull`, and don't disappear when you reinstall the checkout. Both roots are
+visible in `hwe theme list` (yours are marked `(yours)`), and `apply`/`validate`/`pick`/`wall`
+work the same with either.
 
-Тема с именем, совпадающим с шипованной, **перекрывает** её — так `frost` перенастраивается
-под себя без правки репо. Путь к своему корню переопределяется через `HWE_THEMES_USER`.
+A theme whose name matches a shipped one **overrides** it — that's how you retune `frost`
+for yourself without touching the repo. The path to your own root is overridden with `HWE_THEMES_USER`.
 
-## Анатомия папки темы
+## Anatomy of a theme folder
 
 ```
-<корень>/<name>/
-├── theme.toml            # ЕДИНСТВЕННЫЙ источник правды: [palette] + [sem] + [params] + [font]
-├── wallpaper.png         # сгенерированные обои (genwall.py) — у шипованных трекается в git
-├── preview.png           # карточка-превью для rofi-галереи (genpreview.py)
-├── wallpapers/           # (опц.) твои фото — в .gitignore, не шипятся
-└── .current_wallpaper    # (runtime) запомненный выбор обоев — в .gitignore
+<root>/<name>/
+├── theme.toml            # THE single source of truth: [palette] + [sem] + [params] + [font]
+├── wallpaper.png         # generated wallpaper (genwall.py) — tracked in git for shipped themes
+├── preview.png           # preview card for the rofi gallery (genpreview.py)
+├── wallpapers/           # (opt.) your own photos — in .gitignore, not shipped
+└── .current_wallpaper    # (runtime) remembered wallpaper choice — in .gitignore
 ```
 
-Обязателен только `theme.toml`. `wallpaper.png`/`preview.png` генерируются (см. ниже).
+Only `theme.toml` is required. `wallpaper.png`/`preview.png` are generated (see below).
 
-## `[palette]` против `[sem]`
+## `[palette]` versus `[sem]`
 
-- **`[palette]`** — приватная «кухня» темы (например, полный Catppuccin). Нужна тебе как
-  справочник при подборе цветов. Шаблоны её **не видят**.
-- **`[sem]`** — семантический **контракт**: набор ролей, которые читают шаблоны. Код
-  никогда не обращается к сырым именам палитры, только к ролям. Отсутствующая роль —
-  это ошибка рендера (fail-loud), а не тихий чёрный экран.
+- **`[palette]`** is the theme's private "kitchen" (the full Catppuccin set, say). You need it
+  as a reference while picking colors. Templates **never see it**.
+- **`[sem]`** is the semantic **contract**: the set of roles the templates read. The code never
+  reaches for raw palette names, only for roles. A missing role is a render error (fail-loud),
+  not a silent black screen.
 
 ```toml
 name = "My Theme"
 
-[palette]                  # опционально, для себя
+[palette]                  # optional, for yourself
 mauve = "#cba6f7"
 
-[sem]                      # обязательно — контракт (см. таблицу ролей)
+[sem]                      # required — the contract (see the roles table)
 accent = "#cba6f7"
 # …
 
-[params]                  # опционально — геометрия/прозрачность (см. таблицу)
+[params]                  # optional — geometry/opacity (see the table)
 font = "JetBrainsMono Nerd Font"
 ```
 
-## Роли `[sem]` (обязательные — все 19)
+## `[sem]` roles (required — all 19)
 
-| Группа | Роли |
+| Group | Roles |
 |---|---|
-| Поверхности (тёмная → светлая) | `bg_dark` `bg_normal` `bg_light` `bg_lighter` |
-| Текст (тусклый → контрастный) | `fg_dim` `fg_normal` `fg_bright` `fg_white` |
-| Акцент | `accent` `accent_soft` |
-| Сырые цвета | `red` `green` `yellow` `orange` `blue` `magenta` `cyan` |
-| Служебные | `border` `urgent` |
+| Surfaces (dark → light) | `bg_dark` `bg_normal` `bg_light` `bg_lighter` |
+| Text (dim → contrasting) | `fg_dim` `fg_normal` `fg_bright` `fg_white` |
+| Accent | `accent` `accent_soft` |
+| Raw colors | `red` `green` `yellow` `orange` `blue` `magenta` `cyan` |
+| Utility | `border` `urgent` |
 
-Значения — hex-строки `"#rrggbb"`. Пропуск любой роли → `hwe theme validate` и `apply`
-падают с явным перечислением недостающих (форсировать можно `--lenient`, тогда пробелы
-заливаются кричащим `#ff00ff`).
+Values are hex strings, `"#rrggbb"`. Skip any role and `hwe theme validate` and `apply` fail
+with an explicit list of what's missing (you can force it with `--lenient`, and then the gaps
+are filled with a screaming `#ff00ff`).
 
-## Форма значений (проверяется до рендера)
+## Value shape (checked before rendering)
 
-Контракт говорит, какие ключи должны быть; это — какими они имеют право **быть**. Каждое
-значение подставляется в конфиг дословно, а `config/hypr/theme.conf` **сорсится**
-`hyprland.conf` — поэтому цвет с переводом строки внутри дописал бы в него произвольные
-директивы Hyprland (`exec-once = …`), и они выполнились бы при логине. Тема — это данные,
-а не код; проверки ниже и есть то, что делает это правдой.
+The contract says which keys must be there; this says what they are allowed **to be**. Every
+value is substituted into a config verbatim, and `config/hypr/theme.conf` is **sourced** by
+`hyprland.conf` — so a color with a newline inside it would append arbitrary Hyprland
+directives (`exec-once = …`) to that file, and they would run at login. A theme is data, not
+code; the checks below are what makes that true.
 
-| Что | Правило |
+| What | Rule |
 |---|---|
-| роли `[sem]`, `border_inactive` | ровно `#rrggbb` |
-| `border_gradient` | непустой список `#rrggbb` |
-| `opacity`, `active_opacity`, `inactive_opacity` | число 0…1 |
-| `border_angle` | число 0…360 |
-| остальные числовые `[params]` | число ≥ 0 (`true` за 1 не сойдёт) |
-| `bar_height` | число ≥ 1 |
+| `[sem]` roles, `border_inactive` | exactly `#rrggbb` |
+| `border_gradient` | non-empty list of `#rrggbb` |
+| `opacity`, `active_opacity`, `inactive_opacity` | number 0…1 |
+| `border_angle` | number 0…360 |
+| other numeric `[params]` | number ≥ 0 (`true` won't pass for 1) |
+| `bar_height` | number ≥ 1 |
 | `bar_float` | `true`/`false` |
-| `bar_ws_indicator` | одно из `glow` `underline` `pill` `dot` |
-| `name`, `font.family` | непустая строка без управляющих символов и без `" ; { } \ */ /*` |
-| размеры `[font]` | положительное число |
-| `[palette]` | свободная форма (шаблоны её не читают) — но без управляющих символов |
-| имя папки темы | буквы/цифры и `. _ -`, не с точки и не с дефиса |
+| `bar_ws_indicator` | one of `glow` `underline` `pill` `dot` |
+| `name`, `font.family` | non-empty string, no control characters and no `" ; { } \ */ /*` |
+| `[font]` sizes | positive number |
+| `[palette]` | free form (templates don't read it) — but no control characters |
+| theme folder name | letters/digits and `. _ -`, not starting with a dot or a hyphen |
 
-Незнакомый ключ в `[params]` — **не** ошибка: тема, написанная под будущий HWE, должна
-деградировать, а не падать (шаблоны его просто не читают). А вот опечатка в `[font]` даёт
-предупреждение — там весь набор ключей известен.
+An unknown key in `[params]` is **not** an error: a theme written for a future HWE should
+degrade, not crash (the templates simply don't read it). A typo in `[font]`, on the other hand,
+gives a warning — there the full set of keys is known.
 
-Нарушение формы `--lenient` **не** прощает: он дозаполняет то, что тема *забыла*, а не
-принимает то, что она указала неверно.
+A shape violation is **not** forgiven by `--lenient`: it fills in what a theme *forgot*, not
+what it stated incorrectly.
 
-**Авто-псевдонимы** (можно не задавать — выводятся из сырых цветов):
-`good`←`green`, `warn`←`yellow`, `bad`←`red`, `info`←`blue`. Плюс инъектится
-`transparent` = `#00000000`.
+**Auto-aliases** (you may leave them out — they're derived from the raw colors):
+`good`←`green`, `warn`←`yellow`, `bad`←`red`, `info`←`blue`. Plus `transparent` = `#00000000`
+is injected.
 
-**Выводимая роль `on_accent`** — читаемые «чернила» для текста/глифа, нарисованного
-**поверх** заливки акцентом (сплошной pill активного воркспейса, акцент-кнопки).
-Выбирается автоматически из двух краёв контракта — `bg_dark` и `fg_white` — тот,
-что контрастнее с `accent` (потому и работает одинаково в тёмной и светлой теме).
-Можно закрепить вручную в `[sem]`; в контракт 19 ролей **не** входит.
+**Derived role `on_accent`** — readable "ink" for text or a glyph drawn **on top of** an accent
+fill (the solid pill of the active workspace, accent buttons). It's picked automatically from
+the two edges of the contract — `bg_dark` and `fg_white` — whichever contrasts more with
+`accent` (which is why it works the same in a dark and a light theme). You can pin it by hand
+in `[sem]`; it is **not** part of the 19-role contract.
 
-## Параметры `[params]`
+## `[params]` parameters
 
-Все параметры имеют дефолт — можно опустить весь `[params]`, тогда тема рендерится как базовая.
+Every parameter has a default — you can omit all of `[params]`, and the theme renders as the base one.
 
-| Параметр | Дефолт | Назначение |
+| Parameter | Default | Purpose |
 |---|---|---|
-| `rounding` | `10` | скругление углов окон |
-| `border_size` | `2` | толщина рамки |
-| `gaps_in` / `gaps_out` | `5` / `12` | внутренние / внешние отступы |
-| `opacity` | `0.94` | базовая прозрачность (терминал; фокус) |
-| `blur_size` / `blur_passes` | `6` / `3` | радиус и число проходов блюра |
-| `border_gradient` | `[accent_soft, accent]` | цвета анимированной рамки (список hex) |
-| `border_angle` | `270` | стартовый угол градиента рамки |
-| `border_animate` | `100` | дс на оборот; больше = тише, `0` = статичная |
-| `border_inactive` | `bg_lighter` | рамка неактивного окна |
-| `active_opacity` / `inactive_opacity` | `opacity` / `opacity-0.04` | альфа окон целиком |
-| `bar_height` | `26` | высота waybar |
-| `bar_float` | `false` | «плавающий» остров вместо приклеенной панели |
-| `bar_gap` / `bar_gap_x` / `bar_radius` | `6` / `8` / `14` | отступы и скругление плавающей панели |
-| `bar_opacity` | `0.62` | альфа подложки бара над обоями (сколько в баре «стекла») |
-| `bar_ws_indicator` | `glow` | как помечен активный тег: `glow` `underline` `pill` `dot` |
-| `scheme` | `dark` | `dark`/`light` — светлотная схема (GTK prefer-dark, KDE, ANSI-свопы kitty) |
-| `anim_speed` | `1.0` | множитель скорости анимаций окон: больше = резче, `0` = выключить всё |
-| `icon_theme` | `Adwaita` | тема иконок GTK |
-| `cursor_theme` | `` (пусто) | тема курсора; пусто = не трогать системный/Hyprland-курсор |
-| `gtk_theme` | `Adwaita` | имя GTK-темы (напр. `adw-gtk3-dark`) |
+| `rounding` | `10` | window corner rounding |
+| `border_size` | `2` | border thickness |
+| `gaps_in` / `gaps_out` | `5` / `12` | inner / outer gaps |
+| `opacity` | `0.94` | base opacity (terminal; focus) |
+| `blur_size` / `blur_passes` | `6` / `3` | blur radius and number of passes |
+| `border_gradient` | `[accent_soft, accent]` | colors of the animated border (list of hex) |
+| `border_angle` | `270` | starting angle of the border gradient |
+| `border_animate` | `100` | ds per revolution; higher = quieter, `0` = static |
+| `border_inactive` | `bg_lighter` | border of an inactive window |
+| `active_opacity` / `inactive_opacity` | `opacity` / `opacity-0.04` | alpha of whole windows |
+| `bar_height` | `26` | waybar height |
+| `bar_float` | `false` | a "floating" island instead of a glued-on bar |
+| `bar_gap` / `bar_gap_x` / `bar_radius` | `6` / `8` / `14` | gaps and rounding of the floating bar |
+| `bar_opacity` | `0.62` | alpha of the bar backdrop over the wallpaper (how much "glass" is in the bar) |
+| `bar_ws_indicator` | `glow` | how the active tag is marked: `glow` `underline` `pill` `dot` |
+| `scheme` | `dark` | `dark`/`light` — lightness scheme (GTK prefer-dark, KDE, kitty ANSI swaps) |
+| `anim_speed` | `1.0` | speed multiplier for window animations: higher = snappier, `0` = turn everything off |
+| `icon_theme` | `Adwaita` | GTK icon theme |
+| `cursor_theme` | `` (empty) | cursor theme; empty = don't touch the system/Hyprland cursor |
+| `gtk_theme` | `Adwaita` | GTK theme name (e.g. `adw-gtk3-dark`) |
 
-> `opacity_unfocused` выводится из `opacity` автоматически — задавать не нужно.
-> Скругление окна rofi выводится из `rounding` (`rounding + 6`), отдельного ключа нет.
+> `opacity_unfocused` is derived from `opacity` automatically — no need to set it.
+> The rofi window rounding is derived from `rounding` (`rounding + 6`); there is no separate key.
 
-**Подпись каждой темы — анимированная рамка:** градиент вращается вечно, и цвета «текут»
-вокруг активного окна. `neon` и `amethyst` — громкая радуга (`border_animate = 25`),
-остальные — тихий одноцветный шиммер. Отключить: `border_animate = 0`.
+**Every theme's signature is its animated border:** the gradient rotates forever, and the colors
+"flow" around the active window. `neon` and `amethyst` are a loud rainbow (`border_animate = 25`),
+the rest are a quiet single-color shimmer. To turn it off: `border_animate = 0`.
 
-## Типографика `[font]`
+## Typography `[font]`
 
-Отдельная таблица-**контракт**: семейство шрифта + размер под каждую поверхность. Шаблоны
-читают **только** эти значения (нигде не хардкодят шрифт). Любую строку можно опустить —
-подставится дефолт рендерера (fallback). Размеры в pt (для бара — px); `terminal` можно
-дробный.
+A separate **contract** table: the font family plus a size for each surface. Templates read
+**only** these values (nothing hardcodes a font anywhere). Any line may be omitted — the
+renderer's default (fallback) is substituted. Sizes are in pt (px for the bar); `terminal` may
+be fractional.
 
-| Ключ | Дефолт | Поверхность |
+| Key | Default | Surface |
 |---|---|---|
-| `family` | `JetBrainsMono Nerd Font` | моно-шрифт: kitty, waybar, rofi, mako, hyprlock |
-| `ui_family` | `Sans` | пропорциональный UI-шрифт GTK-приложений (размер — из `gtk`) |
-| `terminal` | `9.5` | kitty (starship наследует его — своего размера нет) |
+| `family` | `JetBrainsMono Nerd Font` | mono font: kitty, waybar, rofi, mako, hyprlock |
+| `ui_family` | `Sans` | proportional UI font for GTK applications (size comes from `gtk`) |
+| `terminal` | `9.5` | kitty (starship inherits it — it has no size of its own) |
 | `bar` | `12` | waybar |
-| `launcher` | `11` | меню rofi — **база**; пикеры берут ±от неё (лаунчер +2, powermenu +1, keys +0, theme/wallpaper −1/−2) |
+| `launcher` | `11` | rofi menus — the **base**; pickers take ± from it (launcher +2, powermenu +1, keys +0, theme/wallpaper −1/−2) |
 | `notify` | `11` | mako |
-| `gtk` | `11` | размер шрифта GTK-приложений (семейство — из `ui_family`) |
+| `gtk` | `11` | font size of GTK applications (family comes from `ui_family`) |
 
 ```toml
 [font]
 family   = "JetBrainsMono Nerd Font"
-terminal = 11        # крупнее в терминале
-launcher = 12        # и в лаунчере
+terminal = 11        # larger in the terminal
+launcher = 12        # and in the launcher
 ```
 
-> Меняешь `family` — он меняется во всех моно-поверхностях сразу (kitty/waybar/rofi/mako/
-> hyprlock). GTK — отдельный `ui_family` (по умолчанию `Sans`, UI-шрифт), чтобы моно-шрифт
-> не лез в приложения; размер GTK — ключ `gtk`.
+> Change `family` and it changes across all mono surfaces at once (kitty/waybar/rofi/mako/
+> hyprlock). GTK has a separate `ui_family` (`Sans` by default, a UI font) so the mono font
+> doesn't creep into applications; the GTK size is the `gtk` key.
 
-## Светлые темы (`scheme = "light"`)
+## Light themes (`scheme = "light"`)
 
-Контракт `[sem]` нейтрален к светлоте: та же 19-ролевая таблица, просто заполненная
-со светлого края (тёмные чернила на светлых поверхностях). Порядок ролей не меняется —
-`bg_dark` всё ещё **самая тёмная** поверхность (в светлой теме это мягкий серый),
-`fg_white` — **самый контрастный** текст (в светлой теме — почти чёрный).
+The `[sem]` contract is neutral with respect to lightness: the same 19-role table, just filled
+in from the light end (dark ink on light surfaces). The order of the roles doesn't change —
+`bg_dark` is still the **darkest** surface (a soft gray in a light theme), and `fg_white` is
+the **most contrasting** text (nearly black in a light theme).
 
-`scheme = "light"` в `[params]` дополнительно переключает то, что нельзя выразить
-цветом:
+`scheme = "light"` in `[params]` additionally switches what can't be expressed with color:
 
-- GTK/libadwaita `prefer-dark` → off, и `gsettings color-scheme` → `prefer-light`;
-- в kitty ANSI-«чёрный»/«белый» (0/7/8/15) меняются краями, чтобы «чёрный» текст
-  оставался тёмным на светлой бумаге, а не красился в цвет поверхности.
+- GTK/libadwaita `prefer-dark` → off, and `gsettings color-scheme` → `prefer-light`;
+- in kitty the ANSI "black"/"white" (0/7/8/15) swap ends, so that "black" text stays dark on
+  light paper instead of being painted the color of the surface.
 
-Шипованных примера два: резкий эталон **`paper`** (полная яркость — доказывает
-нейтральность) и мягкая тёплая **`linen`** (низкая пиковая яркость, для светлой
-темы в тёмной комнате). Все шипованные темы проходят контраст-порог WCAG из
+There are two shipped examples: the sharp reference **`paper`** (full brightness — it proves
+the neutrality) and the soft, warm **`linen`** (low peak brightness, for a light theme in a
+dark room). All shipped themes pass the WCAG contrast threshold from
 `tests/test_theme_contrast.py`.
 
-> Ограничение: Qt/Kvantum-виджеты берут геометрию из тёмной базы `KvArcDark`
-> (`HWE_KVANTUM_BASE`), поэтому под светлой темой рамки Qt-приложений могут выглядеть
-> темновато. Палитра при этом светлая. GTK — основная цель светлого режима.
+> Limitation: Qt/Kvantum widgets take their geometry from the dark base `KvArcDark`
+> (`HWE_KVANTUM_BASE`), so under a light theme the borders of Qt applications may look a bit
+> dark. The palette is light nonetheless. GTK is the main target of light mode.
 
-## Раскладка бара — вне темы (`~/.config/hwe/waybar.jsonc`)
+## Bar layout — outside the theme (`~/.config/hwe/waybar.jsonc`)
 
-**Что** за виджеты на баре, в каком порядке, что делает клик — это выбор пользователя,
-а не тема. Поэтому это не в `theme.toml`. Положи необязательный
-`~/.config/hwe/waybar.jsonc`, и `hwe theme apply` **глубоко смержит** его поверх
-сгенерированного `config.jsonc` на каждом применении (`scripts/wbmerge.py`):
+**Which** widgets are on the bar, in what order, and what a click does is the user's choice,
+not the theme's. That's why it isn't in `theme.toml`. Drop in an optional
+`~/.config/hwe/waybar.jsonc` and `hwe theme apply` will **deep-merge** it over the generated
+`config.jsonc` on every apply (`scripts/wbmerge.py`):
 
 ```jsonc
 {
-    // переставить/убрать виджеты: массив заменяется целиком
+    // reorder/remove widgets: the array is replaced wholesale
     "modules-right": ["battery", "pulseaudio", "tray", "custom/cpu"],
-    // а объект мержится по ключам — правим только формат часов
+    // but an object is merged by key — we only fix the clock format
     "clock": { "format": "{:%H:%M}" },
-    // null удаляет сгенерированный ключ
+    // null deletes a generated key
     "custom/temp": null
 }
 ```
 
-Правила мержа: объекты — рекурсивно по ключам; массивы/строки/числа — заменяются
-целиком; `null` — удаляет ключ. Один маленький нетрекаемый файл переживает и
-переключение тем, и `git pull`. Сломанный JSON — не фейлит apply: предупреждение и
-берётся сгенерированный конфиг.
+Merge rules: objects merge recursively by key; arrays/strings/numbers are replaced wholesale;
+`null` deletes a key. One small untracked file survives both theme switching and `git pull`.
+Broken JSON does not fail the apply: you get a warning and the generated config is used.
 
-## Как добавить свою тему
+## How to add your own theme
 
 ```bash
-# 1. Скопировать любую как основу — в СВОЙ корень, не в репо
+# 1. Copy any theme as a base — into YOUR root, not the repo
 mkdir -p ~/.local/share/hwe/themes
 cp -r themes/mocha ~/.local/share/hwe/themes/mytheme
 cd ~/.local/share/hwe/themes/mytheme
-rm -f wallpaper.png preview.png    # это картинки mocha, сейчас сделаем свои
+rm -f wallpaper.png preview.png    # these are mocha's images, we'll make our own now
 
-# 2. Отредактировать theme.toml
-#    → name, [sem]-роли; [palette], [params], [font], [wallpaper] опциональны
+# 2. Edit theme.toml
+#    → name, [sem] roles; [palette], [params], [font], [wallpaper] are optional
 
-# 3. Проверить контракт
+# 3. Check the contract
 hwe theme validate mytheme
 
-# 4. Сгенерировать обои и превью (<repo> = твой чекаут HWE; нужен python-numpy из pkg/dev.lst)
+# 4. Generate the wallpaper and preview (<repo> = your HWE checkout; needs python-numpy from pkg/dev.lst)
 python3 <repo>/scripts/genwall.py    --theme theme.toml wallpaper.png
 python3 <repo>/scripts/genpreview.py theme.toml preview.png
 
-# 5. Применить
-hwe theme apply mytheme          # или интерактивно: hwe theme pick (SUPER+SHIFT+T)
+# 5. Apply
+hwe theme apply mytheme          # or interactively: hwe theme pick (SUPER+SHIFT+T)
 ```
 
-Ни один шаблон и ни один конфиг править не нужно — только `theme.toml`.
+You don't have to edit a single template or a single config — only `theme.toml`.
 
-> Обои необязательны: без `wallpaper.png` тема применится, просто не тронет текущие обои.
-> Без `preview.png` она появится в `hwe theme pick` без картинки.
+> The wallpaper is optional: without `wallpaper.png` the theme applies fine, it just won't
+> touch the current wallpaper. Without `preview.png` it shows up in `hwe theme pick` with no image.
 >
-> `just walls` / `just previews` перегенерируют **шипованные** темы (`themes/*/`) — для
-> своей вызывай генераторы напрямую, как выше.
+> `just walls` / `just previews` regenerate the **shipped** themes (`themes/*/`) — for your own,
+> call the generators directly, as above.
 
-## Обои и превью
+## Wallpapers and previews
 
-- **`wallpaper.png`** генерирует `scripts/genwall.py` — процедурный арт из `[sem]` и
-  блока `[wallpaper]`. 100% свой, без сторонних картинок и лицензий — потому и трекается
-  в git. Перегенерация: `just walls` (нужен `python-numpy` из `pkg/dev.lst`).
+- **`wallpaper.png`** is generated by `scripts/genwall.py` — procedural art from `[sem]` and
+  the `[wallpaper]` block. 100% our own, with no third-party images or licenses — which is why
+  it's tracked in git. Regenerate: `just walls` (needs `python-numpy` from `pkg/dev.lst`).
 
   ```toml
   [wallpaper]
-  style     = "aurora"   # см. таблицу ниже; по умолчанию "mesh"
-  seed      = 42         # (опц.) перекатить композицию, не переименовывая тему
-  intensity = 0.65       # (опц.) громкость акцента, по умолчанию 1.0
+  style     = "aurora"   # see the table below; "mesh" by default
+  seed      = 42         # (opt.) reroll the composition without renaming the theme
+  intensity = 0.65       # (opt.) accent volume, 1.0 by default
   ```
 
-  | style     | что рисует                                | кому идёт             |
+  | style     | what it draws                             | who it suits          |
   |-----------|-------------------------------------------|-----------------------|
-  | `mesh`    | мягкий облачный градиент + свечения       | сдержанным темам      |
-  | `aurora`  | ленты света (domain-warped шум)           | органичным, текучим   |
-  | `voronoi` | кристаллические грани со светящимися рёбрами | ледяным, low-poly  |
-  | `grid`    | synthwave: солнце в полосах + сетка в перспективе | громким, ретро |
-  | `signal`  | едва тлеющий фосфорный след в пустоте     | почти чёрным, пустым  |
-  | `skyline` | неоновый ночной город: силуэты крыш + окна pink/cyan | тёмным, кинематографичным |
+  | `mesh`    | soft cloudy gradient + glows              | restrained themes     |
+  | `aurora`  | ribbons of light (domain-warped noise)    | organic, flowing ones |
+  | `voronoi` | crystalline facets with glowing edges     | icy, low-poly ones |
+  | `grid`    | synthwave: a sun in stripes + a grid in perspective | loud, retro ones |
+  | `signal`  | a barely smoldering phosphor trail in the void | near-black, empty ones |
+  | `skyline` | neon night city: rooftop silhouettes + pink/cyan windows | dark, cinematic ones |
 
-  Стиль выбирается **по характеру темы**, а не ради разнообразия: `neon` — киберпанк,
-  город ночью, поэтому `skyline`; `amethyst` тих везде кроме бордюра, поэтому тихая
-  `aurora`; `void` — «едва отслеживающийся сигнал в пустоте бескрайнего космоса»,
-  поэтому `signal`, где пустота и есть сюжет. Композиция (угол градиента, число и позиции свечений, количество ячеек)
-  выводится из seed = crc32 имени темы — каждая тема получает свою картинку, а не общую
-  в другом оттенке. `intensity` нужна тёмным темам с ярким акцентом: у `void` фон
-  `#050508` при акценте `#00ffd2`, и на полной громкости обои перекрикивают десктоп.
-- **`preview.png`** генерирует `scripts/genpreview.py` — карточка поверх обоев для
-  rofi-галереи (`hwe theme pick`). Перегенерация: `just previews`.
-- Свои фото: положи в `themes/<name>/wallpapers/` (в `.gitignore`) — они появятся в
-  `hwe wall pick` рядом со сгенерированными. Активный выбор запоминается в `.current_wallpaper`.
+  The style is chosen **by the character of the theme**, not for the sake of variety: `neon` is
+  cyberpunk, a city at night, hence `skyline`; `amethyst` is quiet everywhere except its border,
+  hence the quiet `aurora`; `void` is "a barely traceable signal in the emptiness of endless
+  space", hence `signal`, where the emptiness is the subject. The composition (gradient angle,
+  the number and positions of the glows, the cell count)
+  is derived from seed = crc32 of the theme name — each theme gets its own picture, not a shared
+  one in a different shade. `intensity` is for dark themes with a bright accent: `void` has a
+  `#050508` background against a `#00ffd2` accent, and at full volume the wallpaper shouts over
+  the desktop.
+- **`preview.png`** is generated by `scripts/genpreview.py` — a card over the wallpaper for the
+  rofi gallery (`hwe theme pick`). Regenerate: `just previews`.
+- Your own photos: drop them into `themes/<name>/wallpapers/` (which is in `.gitignore`) — they
+  show up in `hwe wall pick` next to the generated ones. The active choice is remembered in `.current_wallpaper`.
 
-## Как это устроено под капотом
+## How it works under the hood
 
-`scripts/render-theme.py` читает `theme.toml`, проверяет контракт `[sem]`, затем проходит
-по всем `templates/**/*.j2` и рендерит каждый в `config/…` (Jinja2, `StrictUndefined` —
-обращение к незаданной переменной = ошибка). Фильтры под разные синтаксисы: `noh`
-(`#cba6f7`→`cba6f7`), `rgb`/`rgba` (Hyprland), `hexa` (`#cba6f7ed` — rofi/CSS-парсеры),
-`kcol` (`203,166,247` для KDE). Дальше
-`hwe theme apply` симлинкует результат в `~/.config` и перечитывает запущенные приложения.
+`scripts/render-theme.py` reads `theme.toml`, checks the `[sem]` contract, then walks all of
+`templates/**/*.j2` and renders each into `config/…` (Jinja2, `StrictUndefined` — touching an
+undefined variable is an error). There are filters for the different syntaxes: `noh`
+(`#cba6f7`→`cba6f7`), `rgb`/`rgba` (Hyprland), `hexa` (`#cba6f7ed` — rofi/CSS parsers),
+`kcol` (`203,166,247` for KDE). After that,
+`hwe theme apply` symlinks the result into `~/.config` and reloads the running applications.

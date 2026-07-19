@@ -1,112 +1,124 @@
-# Вклад в HWE
+# Contributing to HWE
 
-Спасибо, что заглянул. HWE — воспроизводимое окружение Wayland + Hyprland на Arch, собранное
-вокруг двух принципов: **всё автоматизируется** и **цвет живёт в одном месте**. Держись их —
-и патч ляжет естественно.
+**English** · [Русский](CONTRIBUTING.ru.md)
 
-## С чего начать
+Thanks for stopping by. HWE is a reproducible Wayland + Hyprland environment on Arch, built
+around two principles: **everything is automated** and **color lives in one place**. Stick to
+them and your patch will fall into place naturally.
 
-Лучший способ разрабатывать HWE — **внутри его же dev-VM**: она изолирована от твоей
-машины, поднимается одной командой и разворачивает **твою локальную ветку** (без пуша на
-GitHub).
+## Getting started
+
+The best way to develop HWE is **inside its own dev VM**: it is isolated from your machine,
+comes up with a single command, and deploys **your local branch** (no push to GitHub
+required).
 
 ```bash
-./bin/hwe doctor          # проверить хост (libvirtd, группы, KVM, сеть)
-git commit -am "wip"      # VM разворачивает ветку из локального git — нужен коммит
-./bin/hwe vm up           # поднять VM с текущей веткой (видна в virt-manager)
-./bin/hwe vm ssh          # зайти внутрь
-./bin/hwe vm rebuild      # пересобрать начисто после крупных правок
+./bin/hwe doctor vm            # check the host (libvirtd, groups, KVM, network)
+./bin/hwe vm up --uncommitted  # fast loop: deploy the working tree as it is
+./bin/hwe vm up                # or deploy the branch's last commit
+./bin/hwe vm ssh               # step inside
+./bin/hwe vm rebuild           # rebuild from scratch after big changes
 ```
 
-Конфиги в VM деплоятся **симлинками** на репозиторий, так что правки в `~/hwe/config/...`
-видны сразу. Подробности воркфлоу — в [README](README.md#песочница-и-разработка-vm).
+Configs inside the VM are deployed as **symlinks** into the repository, so edits in
+`~/hwe/config/...` show up immediately. Workflow details are in the
+[README](README.md#sandbox-and-development-vm).
 
-> **Никогда не гоняй `hwe install` / `hwe theme apply` / `hwe wall set` на своей рабочей
-> машине ради теста** — они перезагружают композитор, бар и меняют login-shell. Для этого
-> есть VM. На железе установщик и сам откажется стартовать из графической сессии.
+> **Never run `hwe install` / `hwe theme apply` / `hwe wall set` on your working machine
+> just to test something** — they restart the compositor and the bar, and they change your
+> login shell. That is what the VM is for. On bare metal the installer will refuse to start
+> from a graphical session anyway.
 
-## Прежде чем открыть PR
+## Before you open a PR
 
-Одна команда — она же и есть CI:
+One command — and it is also the CI:
 
 ```bash
 just check
 ```
 
-Зелёная локально — зелёная в пайплайне: CI гоняет те же гейты теми же инструментами, что
-и ты. Инструменты приезжают через `hwe install` (`pkg/dev.lst`); CI ставит тот же набор
-инлайн в джобах `.github/workflows/` — держи их в согласии, добавляя гейт. Что внутри:
+Green locally means green in the pipeline: CI runs the same gates with the same tools you
+do. The tools arrive through `hwe install` (`pkg/dev.lst`); CI installs the same set inline
+in the `.github/workflows/` jobs — keep the two in sync when you add a gate. What's inside:
 
 ```bash
-just lint        # shellcheck -x по bin/hwe, lib/*.sh, provision/*.sh
-just lint-py     # ruff check по всему репо (де-факто scripts/ + tests/)
-just lint-ci     # actionlint + yamllint по .github/
+just lint        # shellcheck -x over bin/hwe, lib/*.sh, provision/*.sh
+just lint-py     # ruff check over the whole repo (in practice scripts/ + tests/)
+just lint-ci     # actionlint + yamllint over .github/
 just test        # = test-py (pytest) + test-sh (bats)
 ```
 
-**Форматирование не гейт — и это осознанно.** `just fmt` (shfmt) и `just fmt-py`
-(ruff format) есть, пользуйся, если удобно. Но CI их не требует, и патч не завернут
-из-за вёрстки: в коде много намеренного выравнивания по колонкам (таблица подсказок в
-`vm_doctor`, таблицы цветов в `genwall.py`, палитры тем), а оба форматтера — школы
-`gofmt` и сносят его без возможности отключить. Линтеры ловят **баги** и потому строгие;
-форматтеры ловят **стиль** и потому добровольные.
+**Formatting is not a gate — deliberately.** `just fmt` (shfmt) and `just fmt-py`
+(ruff format) exist, use them if you like. But CI does not require them, and no patch gets
+turned away over layout: the code has a lot of intentional column alignment (the hint table
+in `vm_doctor`, the color tables in `genwall.py`, the theme palettes), and both formatters
+come from the `gofmt` school and flatten it with no way to opt out. Linters catch **bugs**,
+so they are strict; formatters catch **style**, so they are voluntary.
 
-Python-скрипты (`scripts/*.py`) — чистый stdlib там, где это возможно. Исключения
-точечные: `render-theme.py` тянет jinja2, `genwall.py` — numpy, `genpreview.py` вызывает
-imagemagick (внешним процессом). Всё это ставится из `pkg/dev.lst`.
+The Python scripts (`scripts/*.py`) are pure stdlib wherever that is possible. The
+exceptions are narrow: `render-theme.py` pulls in jinja2, `genwall.py` uses numpy,
+`genpreview.py` calls imagemagick (as an external process). All of it installs from
+`pkg/dev.lst`.
 
-## Тесты
+## Tests
 
 ```
-tests/                  pytest — движок тем, генераторы, waybar-модуль, гигиена репо
-tests/bats/             bats   — lib/common.sh, CLI hwe, hwe theme
+tests/                  pytest — theme engine, generators, waybar module, repo hygiene
+tests/bats/             bats   — lib/common.sh, the hwe CLI, hwe theme
 ```
 
-Правишь `scripts/*.py` или `lib/*.sh` — приложи тест. Ориентиры, что покрывать:
+If you touch `scripts/*.py` or `lib/*.sh`, bring a test along. Some pointers on what to
+cover:
 
-- **Движок тем** — контракт ролей и его fail-loud. Сломанный цвет не роняет десктоп, он
-  его перекрашивает; поймать это можно только тестом.
-- **`wbstat.py`** — логика поиска сенсора написана так, чтобы ездить между Intel/AMD/ARM/
-  VM. Твоя машина проверяет ровно одну из этих веток, тесты подсовывают фейковый `hwmon`
-  и проверяют остальные.
-- **`genwall.py`** — детерминизм: обои закоммичены, и если тема перестанет давать те же
-  байты, `just walls` начнёт молча пачкать рабочее дерево на каждом прогоне.
-- **`tests/test_repo_hygiene.py`** — сторожит сам индекс git. `.gitignore` — это фильтр,
-  а не гарантия: на уже отслеживаемый файл он не действует. Тест ловит картинки в корне,
-  чужие директории и сгенерированные конфиги.
+- **The theme engine** — the role contract and its fail-loud behavior. A broken color does
+  not crash the desktop, it repaints it; the only way to catch that is a test.
+- **`wbstat.py`** — the sensor lookup logic is written to travel across Intel/AMD/ARM/VM.
+  Your machine exercises exactly one of those branches; the tests feed it a fake `hwmon`
+  and check the rest.
+- **`genwall.py`** — determinism: the wallpapers are committed, and if a theme stops
+  producing the same bytes, `just walls` will start quietly dirtying the working tree on
+  every run.
+- **`tests/test_repo_hygiene.py`** — guards the git index itself. `.gitignore` is a filter,
+  not a guarantee: it has no effect on an already tracked file. The test catches images in
+  the root, stray directories and generated configs.
 
-Тесты не трогают живую систему: ни `~/.config`, ни композитор, ни пакеты. Всё, что
-требует настоящего железа (`hwe install`, `vm`, `theme apply`) — в VM, не в тестах.
+Tests never touch the live system: not `~/.config`, not the compositor, not packages.
+Anything that needs real hardware (`hwe install`, `vm`, `theme apply`) belongs in the VM,
+not in the tests.
 
-## Как всё покрашено (must-read перед правкой цвета)
+## How everything gets painted (must-read before touching color)
 
-Ни один конфиг не хардкодит цвет. Единственный источник правды — палитра темы
-`themes/<name>/theme.toml`, секция `[sem]` (~19 семантических ролей). `render-theme.py`
-превращает роли в `templates/<app>/*.j2` → сгенерированные `config/<app>/colors.*`
-(в `.gitignore`), а конфиги их `source`/`@import`/`include`'ят.
+No config hardcodes a color. The single source of truth is the theme palette
+`themes/<name>/theme.toml`, section `[sem]` (~19 semantic roles). `render-theme.py` turns
+the roles in `templates/<app>/*.j2` into generated `config/<app>/colors.*` (which are in
+`.gitignore`), and the configs `source`/`@import`/`include` them.
 
-Отсюда правило: **правишь внешний вид — правь шаблон или тему, не сгенерированный файл.**
-Файлы вроде `config/waybar/config.jsonc`, `config/*/colors.*`, `config/mako/config`,
-`hyprlock.conf` **генерируются** и перезаписываются при каждом `hwe theme apply` — твоя
-ручная правка там потеряется. Ищи соответствующий `templates/*.j2`.
+Hence the rule: **if you change the look, change the template or the theme, not the
+generated file.** Files like `config/waybar/config.jsonc`, `config/*/colors.*`,
+`config/mako/config`, `hyprlock.conf` are **generated** and overwritten on every
+`hwe theme apply` — your hand edit there will be lost. Look for the matching
+`templates/*.j2`.
 
-- **Добавить/изменить тему** → [`themes/README.md`](themes/README.md) (полный гайд по
-  контракту ролей и `[params]`). Обязательно `hwe theme validate <name>` — контракт
-  fail-loud, отсутствующая роль ломает рендер сразу, а не тихим чёрным экраном.
-- **Добавить пакет** → в `pkg/core.lst` (официальные repo) или `pkg/aur.lst` (AUR, только
-  если без него никак; помечай необязательное комментарием). Всё, что генерирует файлы в
-  `~/.config`, добавляй и в `.gitignore`, и в деплой (`_deploy_configs`).
-- **Добавить бинд** → `config/hypr/keybindings.conf`. Правило: стрелки — фокус/движение
-  окон, ни одна клавиша не биндится дважды. После — обнови таблицу биндов в README.
+- **Add or change a theme** → [`themes/README.md`](themes/README.md) (the full guide to the
+  role contract and `[params]`). Always run `hwe theme validate <name>` — the contract is
+  fail-loud, a missing role breaks the render immediately instead of via a silent black
+  screen.
+- **Add a package** → to `pkg/core.lst` (official repos) or `pkg/aur.lst` (AUR, only if
+  there is no way around it; mark anything optional with a comment). Anything that
+  generates files in `~/.config` goes into `.gitignore` and into the deploy
+  (`_deploy_configs`) as well.
+- **Add a keybind** → `config/hypr/keybindings.conf`. The rule: arrows are for focus and
+  window movement, and no key is bound twice. Afterwards, update the keybind table in the
+  README.
 
-## Коммиты и PR
+## Commits and PRs
 
-- Коммиты — короткие и по делу, в настоящем времени (`waybar: add cpu graph widget`).
-- Один PR — одна логическая тема. Крупное — разбивай на серию.
-- Если правка меняет поведение на живом железе (login-shell, greeter, автозапуск) —
-  опиши в PR, как ты это проверил (в идеале — в VM).
+- Commits are short and to the point, in the present tense (`waybar: add cpu graph widget`).
+- One PR, one logical topic. Split anything large into a series.
+- If your change affects behavior on live hardware (login shell, greeter, autostart),
+  describe in the PR how you verified it (ideally in the VM).
 
-## Лицензия
+## License
 
-HWE распространяется под [GPL-3.0](LICENSE). Открывая PR, ты соглашаешься, что твой вклад
-лицензируется на тех же условиях.
+HWE is distributed under [GPL-3.0](LICENSE). By opening a PR you agree that your
+contribution is licensed on the same terms.

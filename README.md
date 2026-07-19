@@ -1,310 +1,352 @@
 # Hyprland Workstation Environment (HWE)
 
+**English** · [Русский](README.ru.md)
+
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
 [![Release](https://img.shields.io/github/v/release/valentinesowl/hyprwe)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
-**Рабочее окружение на Arch — Hyprland и всё вокруг него: бар, лаунчер,
-уведомления, темы, экран входа.** Ставится одной командой и разворачивается
-одинаково на железе (`hwe install`) и на одноразовой виртуалке (`hwe vm up`) из
-одного источника.
+**A working environment on Arch — Hyprland and everything around it: bar, launcher,
+notifications, themes, login screen.** It installs with one command and deploys the same
+way on bare metal (`hwe install`) and on a disposable VM (`hwe vm up`), from one source.
 
-Окружение целиком описано в репозитории и воспроизводится на любой машине из
-этого описания. Цвета, геометрия и шрифты всех компонентов рендерятся из одного
-файла-палитры (`themes/<name>/theme.toml`) — тот же механизм, что даёт
-воспроизводимость, держит весь стек в одном тоне.
+The environment is described in full inside the repository and reproduces on any machine
+from that description. Colours, geometry and fonts of every component are rendered from a
+single palette file (`themes/<name>/theme.toml`) — the same mechanism that gives you
+reproducibility keeps the whole stack in one tone.
 
-- **Движок тем** — один `theme.toml` задаёт цвета всех компонентов сразу;
-  `hwe theme apply` меняет вид рабочего стола живьём. Десять встроенных тем.
-- **Модульный конфиг Hyprland** — hyprland, kitty, waybar, rofi, mako, hyprlock,
-  hypridle на `source`-инклудах.
-- **Dev-VM одной командой** — `hwe vm up` поднимает Arch-виртуалку через
-  `libvirt`/`virt-install` (видна в virt-manager), провижинит через `cloud-init`
-  и разворачивает в ней выбранную локальную ветку git прямо из твоего репозитория.
+- **Theme engine** — one `theme.toml` sets the colours of every component at once;
+  `hwe theme apply` changes the desktop live. Ten themes included.
+- **Modular Hyprland config** — hyprland, kitty, waybar, rofi, mako, hyprlock and
+  hypridle wired together with `source` includes.
+- **Dev VM in one command** — `hwe vm up` brings up an Arch VM through
+  `libvirt`/`virt-install` (visible in virt-manager), provisions it with `cloud-init`
+  and deploys your chosen local git branch straight from your own repository.
 
 <p align="center">
-  <img src="assets/themes.png" alt="встроенные темы HWE" width="100%">
+  <img src="assets/themes.png" alt="HWE built-in themes" width="100%">
   <br>
-  <em>Десять встроенных тем (восемь тёмных + две светлые: <code>paper</code> и мягкая <code>linen</code>) — каждая это один <code>theme.toml</code>, из которого рендерится весь стек.</em>
+  <em>Ten built-in themes (eight dark + two light: <code>paper</code> and the softer <code>linen</code>) — each one is a single <code>theme.toml</code> the whole stack is rendered from.</em>
 </p>
 
 ---
 
-## Установка
+## Documentation
 
-Установка на Arch-машину — одна команда: установщик ставит пакеты, раскатывает
-конфиги и настраивает вход в систему. Делает это **обратимо**, сохраняя всё, что уже
-стоит на машине.
+| Document | What is in it |
+|---|---|
+| [`themes/README.md`](themes/README.md) | writing a theme: the `[sem]` role contract, `[params]`, typography, wallpaper styles |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | development workflow, quality gates, tests, how colour flows through the repo |
+| [`CHANGELOG.md`](CHANGELOG.md) | what changed in each version |
+| [`LICENSE`](LICENSE) | GPL-3.0 |
+
+Everything below is the tour: install it, run it, hack on it.
+
+---
+
+## Installation
+
+Installing onto an Arch machine is one command: the installer adds packages, deploys the
+configs and sets up the login screen. It does so **reversibly**, preserving whatever is
+already on the machine.
 
 ```bash
-# 1. Склонировать репозиторий
+# 1. Clone the repository
 git clone https://github.com/valentinesowl/hyprwe.git ~/hwe
 cd ~/hwe
 
-# 2. Выйти в TTY (Ctrl+Alt+F2) и раскатать HWE на эту машину.
-#    Из графической сессии установщик откажется стартовать: он трогает композитор,
-#    бар и login-shell — это не делается из-под работающего Hyprland.
+# 2. Switch to a TTY (Ctrl+Alt+F2) and roll HWE out onto this machine.
+#    The installer refuses to start from a graphical session: it touches the
+#    compositor, the bar and the login shell — not something to do under a running Hyprland.
 ./bin/hwe install
 ```
 
-Что делает `hwe install`:
+What `hwe install` does:
 
-- ставит `pkg/core.lst` + `pkg/dev.lst` (официальные repo); `paru` бутстрапится, только
-  если `pkg/aur.lst` непустой;
-- симлинкует `config/*` в `~/.config`, **сохраняя** твои прежние конфиги рядом как `*.hwe-bak`;
-- генерирует и применяет тему по умолчанию (`mocha`);
-- делает `zsh` login-шеллом и включает сервисы: NetworkManager + SDDM (экран входа).
+- installs `pkg/core.lst` + `pkg/dev.lst` (official repos); `paru` is bootstrapped only if
+  `pkg/aur.lst` is non-empty;
+- symlinks `config/*` into `~/.config`, **keeping** your previous configs beside them as `*.hwe-bak`;
+- generates and applies the default theme (`mocha`);
+- makes `zsh` the login shell and enables NetworkManager + SDDM (the login screen).
 
-**GPU.** Intel/AMD работают из коробки — mesa приезжает вместе с Hyprland, драйверы
-in-tree, настраивать нечего. **NVIDIA** установщик определяет по `lspci` и настраивает сам:
-драйвер (open-модули для Turing+, проприетарный для старых карт), DRM-modeset, модули в
-initramfs и pacman-хук пересборки. Это трогает загрузку, поэтому спрашивает подтверждение —
-и, честно: **эта ветка пока не проверена на живом NVIDIA-железе** (разработка шла на Intel).
-`HWE_NO_NVIDIA=1` пропускает её целиком; `HWE_NVIDIA_DRIVER=<пакет>` фиксирует драйвер, если
-детект поколения промахнулся. Откат `hwe uninstall` этот пласт (initramfs/модули) **не** трогает.
+**GPU.** Intel/AMD work out of the box — mesa comes along with Hyprland, the drivers are
+in-tree, there is nothing to configure. **NVIDIA** is detected by the installer via `lspci`
+and set up for you: driver (open modules for Turing+, proprietary for older cards),
+DRM modesetting, initramfs modules and a pacman rebuild hook. That touches boot, so it asks
+for confirmation — and, honestly: **this path has not yet been tried on live NVIDIA hardware**
+(development happened on Intel). `HWE_NO_NVIDIA=1` skips it entirely; `HWE_NVIDIA_DRIVER=<package>`
+pins the driver if the generation detection guessed wrong. `hwe uninstall` does **not** roll
+that layer back (initramfs/modules).
 
-Осторожно и предсказуемо:
+Careful and predictable:
 
-- **Обновление системы — по флагу.** `pacman -Su` идёт только с `HWE_FULL_UPGRADE=1`;
-  иначе установка работает против текущей БД пакетов.
-- **Опт-ауты:** `HWE_NO_ZSH=1` (оставить shell как есть), `HWE_NO_NM=1` (оставить сеть как есть),
-  `HWE_NO_NVIDIA=1` (оставить GPU как есть), `HWE_FORCE=1` (запустить и в графической сессии — на свой страх).
-- **Откат:** `hwe uninstall` снимает симлинки и возвращает shell из `*.hwe-bak`; пакеты и
-  сервисы оставляет на месте — заблокировать себя нельзя.
+- **A system upgrade is opt-in.** `pacman -Su` runs only with `HWE_FULL_UPGRADE=1`; otherwise
+  the install works against the current package database.
+- **Opt-outs:** `HWE_NO_ZSH=1` (leave the shell alone), `HWE_NO_NM=1` (leave networking alone),
+  `HWE_NO_NVIDIA=1` (leave the GPU alone), `HWE_FORCE=1` (run even from a graphical session — at your own risk).
+- **Rollback:** `hwe uninstall` removes the symlinks and restores the shell from `*.hwe-bak`;
+  packages and services stay in place — you cannot lock yourself out.
 
-После установки `hwe` линкуется в `/usr/local/bin/hwe` — дальше зовёшь просто `hwe …` (до
-установки — `./bin/hwe …`). Первый вход поздоровается и подскажет `SUPER + /` — шпаргалку по
-горячим клавишам.
+After the install `hwe` is linked into `/usr/local/bin/hwe` — from then on you just call
+`hwe …` (before the install — `./bin/hwe …`). The first login greets you and points at
+`SUPER + /`, the keybinding cheatsheet.
 
-> Конфиги деплоятся **симлинками** на репозиторий: правишь `~/hwe/config/...` — изменения
-> сразу живые.
+> Configs are deployed as **symlinks** into the repository: edit `~/hwe/config/...` and the
+> change is live right away.
+
+### Keeping a machine in sync
+
+```bash
+hwe update            # pull the repo and reconcile this machine
+hwe update --check    # read-only: report drift, change nothing
+hwe doctor            # same read-only check (bare doctor = doctor host)
+hwe doctor vm         # host prerequisites for the VM workflow instead
+```
+
+`hwe update` pulls with `--ff-only` and stops if the tree is dirty or the history has
+diverged — it will never silently merge or stash your work. Then it relinks the configs,
+re-applies the current theme and offers to install packages that are missing from the
+lists. `hwe doctor` reports the same drift without touching anything: config symlinks,
+packages, login shell, Hyprland config errors. Detection and repair share the install
+primitives, so a check cannot drift from what the installer actually lays down.
 
 ---
 
 ## CLI: `hwe`
 
-| Команда | Что делает |
+| Command | What it does |
 |---|---|
-| `hwe install` | поставить пакеты и раскатать конфиги на **эту** машину |
-| `hwe uninstall` | откатить симлинки конфигов и login-shell (пакеты/сервисы остаются) |
-| `hwe theme <list\|apply\|pick\|validate\|current\|sddm>` | сгенерировать цвета всех компонентов из темы |
-| `hwe wall <list\|set\|random\|pick\|current\|restore>` | обои (сгенерированные темой или свои фото) |
-| `hwe power` | rofi-меню сессии (lock/logout/suspend/reboot/shutdown) |
-| `hwe keys` | шпаргалка по горячим клавишам (rofi, генерится из биндов; `SUPER+/`) |
-| `hwe clip <show\|wipe>` | история буфера обмена (cliphist, rofi; `SUPER+C`) |
-| `hwe record <toggle\|region>` | запись экрана (wf-recorder → `~/Videos`; индикатор в баре) |
-| `hwe checkconfig [--notify]` | показать ошибки конфига из запущенного Hyprland |
-| `hwe vm <up\|ssh\|console\|status\|list\|down\|destroy\|rebuild>` | локальная dev-VM (libvirt + cloud-init) |
-| `hwe doctor` | проверить готовность хоста к VM-воркфлоу |
-| `hwe version` | показать версию (из `bin/hwe`) |
+| `hwe install` | install packages and deploy configs onto **this** machine |
+| `hwe update [--check]` | pull the repo and reconcile this machine (configs, theme, packages) |
+| `hwe uninstall` | revert config symlinks and login shell (packages/services stay) |
+| `hwe theme <list\|apply\|pick\|validate\|current\|sddm>` | render every component's colours from a theme |
+| `hwe wall <list\|set\|random\|pick\|current\|restore>` | wallpaper (generated by the theme, or your own photos) |
+| `hwe power` | rofi session menu (lock/logout/suspend/reboot/shutdown) |
+| `hwe keys` | keybinding cheatsheet (rofi, generated from the binds; `SUPER+/`) |
+| `hwe clip <show\|wipe>` | clipboard history (cliphist, rofi; `SUPER+C`) |
+| `hwe record <toggle\|region>` | screen recording (wf-recorder → `~/Videos`; bar indicator) |
+| `hwe checkconfig [--notify]` | show config errors from the running Hyprland |
+| `hwe vm <up\|ssh\|console\|status\|list\|down\|destroy\|rebuild>` | the local dev VM (libvirt + cloud-init) |
+| `hwe doctor [host\|vm]` | health-check this machine (host, the default) or the VM prerequisites |
+| `hwe version` | print the version (from `bin/hwe`) |
 
 ---
 
-## Темы
+## Themes
 
-Тема — это **один** файл `themes/<name>/theme.toml`: приватная `[palette]` и семантический
-контракт `[sem]` (~19 ролей: `bg_*`, `fg_*`, `accent`, `red`/`green`/…, `border`, `urgent`).
-Шаблоны в `templates/*.j2` читают **только роли**, поэтому новая тема сводится к одному
-файлу `theme.toml`.
+A theme is **one** file, `themes/<name>/theme.toml`: a private `[palette]` and the semantic
+`[sem]` contract (~19 roles: `bg_*`, `fg_*`, `accent`, `red`/`green`/…, `border`, `urgent`).
+The templates in `templates/*.j2` read **roles only**, so a new theme comes down to a single
+`theme.toml`.
 
 ```bash
-hwe theme list                # доступные темы (текущая помечена *)
-hwe theme apply mocha         # рендер + деплой + живой reload всех компонентов
-hwe theme pick                # rofi-галерея с превью (SUPER+SHIFT+T)
-hwe theme validate <name>     # проверить тему на контракт (fail-loud)
+hwe theme list                # available themes (the current one is marked *)
+hwe theme apply mocha         # render + deploy + live reload of every component
+hwe theme pick                # rofi gallery with previews (SUPER+SHIFT+T)
+hwe theme validate <name>     # check a theme against the contract (fail-loud)
 ```
 
-Отдельная таблица `[font]` — тоже контракт: семейство шрифта и размеры под каждую
-поверхность (`terminal`/`bar`/`launcher`/`notify`/`gtk`), с дефолтами-fallback. Меняешь
-размер шрифта прямо в теме — см. [`themes/README.md`](themes/README.md#типографика-font).
+The separate `[font]` table is a contract too: the font family and sizes for each surface
+(`terminal`/`bar`/`launcher`/`notify`/`gtk`), with fallback defaults. Change the font size
+right in the theme — see [`themes/README.md`](themes/README.md#typography-font).
 
-`theme apply` рендерит цвета в hyprland, waybar, kitty, rofi, mako, GTK 3/4, Kvantum (Qt/KDE),
-starship, kdeglobals и hyprlock; затем перечитывает запущенные приложения и ставит обои темы.
-Гритер SDDM синхронизируется отдельно (нужен root): `hwe theme sddm`.
+`theme apply` renders colours into hyprland, waybar, kitty, rofi, mako, GTK 3/4, Kvantum
+(Qt/KDE), starship, kdeglobals and hyprlock; then it makes the running applications reread
+them and sets the theme's wallpaper. The SDDM greeter is synced separately (needs root):
+`hwe theme sddm`.
 
-**Готовые темы:** `amethyst` · `default` · `ember` · `frost` · `garden` · `mocha` (по
-умолчанию) · `neon` · `paper` (светлая) · `linen` (мягкая светлая) · `void`. Добавить свою — см.
+**Themes included:** `amethyst` · `default` · `ember` · `frost` · `garden` · `mocha` (the
+default) · `neon` · `paper` (light) · `linen` (soft light) · `void`. To add your own, see
 [`themes/README.md`](themes/README.md).
 
-### Обои
+### Wallpapers
 
 ```bash
-hwe wall pick                 # rofi с миниатюрами (SUPER+SHIFT+W)
-hwe wall random [theme]       # случайные обои темы
-hwe wall set <path|name>      # конкретный файл или имя из `wall list`
+hwe wall pick                 # rofi with thumbnails (SUPER+SHIFT+W)
+hwe wall random [theme]       # a random wallpaper of the theme
+hwe wall set <path|name>      # a specific file, or a name from `wall list`
 ```
 
-Каждая тема несёт **сгенерированные обои** `wallpaper.png` (собственные, без лицензий):
-процедурный арт в одном из шести стилей — см. `themes/README.md`.
-Свои фото клади в `themes/<name>/wallpapers/` (в `.gitignore`) — они появятся рядом с ними.
+Every theme carries a **generated** `wallpaper.png` (our own, no licences attached):
+procedural art in one of six styles — see `themes/README.md`. Put your own photos into
+`themes/<name>/wallpapers/` (it is in `.gitignore`) and they show up next to it.
 
 ---
 
-## Конфиг Hyprland
+## The Hyprland config
 
-Точка входа — `config/hypr/hyprland.conf`, которая только подключает модули:
+The entry point is `config/hypr/hyprland.conf`, which does nothing but pull in the modules:
 
-| Файл | За что отвечает |
+| File | What it covers |
 |---|---|
-| `colors.conf` | **генерируется** `hwe theme` (`$accent`, …) |
-| `environment.conf` | env сессии + `$mainMod`, `$terminal`, `$launcher` |
-| `monitors.conf` | мониторы и масштаб |
-| `appearance.conf` | general / decoration / blur / анимации |
-| `theme.conf` | **генерируется** — рамка, скругления, прозрачность из темы |
-| `input.conf` | клавиатура (us/ru), тачпад, жесты |
-| `keybindings.conf` | горячие клавиши (SUPER; фокус на стрелках; без дублей) |
-| `windowrules.conf` | правила окон и слоёв |
-| `autostart.conf` | автозапуск (waybar, mako, hyprpaper, polkit, трей…) |
+| `colors.conf` | **generated** by `hwe theme` (`$accent`, …) |
+| `environment.conf` | session env + `$mainMod`, `$terminal`, `$launcher` |
+| `monitors.conf` | monitors and scaling |
+| `appearance.conf` | general / decoration / blur / animations |
+| `theme.conf` | **generated** — border, rounding, opacity from the theme |
+| `input.conf` | keyboard (us/ru), touchpad, gestures |
+| `keybindings.conf` | keybinds (SUPER; focus on the arrows; no duplicates) |
+| `windowrules.conf` | window and layer rules |
+| `autostart.conf` | autostart (waybar, mako, hyprpaper, polkit, tray…) |
 
-Плюс `hypridle.conf` (idle → лок/DPMS) и `hyprlock.conf` (генерируется). При каждом входе
-`hwe checkconfig --notify` показывает на экране ошибки синтаксиса, если Hyprland поменял грамматику.
+Plus `hypridle.conf` (idle → lock/DPMS) and `hyprlock.conf` (generated). On every login
+`hwe checkconfig --notify` puts syntax errors on screen, should Hyprland change its grammar.
 
-**Основные бинды:**
-`SUPER+T` терминал · `SUPER+N` файлы · `SUPER+B` браузер · `SUPER+R` лаунчер (rofi) ·
-`SUPER+Q` закрыть · `SUPER+V` плавающее · `SUPER+F` фуллскрин · `SUPER+←↑↓→` фокус ·
-`SUPER+SHIFT+←↑↓→` двигать окно · `SUPER+1..0` воркспейсы · `SUPER+S` scratchpad ·
-`SUPER+L` / `SUPER+Escape` лок · `SUPER+Space` раскладка us↔ru ·
-`SUPER+SHIFT+T` тема · `SUPER+SHIFT+W` обои · `SUPER+SHIFT+E` меню питания ·
-`SUPER+/` шпаргалка биндов · `SUPER+C` буфер обмена · `SUPER+SHIFT+C` цветопипетка ·
-`SUPER+ALT+R` / `SUPER+ALT+S` запись экрана (весь / область) ·
-`Print` скриншот экрана → буфер · `SHIFT+Print` область → буфер ·
-`SUPER+Print` область → `~/Pictures` ·
-`SUPER+SHIFT+Print` / `SUPER+P` область с аннотацией (satty) → `~/Pictures`.
+**The main binds:**
+`SUPER+T` terminal · `SUPER+N` files · `SUPER+B` browser · `SUPER+R` launcher (rofi) ·
+`SUPER+Q` close · `SUPER+V` floating · `SUPER+F` fullscreen · `SUPER+←↑↓→` focus ·
+`SUPER+SHIFT+←↑↓→` move the window · `SUPER+1..0` workspaces · `SUPER+S` scratchpad ·
+`SUPER+L` / `SUPER+Escape` lock · `SUPER+Space` us↔ru layout ·
+`SUPER+SHIFT+T` theme · `SUPER+SHIFT+W` wallpaper · `SUPER+SHIFT+E` power menu ·
+`SUPER+/` bind cheatsheet · `SUPER+C` clipboard · `SUPER+SHIFT+C` colour picker ·
+`SUPER+ALT+R` / `SUPER+ALT+S` screen recording (whole / region) ·
+`Print` screenshot → clipboard · `SHIFT+Print` region → clipboard ·
+`SUPER+Print` region → `~/Pictures` ·
+`SUPER+SHIFT+Print` / `SUPER+P` region with annotation (satty) → `~/Pictures`.
 
 ---
 
-## Песочница и разработка (VM)
+## Sandbox and development (VM)
 
-Хочешь пощупать HWE на отдельной одноразовой машине — или разрабатывать сам HWE?
-`hwe vm up` поднимает **одноразовую** Arch-виртуалку (видна в virt-manager) и разворачивает
-в ней **твою локальную ветку git** прямо из твоего репозитория. Внутри отрабатывает тот же
-`hwe install`, что и на железе, так что это честная репетиция установки.
+Want to try HWE on a separate, disposable machine — or to develop HWE itself? `hwe vm up`
+brings up a **disposable** Arch VM (visible in virt-manager) and deploys **your local git
+branch** into it, straight from your own repository. Inside, the very same `hwe install`
+runs as on bare metal, so it is an honest rehearsal of the installation.
 
 ```bash
-# 0. Проверить хост (libvirtd, группы, сеть, KVM)
-./bin/hwe doctor
+# 0. Check the host (libvirtd, groups, network, KVM)
+./bin/hwe doctor vm
 
-# 1. Убедиться, что есть коммит (VM разворачивает ветку из локального git)
-git add -A && git commit -m "wip"        # если ещё не коммитили
-
-# 2. Поднять VM с текущей веткой (или указать конкретную)
+# 1. Bring up a VM with the current branch (or name one)
 ./bin/hwe vm up
 ./bin/hwe vm up feature-x
 
-# 3. Зайти внутрь (когда cloud-init отработает)
-./bin/hwe vm ssh
-./bin/hwe vm console      # или смотреть загрузку в virt-manager
-./bin/hwe vm status       # состояние + IP
+# 1b. Or deploy the working tree as it is, before committing anything
+./bin/hwe vm up --uncommitted
 
-# 4. Пересобрать начисто / снести
+# 2. Get inside (once cloud-init has finished)
+./bin/hwe vm ssh
+./bin/hwe vm console      # or watch it boot in virt-manager
+./bin/hwe vm status       # state + IP
+
+# 3. Rebuild from scratch / tear down
 ./bin/hwe vm rebuild
 ./bin/hwe vm destroy
 ```
 
-Логин в VM: пользователь **`hwe`**, пароль **печатается при `vm up`** (случайный,
-генерится на каждую сборку). Твои `~/.ssh/id_*.pub` прокидываются в госта автоматически —
-обычно вход по ключу, а пароль остаётся только для консоли.
+By default the VM gets the branch's last commit. `--uncommitted` deploys the working tree
+instead — modified, staged, deleted and new files included — so a change can be tested
+before it is committed. The snapshot is built through a separate index and a temporary
+`--shared` clone: your index, working tree and branches do not move, and no commit appears
+in your history. Ignored files stay behind; the guest regenerates them.
 
-Конфиги в VM деплоятся **симлинками** на репозиторий, так что правки в `~/hwe/config/...`
-видны сразу — удобно для разработки самого HWE.
+Logging into the VM: user **`hwe`**, password **printed by `vm up`** (random, per build).
+Your `~/.ssh/id_*.pub` keys are passed into the guest automatically — normally you log in
+by key, and the password is left for the console only.
 
-### Как это работает
+Configs inside the VM are deployed as **symlinks** into the repository, so edits in
+`~/hwe/config/...` are visible immediately — handy when developing HWE itself.
 
-1. `hwe vm up <branch>` качает Arch cloud-образ в `~/.cache/hwe/` (один раз) и
-   **сверяет его GPG-подпись** с закреплённым fingerprint'ом arch-boxes.
-2. Делает `git bundle` выбранной ветки и кладёт на **NoCloud seed ISO** (`xorriso`).
-3. `virt-install --import` создаёт **libvirt-домен** (виден в virt-manager).
-4. `cloud-init` в госте: создаёт юзера, монтирует seed, `git clone` из бандла,
-   запускает `hwe install` — машина поднимается сама, от образа до готового десктопа.
+### How it works
 
-### Переопределения (env)
+1. `hwe vm up <branch>` downloads the Arch cloud image into `~/.cache/hwe/` (once) and
+   **verifies its GPG signature** against the pinned arch-boxes fingerprint.
+2. It makes a `git bundle` of the chosen branch — or, with `--uncommitted`, of a throwaway
+   snapshot of your working tree — and puts it on a **NoCloud seed ISO** (`xorriso`).
+3. `virt-install --import` creates a **libvirt domain** (visible in virt-manager).
+4. `cloud-init` in the guest creates the user, mounts the seed, does a `git clone` from the
+   bundle and runs `hwe install` — the machine brings itself up, from image to finished desktop.
 
-| Переменная | Дефолт | Назначение |
+### Overrides (env)
+
+| Variable | Default | Purpose |
 |---|---|---|
-| `HWE_VM_NAME` | `hwe-dev` | имя домена libvirt |
-| `HWE_VM_MEMORY` | `4096` | RAM, МиБ |
-| `HWE_VM_VCPUS` | `4` | vCPU |
-| `HWE_VM_DISK_SIZE` | `24G` | размер корневого диска |
-| `HWE_VM_USER` | `hwe` | имя пользователя в госте |
-| `HWE_VM_PASSWORD` | *случайный* | пароль (задать, чтобы зафиксировать) |
-| `HWE_LIBVIRT_URI` | `qemu:///system` | URI libvirt (дефолт virt-manager) |
-| `HWE_VM_NETWORK` | `default` | имя libvirt-сети |
-| `HWE_IMAGE_URL` | Arch cloudimg | базовый qcow2 |
+| `HWE_VM_NAME` | `hwe-dev` | libvirt domain name |
+| `HWE_VM_MEMORY` | `4096` | RAM, MiB |
+| `HWE_VM_VCPUS` | `4` | vCPUs |
+| `HWE_VM_DISK_SIZE` | `24G` | root disk size |
+| `HWE_VM_USER` | `hwe` | user name in the guest |
+| `HWE_VM_PASSWORD` | *random* | password (set it to pin one) |
+| `HWE_LIBVIRT_URI` | `qemu:///system` | libvirt URI (the virt-manager default) |
+| `HWE_VM_NETWORK` | `default` | libvirt network name |
+| `HWE_IMAGE_URL` | Arch cloudimg | base qcow2 |
 
 ---
 
-## Структура репозитория
+## Repository layout
 
 ```
 hyprwe/
-├── bin/hwe                 # единый CLI: vm · install · theme · wall · power · keys · clip · record · checkconfig · doctor
+├── bin/hwe                 # the one CLI: vm · install · update · theme · wall · power · keys · clip · record · checkconfig · doctor
 ├── lib/
-│   ├── common.sh           # логирование, confirm, need, run
-│   ├── vm.sh               # virt-install + cloud-init + git-bundle
-│   ├── theme.sh            # hwe theme — рендер палитры во все компоненты
-│   ├── wall.sh             # hwe wall — обои (per-theme, живой swap)
-│   ├── power.sh            # hwe power — rofi-меню сессии
-│   ├── keys.sh             # hwe keys — шпаргалка биндов (rofi)
-│   ├── clip.sh             # hwe clip — история буфера (cliphist)
-│   ├── record.sh           # hwe record — запись экрана (wf-recorder)
-│   ├── checkconfig.sh      # hwe checkconfig — ошибки конфига Hyprland
-│   └── welcome.sh          # hwe welcome — приветствие при первом входе
+│   ├── common.sh           # logging, confirm, need, run
+│   ├── vm.sh               # virt-install + cloud-init + git bundle
+│   ├── theme.sh            # hwe theme — render the palette into every component
+│   ├── wall.sh             # hwe wall — wallpaper (per theme, live swap)
+│   ├── update.sh           # hwe update — ff-only pull + reconcile the machine
+│   ├── doctor.sh           # hwe doctor — drift check for the machine (and the VM host)
+│   ├── power.sh            # hwe power — rofi session menu
+│   ├── keys.sh             # hwe keys — bind cheatsheet (rofi)
+│   ├── clip.sh             # hwe clip — clipboard history (cliphist)
+│   ├── record.sh           # hwe record — screen recording (wf-recorder)
+│   ├── checkconfig.sh      # hwe checkconfig — Hyprland config errors
+│   └── welcome.sh          # hwe welcome — greeting on the first login
 ├── provision/
-│   ├── cloud-init/         # user-data.tmpl, meta-data.tmpl (токены @@VAR@@)
-│   ├── guest-install.sh    # ставит пакеты + деплоит конфиги (в госте и на железе)
-│   ├── sddm/hwe/           # QML-гритер SDDM (тема из активной палитры)
-│   ├── hyprland-uwsm.desktop  # сессия Hyprland (uwsm) для SDDM
-│   └── arch-boxes.asc      # пиннинг ключа подписи cloud-образа
+│   ├── cloud-init/         # user-data.tmpl, meta-data.tmpl (@@VAR@@ tokens)
+│   ├── guest-install.sh    # installs packages + deploys configs (guest and bare metal alike)
+│   ├── sddm/hwe/           # the SDDM QML greeter (themed from the active palette)
+│   ├── hyprland-uwsm.desktop  # the Hyprland (uwsm) session for SDDM
+│   └── arch-boxes.asc      # pinned signing key of the cloud image
 ├── pkg/                    # core.lst · dev.lst · vm.lst · aur.lst
-├── themes/<name>/          # theme.toml (палитра + [sem]) + wallpaper.png + preview.png
-├── templates/              # .j2 — из [sem] рендерятся colors всех компонентов
-├── config/                 # XDG-конфиги → симлинкуются в ~/.config
-│   ├── hypr/               # модульный Hyprland (см. hyprland.conf)
+├── themes/<name>/          # theme.toml (palette + [sem]) + wallpaper.png + preview.png
+├── templates/              # .j2 — every component's colours are rendered from [sem]
+├── config/                 # XDG configs → symlinked into ~/.config
+│   ├── hypr/               # the modular Hyprland (see hyprland.conf)
 │   ├── waybar/ rofi/ mako/ kitty/ gtk-3.0/ gtk-4.0/ zsh/
 │   └── starship.toml
 ├── scripts/                # render-theme.py · genwall.py · genpreview.py · wbstat.py
-├── tests/                  # pytest (движок тем, генераторы, гигиена репо) + bats/ (bash)
-├── .github/workflows/      # ci.yml (гейты на PR) · release.yml (тег vX.Y.Z → релиз)
-├── CHANGELOG.md            # версия живёт в bin/hwe; тег и CHANGELOG сверяются в CI
-└── justfile                # dev-задачи (just up / ssh / check / walls …)
+├── tests/                  # pytest (theme engine, generators, repo hygiene) + bats/ (bash)
+├── .github/workflows/      # ci.yml (PR gates) · release.yml (tag vX.Y.Z → release)
+├── CHANGELOG.md            # the version lives in bin/hwe; tag and CHANGELOG are cross-checked in CI
+└── justfile                # dev tasks (just up / ssh / check / walls …)
 ```
 
-## Разработка
+## Development
 
 ```bash
-just            # список задач
+just            # list the tasks
 just up         # = hwe vm up
-just check      # всё, что проверяет CI: линтеры + тесты (см. CONTRIBUTING.md)
-just test       # только тесты: pytest + bats
-just lint       # shellcheck по всем скриптам
-just fmt        # shfmt (4 пробела; не гейт)
-just walls      # перегенерировать обои всех тем
-just previews   # перегенерировать превью тем (для rofi-галереи)
-just gallery    # пересобрать assets/themes.png из превью
+just check      # everything CI checks: linters + tests (see CONTRIBUTING.md)
+just test       # tests only: pytest + bats
+just lint       # shellcheck over every script
+just fmt        # shfmt (4 spaces; not a gate)
+just walls      # regenerate the wallpapers of every theme
+just previews   # regenerate the theme previews (for the rofi gallery)
+just gallery    # rebuild assets/themes.png from the previews
 ```
 
-Гейты качества ставятся вместе со всем остальным через `hwe install` (`pkg/dev.lst`), и CI
-ставит ровно их же — так что зелёный `just check` локально означает зелёный пайплайн.
-Как контрибьютить — [CONTRIBUTING.md](CONTRIBUTING.md).
+The quality gates are installed along with everything else by `hwe install` (`pkg/dev.lst`),
+and CI installs exactly the same ones — so a green `just check` locally means a green
+pipeline. How to contribute — [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
-## Статус
+## Status
 
-`v1.0.0` — первый стабильный релиз: VM-воркфлоу, установщик, движок тем (10 тем),
-SDDM-гритер, zsh. Дальше: больше компонентов панели, воркфлоу и полировка.
+`v1.0.0` — the first stable release: the VM workflow, the installer, the theme engine
+(10 themes), the SDDM greeter, zsh. Next: more bar components, more workflows, polish.
 
-## Благодарности
+## Acknowledgements
 
-Вдохновлено собственной системой автора для AwesomeWM и проектом
-[HyDE](https://github.com/HyDE-Project/HyDE) — спасибо ему за идеи.
+Inspired by the author's own system for AwesomeWM and by
+[HyDE](https://github.com/HyDE-Project/HyDE) — thank you for the ideas.
 
-## Лицензия
+## License
 
 [GPL-3.0](LICENSE) © 2026 valentinesowl.
 
-Обои и превью тем (`themes/*/wallpaper.png`, `themes/*/preview.png`) сгенерированы
-скриптами репозитория и распространяются под той же лицензией. Личные фото из
-`themes/*/wallpapers/` остаются локальными (см. `.gitignore`).
+The wallpapers and theme previews (`themes/*/wallpaper.png`, `themes/*/preview.png`) are
+generated by the repository's own scripts and ship under the same license. Personal photos
+in `themes/*/wallpapers/` stay local (see `.gitignore`).

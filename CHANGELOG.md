@@ -1,131 +1,131 @@
 # Changelog
 
-Формат — [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/),
-версии — [Semantic Versioning](https://semver.org/lang/ru/).
+Format — [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+versioning — [Semantic Versioning](https://semver.org/).
 
-Версия живёт в `bin/hwe` (`HWE_VERSION`). Релизный workflow не опубликует тег,
-который с ней расходится, а тест сверяет её с верхней записью этого файла — так
-что три источника не разъедутся.
+The version lives in `bin/hwe` (`HWE_VERSION`). The release workflow will not publish
+a tag that disagrees with it, and a test pins it to the newest entry in this file — so
+the three sources cannot drift apart.
 
 ## [Unreleased]
 
-### Добавлено
+### Added
 
-- **`hwe update`** — привести машину в соответствие с репозиторием: `git pull
-  --ff-only` (безопасно — откажется на незакоммиченных правках или разошедшейся
-  истории, ты сам разруливаешь), перелинковать конфиги, переприменить текущую
-  тему, доустановить недостающие пакеты (core + dev, AUR по возможности; спросит
-  перед установкой). `hwe update --check` — только read-only отчёт о расхождениях.
-- **`hwe vm up --uncommitted`** (и `hwe vm rebuild --uncommitted`) — развернуть в
-  VM рабочее дерево как есть: историю ветки плюс всё незакоммиченное сверху
-  (изменённое, застейдженное, удалённое и новые файлы). Раньше протестировать
-  правку можно было только закоммитив её. Снимок собирается через отдельный
-  индекс и временный `--shared` клон — твой индекс, рабочее дерево и ветки не
-  двигаются, коммита в истории не появляется. Игнорируемые файлы не едут: это
-  выхлоп генераторов, гость соберёт его сам.
-- **`hwe doctor host`** — проверка установленной машины на дрейф: целы ли
-  симлинки `~/.config`, установлены ли пакеты из списков, чист ли
-  `hyprctl configerrors`, zsh ли login-shell. Только чтение, ничего не меняет.
-  Голый `hwe doctor` теперь = `hwe doctor host`; прежняя проверка пред-условий
-  VM переехала под явный **`hwe doctor vm`**.
+- **`hwe update`** — bring the machine in line with the repository: `git pull
+  --ff-only` (safe — it refuses on uncommitted changes or diverged history and
+  leaves those to you), relink the configs, re-apply the current theme, install
+  packages that are missing (core + dev, AUR best-effort; it asks before
+  installing). `hwe update --check` is a read-only drift report and nothing else.
+- **`hwe vm up --uncommitted`** (and `hwe vm rebuild --uncommitted`) — deploy the
+  working tree into the VM as it is: the branch's history plus everything
+  uncommitted on top of it (modified, staged, deleted and new files). Testing a
+  change used to require committing it first. The snapshot is built through a
+  separate index and a temporary `--shared` clone — your index, working tree and
+  branches do not move, and no commit appears in your history. Ignored files stay
+  behind: they are generator output, and the guest builds its own.
+- **`hwe doctor host`** — check an installed machine for drift: are the `~/.config`
+  symlinks intact, are the packages from the lists installed, is `hyprctl
+  configerrors` clean, is zsh the login shell. Read-only, it changes nothing.
+  Bare `hwe doctor` now means `hwe doctor host`; the former VM prerequisite check
+  moved under an explicit **`hwe doctor vm`**.
 
-### Исправлено
+### Fixed
 
-- Деплой больше не создаёт инертные симлинки `~/.config/{color-schemes,kvantum,sddm}`.
-  Эти три `config/<name>/` — выхлоп `theme apply`, который читается по другим путям
-  (XDG_DATA для схемы цветов, собирается в `~/.config/Kvantum/HWE`, ставится в
-  `/usr/share/sddm/themes/hwe`), а не из `~/.config`. Общий предикат `_config_is_staging`
-  исключает их и из деплоя, и из `hwe doctor host`, чтобы проверка не расходилась с установкой.
+- Deployment no longer creates inert `~/.config/{color-schemes,kvantum,sddm}` symlinks.
+  Those three `config/<name>/` dirs are `theme apply` output that is read from other
+  paths (XDG_DATA for the colour scheme, assembled into `~/.config/Kvantum/HWE`,
+  installed into `/usr/share/sddm/themes/hwe`) rather than from `~/.config`. The shared
+  `_config_is_staging` predicate excludes them from the deploy and from `hwe doctor host`
+  alike, so the check cannot diverge from the install.
 
 ## [1.0.0] — 2026-07-18
 
-Первый стабильный релиз. С него `hwe` — публичный интерфейс: ломающие изменения
-в нём поедут только в 2.0.0.
+The first stable release. From here on `hwe` is a public interface: breaking changes
+to it only ship in 2.0.0.
 
-### Добавлено
+### Added
 
-- **Dev-VM в одну команду.** `hwe vm up` поднимает Arch-виртуалку через
-  `libvirt`/`virt-install` (видна в virt-manager), провижинит её полностью
-  автоматически через `cloud-init` и разворачивает выбранную **локальную** ветку
-  git — без пуша на GitHub. Cloud-образ проверяется по GPG-подписи с пиннингом
-  ключа arch-boxes и сверкой SHA256 до сборки.
-- **Единый движок тем.** Один `themes/<name>/theme.toml` → цвета всех
-  компонентов. Контракт из 19 семантических ролей, рендер через Jinja2 в
-  `config/<app>/colors.*`; отсутствующая роль валит рендер сразу, а не красит
-  экран в чёрный. `hwe theme apply` меняет вид всего рабочего стола живьём.
-- **Десять встроенных тем** — восемь тёмных (default, mocha, ember, frost,
-  garden, neon, void, amethyst) и две светлые (**`paper`** — резкий эталон,
-  **`linen`** — мягкая тёплая, низкая пиковая яркость для светлого-в-темноте).
-  `neon` — cyberpunk / neon-noir. Каждая с процедурно сгенерированными обоями и
-  превью-карточкой; контраст каждой проходит порог WCAG (зафиксировано тестом
+- **A dev VM in one command.** `hwe vm up` brings up an Arch VM through
+  `libvirt`/`virt-install` (visible in virt-manager), provisions it fully
+  automatically with `cloud-init` and deploys the chosen **local** git branch —
+  with no push to GitHub. The cloud image is verified by GPG signature against a
+  pinned arch-boxes key, with a SHA256 cross-check, before anything is built.
+- **One theme engine.** A single `themes/<name>/theme.toml` → the colours of every
+  component. A contract of 19 semantic roles, rendered through Jinja2 into
+  `config/<app>/colors.*`; a missing role fails the render outright instead of
+  painting the screen black. `hwe theme apply` changes the whole desktop live.
+- **Ten built-in themes** — eight dark (default, mocha, ember, frost, garden, neon,
+  void, amethyst) and two light (**`paper`**, the crisp reference, and **`linen`**,
+  soft and warm with a low peak brightness for light-in-the-dark). `neon` is
+  cyberpunk / neon-noir. Each comes with a procedurally generated wallpaper and a
+  preview card; each one's contrast clears the WCAG threshold (pinned by
   `tests/test_theme_contrast.py`).
-- **Светлый режим** — `scheme = "dark"|"light"` в `[params]`. Переключает GTK
-  `prefer-dark`, `gsettings color-scheme` и ANSI-свопы kitty (чёрный/белый
-  остаются на своих краях).
-- **Свои темы живут вне репозитория** — `~/.local/share/hwe/themes/` (путь
-  переопределяется через `HWE_THEMES_USER`). Устройство то же, что у шипованных:
-  `list`/`validate`/`apply`/`pick`/`wall` работают с обоими корнями одинаково.
-  Твои темы не всплывают в `git status`, не конфликтуют на `git pull` и не
-  исчезают вместе с чекаутом. Тема с именем шипованной **перекрывает** её —
-  `hwe theme list` помечает свои как `(yours)`.
-- **Роль `on_accent`** — выводимые «чернила» для текста поверх заливки акцентом
-  (сплошной pill активного воркспейса читается на любом акценте). Выбор по
-  контрасту из `bg_dark`/`fg_white`, корректен и в светлой теме; можно закрепить
-  в `[sem]`. В контракт 19 ролей не входит.
-- **`[params]` кастомизации**: `bar_opacity` (альфа подложки бара), `anim_speed`
-  (скорость анимаций окон; `0` = выключить), `icon_theme` / `cursor_theme` /
-  `gtk_theme`. Скругление окна rofi следует за `rounding`. `[font].ui_family` —
-  отдельный UI-шрифт GTK-приложений (по умолчанию `Sans`), чтобы моно-семейство
-  не лезло в GTK.
-- **Раскладка бара — вне темы**: `~/.config/hwe/waybar.jsonc` глубоко мержится
-  поверх сгенерированного `config.jsonc` на каждом apply (`scripts/wbmerge.py`).
-  Переставить/убрать/добавить виджеты, не редактируя генерируемый файл.
-- **Процедурные обои** (`scripts/genwall.py`): шесть стилей (mesh, aurora,
-  voronoi, grid, signal, skyline), палитра берётся из темы. Ни одной сторонней
-  картинки — всё вычисляется из палитры, поэтому едет в репозитории без
-  лицензионных хвостов. Композиция детерминирована по имени темы.
-- **Модульный конфиг Hyprland** — hyprland, kitty, waybar, rofi, mako, hyprlock,
-  hypridle на `source`-инклудах.
-- **Waybar**: тонкий моноширинный бар, все индикаторы — один Nerd Font глиф,
-  который морфится по уровню; точные значения в тултипе. Виджеты CPU/RAM/
-  температуры (`scripts/wbstat.py`) находят сенсор по имени чипа (coretemp,
-  k10temp, zenpower, cpu_thermal, acpitz), а не по номеру hwmon, и прячутся, если
-  сенсора нет.
-- **NVIDIA на bare metal** (экспериментально). Установщик определяет NVIDIA по
-  `lspci` и настраивает драйвер (open-модули для Turing+, проприетарный для
-  старых карт по коду чипа), DRM-modeset, модули initramfs и pacman-хук
-  пересборки. Логика выбора драйвера и правки `mkinitcpio.conf` покрыта тестами
-  (`tests/bats/gpu.bats`), но сам путь **не проверен на живом NVIDIA-железе**.
-  `HWE_NO_NVIDIA=1` пропускает; `HWE_NVIDIA_DRIVER` фиксирует пакет. Intel/AMD
-  ничего из этого не касается. Не откатывается `hwe uninstall`.
-- **CLI `hwe`**: `vm`, `install`, `uninstall`, `theme`, `wall`, `power`, `keys`,
+- **Light mode** — `scheme = "dark"|"light"` in `[params]`. It switches GTK
+  `prefer-dark`, `gsettings color-scheme` and the kitty ANSI swaps (black and white
+  stay at their own ends).
+- **Your own themes live outside the repository** — `~/.local/share/hwe/themes/`
+  (the path is overridable via `HWE_THEMES_USER`). They are built exactly like the
+  shipped ones: `list`/`validate`/`apply`/`pick`/`wall` treat both roots the same.
+  Your themes never surface in `git status`, never conflict on `git pull` and never
+  disappear with a checkout. A theme named like a shipped one **overrides** it —
+  `hwe theme list` marks yours as `(yours)`.
+- **The `on_accent` role** — the derived "ink" for text on top of an accent fill (the
+  solid pill of the active workspace stays readable on any accent). It is picked by
+  contrast from `bg_dark`/`fg_white`, is correct in a light theme too, and can be
+  pinned in `[sem]`. It is not part of the 19-role contract.
+- **`[params]` customisation**: `bar_opacity` (alpha of the bar's backdrop),
+  `anim_speed` (window animation speed; `0` disables them), `icon_theme` /
+  `cursor_theme` / `gtk_theme`. The rofi window's rounding follows `rounding`.
+  `[font].ui_family` is a separate UI font for GTK applications (`Sans` by default),
+  so the mono family does not creep into GTK.
+- **The bar layout lives outside the theme**: `~/.config/hwe/waybar.jsonc` is deep-merged
+  over the generated `config.jsonc` on every apply (`scripts/wbmerge.py`). Move, drop or
+  add widgets without editing a generated file.
+- **Procedural wallpapers** (`scripts/genwall.py`): six styles (mesh, aurora, voronoi,
+  grid, signal, skyline), with the palette taken from the theme. Not a single
+  third-party image — everything is computed from the palette, so it ships in the
+  repository with no licensing tail. The composition is deterministic per theme name.
+- **A modular Hyprland config** — hyprland, kitty, waybar, rofi, mako, hyprlock and
+  hypridle wired together with `source` includes.
+- **Waybar**: a thin monospaced bar where every indicator is a single Nerd Font glyph
+  that morphs with the level; exact values live in the tooltip. The CPU/RAM/temperature
+  widgets (`scripts/wbstat.py`) find the sensor by chip name (coretemp, k10temp,
+  zenpower, cpu_thermal, acpitz) rather than by hwmon number, and hide themselves when
+  there is no sensor.
+- **NVIDIA on bare metal** (experimental). The installer detects NVIDIA via `lspci` and
+  sets up the driver (open modules for Turing+, proprietary for older cards by chip
+  code), DRM modesetting, initramfs modules and a pacman rebuild hook. The driver
+  selection logic and the `mkinitcpio.conf` edits are covered by tests
+  (`tests/bats/gpu.bats`), but the path itself is **untested on live NVIDIA hardware**.
+  `HWE_NO_NVIDIA=1` skips it; `HWE_NVIDIA_DRIVER` pins the package. Intel/AMD are not
+  touched by any of this. `hwe uninstall` does not roll it back.
+- **The `hwe` CLI**: `vm`, `install`, `uninstall`, `theme`, `wall`, `power`, `keys`,
   `clip`, `record`, `checkconfig`, `doctor`, `version`.
-- **Тема для SDDM** — QML-гритер, синхронизируется с активной палитрой.
-- **Гейты качества**: shellcheck + ruff + pytest + bats, все запускаются одной
-  командой `just check` и той же командой в CI.
+- **An SDDM theme** — a QML greeter, kept in sync with the active palette.
+- **Quality gates**: shellcheck + ruff + pytest + bats, all run by the single command
+  `just check`, and by the same command in CI.
 
-### Безопасность
+### Security
 
-- **Значения темы проверяются по форме до рендера, а не только на наличие.**
-  `config/hypr/theme.conf` сорсится `hyprland.conf`, поэтому роль вида
-  `accent = "#000000\nexec-once = …"` (`\n` — легальный TOML-escape) дописала бы
-  в него произвольные директивы Hyprland с исполнением при логине. Цвета обязаны
-  быть `#rrggbb`, числа — числами в своих диапазонах, строки — без управляющих
-  символов; иначе не рендерится ничего, и `--lenient` этого не прощает.
-  Незнакомый ключ в `[params]` не ошибка — тема под будущий HWE деградирует, а не
-  падает.
-- **Имя темы проверяется как имя каталога** (буквы/цифры и `. _ -`, не с точки и
-  не с дефиса): `hwe theme apply ../../etc` не выходит за корни тем, а имя с
-  ведущим дефисом не читается как опция.
+- **Theme values are checked for shape before the render, not just for presence.**
+  `config/hypr/theme.conf` is sourced by `hyprland.conf`, so a role like
+  `accent = "#000000\nexec-once = …"` (`\n` being a legal TOML escape) would append
+  arbitrary Hyprland directives to it, executed at login. Colours must be `#rrggbb`,
+  numbers must be numbers within their ranges, strings must carry no control
+  characters; otherwise nothing renders at all, and `--lenient` does not forgive it.
+  An unknown key in `[params]` is not an error — a theme written for a future HWE
+  degrades instead of failing.
+- **A theme name is validated as a directory name** (letters/digits and `. _ -`, not
+  leading with a dot or a hyphen): `hwe theme apply ../../etc` cannot escape the theme
+  roots, and a name with a leading hyphen cannot be read as an option.
 
-### Известные ограничения
+### Known limitations
 
-- Чужой конфиг в `/etc/sddm.conf.d`, оставшийся от другого окружения, может
-  перебить наш: SDDM читает каждый файл в этой директории и побеждает последний
-  по алфавиту. HWE намеренно не трогает файлы, которые ему не принадлежат —
-  удалять их должен деинсталлятор того окружения. Если после `hwe theme sddm`
-  экран логина выглядит чужим, посмотри, что лежит в этой директории.
+- A foreign config in `/etc/sddm.conf.d` left behind by another environment can override
+  ours: SDDM reads every file in that directory and the alphabetically last one wins.
+  HWE deliberately does not touch files it does not own — removing them is the job of
+  that environment's uninstaller. If the login screen looks foreign after
+  `hwe theme sddm`, look at what is in that directory.
 
 [Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.0.0
-
