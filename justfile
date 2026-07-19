@@ -51,7 +51,7 @@ check: lint lint-py lint-ci test
 # instead of being reported as SC1091. Severity stays at the default (info) —
 # the few info findings we consider wrong carry a justified inline disable.
 lint:
-    shellcheck -x bin/hwe lib/*.sh provision/*.sh
+    shellcheck -x bin/hwe lib/*.sh provision/*.sh scripts/*.sh
 
 # Lint the Python tools + tests with ruff (config: pyproject.toml)
 lint-py:
@@ -101,6 +101,15 @@ fmt-py:
 #                               (what the scheduled Font watch job runs)
 fonts-lock *ARGS:
     python3 scripts/fontlock.py {{ARGS}}
+
+# The map records ~20 facts about someone else's package archive; archives move,
+# and a rename nobody noticed breaks `hwe install` on Ubuntu silently. Runs in a
+# throwaway container so the answer is about a CLEAN machine — on a box that
+# already has the packages the check cannot fail, and so proves nothing. This is
+# what the scheduled Apt map watch job runs.
+# Ask whether pkg/map/apt.map still describes Ubuntu's archive
+apt-map-check:
+    docker run --rm -v "$PWD:/hwe:ro" -w /hwe ubuntu:26.04 bash scripts/aptmapcheck.sh
 
 # Regenerate every theme's wallpaper gradient
 walls:
