@@ -8,7 +8,6 @@
 # Sourced by bin/hwe; relies on helpers from lib/common.sh.
 
 # --- Tunables (override via environment) ----------------------------------
-: "${HWE_VM_NAME:=hwe-dev}"
 : "${HWE_LIBVIRT_URI:=qemu:///system}"
 : "${HWE_VM_MEMORY:=4096}"          # MiB
 : "${HWE_VM_VCPUS:=4}"
@@ -21,7 +20,73 @@
 # this only guards the local console — but a guessable guard is still no guard.
 : "${HWE_VM_PASSWORD:=$(od -An -N9 -tx1 /dev/urandom | tr -d ' \n')}"
 : "${HWE_VM_NETWORK:=default}"      # libvirt network name (system URI)
-: "${HWE_IMAGE_URL:=https://geo.mirror.pkgbuild.com/images/latest/Arch-Linux-x86_64-cloudimg.qcow2}"
+
+# --- Which distribution the guest runs ------------------------------------
+# lib/distro.sh is one half of running on more than Arch — what HWE does once it
+# is on a machine. This is the other half: which machine it lands on. Each
+# distro gets its OWN domain name and disk, so an Arch VM and an Ubuntu one
+# coexist; the point of the port is comparing them, which a single VM that gets
+# rebuilt into the other distro cannot do.
+#
+# Everything that differs is gathered here — image URL, how upstream publishes
+# authenticity, which key vouches for it, and what to tell libosinfo. Adding a
+# third distro is another arm, not another code path.
+#
+# Record whether the caller NAMED a target before we default one, so the actions
+# that operate on an existing VM can tell "you asked for this one" from "you did
+# not say" — see _vm_resolve_target.
+[[ -n "${HWE_VM_DISTRO+x}" ]] && HWE_VM_TARGET_NAMED=1
+[[ -n "${HWE_VM_NAME+x}" ]]   && HWE_VM_TARGET_NAMED=1
+: "${HWE_VM_TARGET_NAMED:=}"
+: "${HWE_VM_DISTRO:=arch}"
+: "${HWE_VM_UBUNTU_RELEASE:=26.04}"
+
+# Every domain name HWE itself creates. Used to find the VM you meant when you
+# did not say which — never to guess between two of them.
+HWE_VM_NAMES_ALL="hwe-dev hwe-dev-ubuntu"
+
+# Pinned signing keys. A fingerprint is the key's own hash, so pinning it means a
+# keyserver can hand us a key but never a DIFFERENT key.
+: "${HWE_ARCHBOX_FP:=1B9A16984A4E8CB448712D2AE0B78BF4326C6F8F}"
+: "${HWE_UBUNTU_FP:=D2EB44626FDDC30B513D5BB71A5D6C4C7DB87C81}"
+
+case "$HWE_VM_DISTRO" in
+    arch)
+        : "${HWE_VM_NAME:=hwe-dev}"
+        : "${HWE_IMAGE_URL:=https://geo.mirror.pkgbuild.com/images/latest/Arch-Linux-x86_64-cloudimg.qcow2}"
+        # arch-boxes signs each image with a detached .sig beside it.
+        HWE_VM_SIGSTYLE=detached
+        HWE_VM_KEY_FP="$HWE_ARCHBOX_FP"
+        HWE_VM_KEY_FILE="$HWE_ROOT/provision/arch-boxes.asc"
+        HWE_VM_KEY_NAME="arch-boxes"
+        HWE_VM_OSINFO=archlinux
+        HWE_VM_ADMIN_GROUP=wheel
+        HWE_VM_SHELL=/usr/bin/bash
+        ;;
+    ubuntu)
+        : "${HWE_VM_NAME:=hwe-dev-ubuntu}"
+        : "${HWE_IMAGE_URL:=https://cloud-images.ubuntu.com/releases/$HWE_VM_UBUNTU_RELEASE/release/ubuntu-$HWE_VM_UBUNTU_RELEASE-server-cloudimg-amd64.img}"
+        # Ubuntu signs no image. It signs ONE SHA256SUMS covering the release
+        # directory, detached as SHA256SUMS.gpg — so an image is authentic when
+        # that signature verifies AND the image's own line is in the signed file.
+        HWE_VM_SIGSTYLE=sumsfile
+        HWE_VM_KEY_FP="$HWE_UBUNTU_FP"
+        HWE_VM_KEY_FILE="$HWE_ROOT/provision/ubuntu-cloudimage.asc"
+        HWE_VM_KEY_NAME="Ubuntu cloud images"
+        HWE_VM_OSINFO="ubuntu$HWE_VM_UBUNTU_RELEASE"
+        HWE_VM_ADMIN_GROUP=sudo
+        HWE_VM_SHELL=/bin/bash
+        ;;
+    *)
+        # Not fatal at source time — `hwe theme` should still work on a machine
+        # with a typo'd HWE_VM_DISTRO exported. vm_main refuses instead.
+        : "${HWE_VM_NAME:=hwe-dev}"
+        : "${HWE_IMAGE_URL:=unsupported}"   # never fetched; keeps set -u happy below
+        HWE_VM_SIGSTYLE=unsupported
+        HWE_VM_ADMIN_GROUP=wheel
+        HWE_VM_SHELL=/bin/bash
+        ;;
+esac
 
 HWE_BASE_IMG="$HWE_CACHE/$(basename "$HWE_IMAGE_URL")"
 HWE_POOL_DIR="/var/lib/libvirt/images/hwe"   # where per-VM disks/seed live (system URI)
@@ -55,6 +120,14 @@ ${C_BOLD}Actions:${C_RESET}
   ${C_CYAN}rebuild${C_RESET} [br]    destroy + up (fresh provision; takes --uncommitted too)
   ${C_CYAN}doctor${C_RESET}         Check host prerequisites
 
+${C_BOLD}Guest distribution:${C_RESET} ${C_CYAN}HWE_VM_DISTRO${C_RESET}=$HWE_VM_DISTRO  (arch | ubuntu)
+  Each distro gets its own domain and disk, so both can run side by side:
+    ${C_BOLD}HWE_VM_DISTRO=ubuntu hwe vm up${C_RESET}   → domain 'hwe-dev-ubuntu'
+
+${C_BOLD}Compositor source:${C_RESET} ${C_CYAN}HWE_HYPR_SOURCE${C_RESET}=$HWE_HYPR_SOURCE  (repo | ppa)
+  ${C_DIM}repo${C_RESET} = the guest distribution's own Hyprland.
+  ${C_DIM}ppa${C_RESET}  = a third-party archive, pinned to the Hyprland stack. Opt-in only.
+
 ${C_BOLD}Env overrides:${C_RESET} HWE_VM_NAME=$HWE_VM_NAME  HWE_VM_MEMORY=$HWE_VM_MEMORY
   HWE_VM_VCPUS=$HWE_VM_VCPUS  HWE_LIBVIRT_URI=$HWE_LIBVIRT_URI
 EOF
@@ -62,13 +135,20 @@ EOF
 
 vm_main() {
     local action="${1:-}"; shift || true
+    # A typo'd HWE_VM_DISTRO must not silently build an Arch VM under an Ubuntu
+    # name, nor reach the image code with no way to authenticate anything.
+    if [[ "$HWE_VM_SIGSTYLE" == unsupported && "$action" != "" && "$action" != help && "$action" != -h && "$action" != --help ]]; then
+        err "unknown HWE_VM_DISTRO='$HWE_VM_DISTRO'"
+        info "HWE builds a VM from ${C_BOLD}arch${C_RESET} or ${C_BOLD}ubuntu${C_RESET} cloud images"
+        return 1
+    fi
     case "$action" in
         up)       vm_up "$@" ;;
         ssh)      vm_ssh "$@" ;;
-        console)  _virsh console "$HWE_VM_NAME" ;;
+        console)  _vm_resolve_target console && _virsh console "$HWE_VM_NAME" ;;
         status)   vm_status ;;
         list|ls)  vm_list ;;
-        down|stop) _virsh shutdown "$HWE_VM_NAME" && ok "shutdown signal sent" ;;
+        down|stop) _vm_resolve_target down && _virsh shutdown "$HWE_VM_NAME" && ok "shutdown signal sent" ;;
         destroy|rm) vm_destroy ;;
         rebuild)  vm_destroy_quiet; vm_up "$@" ;;
         doctor)   vm_doctor ;;
@@ -188,39 +268,62 @@ _vm_ensure_network() {
 }
 
 # --- Base image authenticity ----------------------------------------------
-# The Arch cloud image becomes the VM's root disk (boots with passwordless sudo),
-# so a tampered/MITM'd download owns the guest. We refuse any image not signed by
-# the arch-boxes key: the PRIMARY fingerprint pinned here + shipped as an in-repo
-# pubkey (provision/arch-boxes.asc) so verification works offline / in the VM.
-: "${HWE_ARCHBOX_FP:=1B9A16984A4E8CB448712D2AE0B78BF4326C6F8F}"
-HWE_ARCHBOX_KEY="$HWE_ROOT/provision/arch-boxes.asc"
+# The cloud image becomes the VM's root disk (which boots with passwordless
+# sudo), so a tampered or MITM'd download owns the guest. We refuse any image the
+# distro's own key has not vouched for: the PRIMARY fingerprint pinned above +
+# the pubkey shipped in-repo (provision/*.asc) so verification works offline.
+#
+# The two distros publish that vouching differently — arch-boxes signs the image,
+# Ubuntu signs a checksum file listing it — so the SHAPE of the evidence differs
+# while the rule does not. Everything below the keyring is shared.
 HWE_GNUPGHOME="$HWE_CACHE/gnupg"          # isolated keyring — never touches ~/.gnupg
 
 # All image-verification gpg runs go through our private, batch keyring.
 _vm_gpg() { gpg --homedir "$HWE_GNUPGHOME" --batch --no-tty "$@"; }
 
-_vm_have_pinned_key() { _vm_gpg --list-keys "$HWE_ARCHBOX_FP" >/dev/null 2>&1; }
+_vm_have_pinned_key() { _vm_gpg --list-keys "$HWE_VM_KEY_FP" >/dev/null 2>&1; }
 
 # Pull the pinned key from a keyserver (recv-keys BY FULL FINGERPRINT: a server
 # can't substitute a different key, since the fingerprint is the key's own hash).
+# Overridable so the tests can exercise the refusals without reaching the
+# network — an empty list makes a refresh fail immediately instead of timing out.
+: "${HWE_VM_KEYSERVERS:=hkps://keyserver.ubuntu.com hkps://keys.openpgp.org}"
 _vm_refresh_key() {
     local ks
-    for ks in hkps://keyserver.ubuntu.com hkps://keys.openpgp.org; do
-        info "fetching arch-boxes key ${HWE_ARCHBOX_FP:(-8)} from $ks"
-        _vm_gpg --keyserver "$ks" --recv-keys "$HWE_ARCHBOX_FP" >/dev/null 2>&1 && return 0
+    for ks in $HWE_VM_KEYSERVERS; do
+        info "fetching $HWE_VM_KEY_NAME key ${HWE_VM_KEY_FP:(-8)} from $ks"
+        _vm_gpg --keyserver "$ks" --recv-keys "$HWE_VM_KEY_FP" >/dev/null 2>&1 && return 0
     done
     return 1
 }
 
 # gpg --verify returns 0 only for a good, unexpired signature; owner-trust
 # warnings go to stderr and don't affect the exit code. Our keyring holds ONLY
-# the pinned key, so a 0 here means "arch-boxes signed this exact image".
+# the pinned key, so a 0 here means "that key signed this exact file".
 _vm_verify_sig() { _vm_gpg --verify "$2" "$1" >/dev/null 2>&1; }
 
-# Verify $img against detached sig $sig (+ optional $sha256, a cheap precheck).
-# Embedded key first; if it can't verify (upstream subkey rotation) refresh the
-# SAME pinned fingerprint from a keyserver and retry once — self-heals rotation.
-_vm_verify_base() {
+# Get the pinned key into the private keyring, from the repo or a keyserver.
+_vm_prepare_keyring() {
+    mkdir -p "$HWE_GNUPGHOME"; chmod 700 "$HWE_GNUPGHOME"
+    [[ -f "$HWE_VM_KEY_FILE" ]] && _vm_gpg --import "$HWE_VM_KEY_FILE" >/dev/null 2>&1 || true
+    _vm_have_pinned_key || _vm_refresh_key || true
+    _vm_have_pinned_key \
+        || { err "could not obtain the pinned $HWE_VM_KEY_NAME key ($HWE_VM_KEY_FP)"; return 1; }
+}
+
+# Verify a detached signature, self-healing an upstream subkey rotation: retry
+# once against a keyserver copy of the SAME pinned fingerprint. $3 names what is
+# being signed, for the message.
+_vm_verify_detached_sig() {
+    local file="$1" sig="$2" what="${3:-image}"
+    _vm_verify_sig "$file" "$sig" && return 0
+    warn "$what did not verify with the embedded key — refreshing it (possible upstream key rotation)"
+    _vm_refresh_key && _vm_verify_sig "$file" "$sig"
+}
+
+# --- Arch's shape: a detached .sig per image ------------------------------
+# $sha256 is an optional cheap precheck; the signature is the actual evidence.
+_vm_verify_detached() {
     local img="$1" sig="$2" sha="${3:-}"
     if [[ -f "$sha" ]]; then
         local want got
@@ -229,13 +332,55 @@ _vm_verify_base() {
         [[ -n "$want" && "$want" == "$got" ]] || { err "SHA256 mismatch on base image"; return 1; }
         info "SHA256 matches the published checksum"
     fi
-    mkdir -p "$HWE_GNUPGHOME"; chmod 700 "$HWE_GNUPGHOME"
-    [[ -f "$HWE_ARCHBOX_KEY" ]] && _vm_gpg --import "$HWE_ARCHBOX_KEY" >/dev/null 2>&1 || true
-    _vm_have_pinned_key || _vm_refresh_key || true
-    _vm_have_pinned_key || { err "could not obtain the pinned arch-boxes key ($HWE_ARCHBOX_FP)"; return 1; }
-    _vm_verify_sig "$img" "$sig" && return 0
-    warn "image did not verify with the embedded key — refreshing it (possible upstream key rotation)"
-    _vm_refresh_key && _vm_verify_sig "$img" "$sig"
+    _vm_prepare_keyring || return 1
+    _vm_verify_detached_sig "$img" "$sig" "image"
+}
+
+# --- Ubuntu's shape: one signed SHA256SUMS for the whole directory --------
+# Two steps, and BOTH are load-bearing: the signature proves the checksum file is
+# Canonical's, and the file's line for our image proves the bytes are the ones it
+# vouched for. Verify in that order — a checksum from an unsigned file is a
+# number, not evidence.
+_vm_verify_sums() {
+    local img="$1" sums="$2" sig="$3"
+    _vm_prepare_keyring || return 1
+    _vm_verify_detached_sig "$sums" "$sig" "SHA256SUMS" \
+        || { err "SHA256SUMS is not signed by the pinned $HWE_VM_KEY_NAME key"; return 1; }
+    info "SHA256SUMS carries a valid $HWE_VM_KEY_NAME signature"
+
+    # A MISSING line is a refusal, not an absence of evidence. Left implicit,
+    # `grep` finding nothing reads exactly like "nothing wrong" — which is how a
+    # check comes to pass without having checked anything.
+    local name want got
+    name="$(basename "$HWE_IMAGE_URL")"
+    # sha256sum's own format: "<hash> *<name>" (binary mode) or "<hash>  <name>".
+    want="$(awk -v n="$name" '$2 == n || $2 == "*" n {print $1; exit}' "$sums")"
+    [[ -n "$want" ]] \
+        || { err "$name has no line in the signed SHA256SUMS — refusing an image it does not vouch for"; return 1; }
+    got="$(sha256sum "$img" | awk '{print $1}')"
+    [[ "$want" == "$got" ]] \
+        || { err "SHA256 mismatch: signed $want, downloaded $got"; return 1; }
+    info "image matches its SHA-256 in the signed SHA256SUMS"
+}
+
+# libosinfo tunes the domain's device defaults from an OS id. A brand-new release
+# routinely postdates the host's osinfo-db — 26.04 is absent from a db that stops
+# at 25.10 — and virt-install ERRORS on an unknown name rather than ignoring it,
+# which would make `vm up` fail on a detail that only picks default hardware.
+# Fall back to the newest id of the same family the host actually knows.
+_vm_osinfo_name() {
+    local want="$HWE_VM_OSINFO" known best family
+    command -v osinfo-query >/dev/null 2>&1 || { printf '%s\n' "$want"; return 0; }
+    known="$(osinfo-query --fields=short-id os 2>/dev/null | tr -d '[:blank:]')"
+    if grep -qx -- "$want" <<<"$known"; then printf '%s\n' "$want"; return 0; fi
+    family="${want%%[0-9]*}"                       # ubuntu26.04 -> ubuntu
+    best="$(grep -E "^${family}[0-9]" <<<"$known" | sort -V | tail -1)"
+    if [[ -n "$best" ]]; then
+        warn "libosinfo does not know '$want' — using '$best' (affects device defaults only)"
+        printf '%s\n' "$best"
+    else
+        printf '%s\n' "$want"
+    fi
 }
 
 # --- Base image -----------------------------------------------------------
@@ -245,22 +390,50 @@ _vm_download_base() {
         info "base image present: ${HWE_BASE_IMG##*/}"
         return 0
     fi
-    log "Downloading Arch cloud image..."
+    log "Downloading the $HWE_VM_DISTRO cloud image..."
     info "$HWE_IMAGE_URL"
     local part="$HWE_BASE_IMG.part"
     curl -fL --progress-bar "$HWE_IMAGE_URL" -o "$part"
-    # Fetch the signature (+ checksum) and verify BEFORE promoting .part -> final.
-    curl -fsSL "$HWE_IMAGE_URL.sig" -o "$part.sig" \
-        || { rm -f "$part"; die "could not fetch the image signature (.sig) — refusing an unverifiable image"; }
-    curl -fsSL "$HWE_IMAGE_URL.SHA256" -o "$part.sha256" 2>/dev/null || rm -f "$part.sha256"
-    log "Verifying base image signature (arch-boxes)"
-    if ! _vm_verify_base "$part" "$part.sig" "$part.sha256"; then
-        rm -f "$part" "$part.sig" "$part.sha256"
-        die "base image failed authenticity check — refusing to build a VM from it (tampered mirror / MITM, or upstream rotated the signing key: re-run provision/arch-boxes.asc regeneration)"
+
+    # Fetch the evidence and check it BEFORE promoting .part -> final, so a
+    # failed verification never leaves a usable image in the cache.
+    local -a scratch=("$part")
+    local verified=1
+    case "$HWE_VM_SIGSTYLE" in
+        detached)
+            scratch+=("$part.sig" "$part.sha256")
+            curl -fsSL "$HWE_IMAGE_URL.sig" -o "$part.sig" \
+                || { rm -f "${scratch[@]}"; die "could not fetch the image signature (.sig) — refusing an unverifiable image"; }
+            curl -fsSL "$HWE_IMAGE_URL.SHA256" -o "$part.sha256" 2>/dev/null || rm -f "$part.sha256"
+            log "Verifying base image signature ($HWE_VM_KEY_NAME)"
+            _vm_verify_detached "$part" "$part.sig" "$part.sha256" && verified=0
+            ;;
+        sumsfile)
+            scratch+=("$part.sums" "$part.sums.gpg")
+            # SHA256SUMS lives beside the image, not at the image's own URL.
+            local dir="${HWE_IMAGE_URL%/*}"
+            # if/else, not `A && B || C`: with the latter, C also runs when B
+            # fails, so a failed .gpg fetch would report the wrong cause.
+            if ! curl -fsSL "$dir/SHA256SUMS" -o "$part.sums" \
+                || ! curl -fsSL "$dir/SHA256SUMS.gpg" -o "$part.sums.gpg"; then
+                rm -f "${scratch[@]}"
+                die "could not fetch SHA256SUMS(.gpg) — refusing an unverifiable image"
+            fi
+            log "Verifying base image against the signed SHA256SUMS ($HWE_VM_KEY_NAME)"
+            _vm_verify_sums "$part" "$part.sums" "$part.sums.gpg" && verified=0
+            ;;
+        *)
+            rm -f "${scratch[@]}"
+            die "no authenticity check defined for HWE_VM_DISTRO='$HWE_VM_DISTRO' — refusing to build a VM from an unverified image"
+            ;;
+    esac
+    if [[ $verified -ne 0 ]]; then
+        rm -f "${scratch[@]}"
+        die "base image failed authenticity check — refusing to build a VM from it (tampered mirror / MITM, or upstream rotated the signing key: regenerate ${HWE_VM_KEY_FILE##*/})"
     fi
-    rm -f "$part.sig" "$part.sha256"
+    rm -f "${scratch[@]:1}"
     mv "$part" "$HWE_BASE_IMG"
-    ok "verified (arch-boxes) + downloaded $(du -h "$HWE_BASE_IMG" | cut -f1) base image"
+    ok "verified ($HWE_VM_KEY_NAME) + downloaded $(du -h "$HWE_BASE_IMG" | cut -f1) base image"
 }
 
 # --- Git bundle of the chosen local branch --------------------------------
@@ -379,7 +552,9 @@ _vm_render_seed() {
 
     _vm_subst "$HWE_ROOT/provision/cloud-init/user-data.tmpl" "$ci/user-data" \
         HOSTNAME="$HWE_VM_NAME" USER="$HWE_VM_USER" PASSWORD="$HWE_VM_PASSWORD" \
-        BRANCH="$branch" SSH_KEYS="$ssh_keys" SSH_PWAUTH="$pwauth"
+        BRANCH="$branch" SSH_KEYS="$ssh_keys" SSH_PWAUTH="$pwauth" \
+        ADMIN_GROUP="$HWE_VM_ADMIN_GROUP" SHELL="$HWE_VM_SHELL" \
+        HYPR_SOURCE="$HWE_HYPR_SOURCE"
     _vm_subst "$HWE_ROOT/provision/cloud-init/meta-data.tmpl" "$ci/meta-data" \
         HOSTNAME="$HWE_VM_NAME" INSTANCE_ID="$instance_id"
 
@@ -427,6 +602,14 @@ vm_up() {
     _vm_branch_ok "$branch" \
         || die "refusing branch name '$branch' — letters, digits and . _ / - only (it is interpolated into the guest's cloud-init)"
 
+    # Same reasoning as the branch name: this reaches the guest inside a single-
+    # quoted shell word, so it is data that could become code. It also happens to
+    # be a closed set, which makes the check free.
+    case "$HWE_HYPR_SOURCE" in
+        repo|ppa) ;;
+        *) die "refusing HWE_HYPR_SOURCE='$HWE_HYPR_SOURCE' — expected 'repo' or 'ppa'" ;;
+    esac
+
     if _virsh dominfo "$HWE_VM_NAME" >/dev/null 2>&1; then
         die "VM '$HWE_VM_NAME' already exists. Use 'hwe vm rebuild $branch' or 'hwe vm destroy' first."
     fi
@@ -467,7 +650,7 @@ vm_up() {
         --import \
         --disk "path=$disk,format=qcow2,bus=virtio" \
         --disk "path=$seed_dst,device=cdrom" \
-        --osinfo detect=on,require=off,name=archlinux \
+        --osinfo "detect=on,require=off,name=$(_vm_osinfo_name)" \
         --network "network=$HWE_VM_NETWORK,model=virtio" \
         --graphics spice,gl.enable=yes,listen=none \
         --video model.type=virtio,model.acceleration.accel3d=yes \
@@ -498,8 +681,50 @@ _vm_ip() {
     return 1
 }
 
+# `hwe vm up` NAMES a domain; every other action has to find one. With a VM per
+# distro that name stopped being a constant, and forgetting HWE_VM_DISTRO used to
+# surface as a bare libvirt error about a domain you never asked for.
+#
+# So: if the target is missing and you did not name one, and exactly ONE HWE VM
+# exists, act on that and say so. Two or more is a real ambiguity — list them and
+# stop, because picking for you would be a guess, and this is the code path that
+# reaches `destroy`.
+_vm_distro_of_name() {
+    case "$1" in
+        hwe-dev-ubuntu) printf 'HWE_VM_DISTRO=ubuntu ' ;;
+        *)              printf '' ;;
+    esac
+}
+
+_vm_resolve_target() {
+    _virsh dominfo "$HWE_VM_NAME" >/dev/null 2>&1 && return 0
+    if [[ -n "$HWE_VM_TARGET_NAMED" ]]; then
+        err "VM '$HWE_VM_NAME' does not exist"
+        info "create it: ${C_BOLD}$(_vm_distro_of_name "$HWE_VM_NAME")hwe vm up${C_RESET}"
+        return 1
+    fi
+    local found=() cand
+    for cand in $HWE_VM_NAMES_ALL; do
+        [[ "$cand" == "$HWE_VM_NAME" ]] && continue
+        _virsh dominfo "$cand" >/dev/null 2>&1 && found+=("$cand")
+    done
+    case ${#found[@]} in
+        0)  err "no HWE VM exists yet"
+            info "create one: ${C_BOLD}hwe vm up${C_RESET}  or  ${C_BOLD}HWE_VM_DISTRO=ubuntu hwe vm up${C_RESET}"
+            return 1 ;;
+        1)  HWE_VM_NAME="${found[0]}"
+            info "no '$HWE_VM_DISTRO' VM — using the one that exists: ${C_BOLD}$HWE_VM_NAME${C_RESET}"
+            return 0 ;;
+        *)  err "several HWE VMs exist — say which one you mean:"
+            for cand in "${found[@]}"; do
+                info "  ${C_BOLD}$(_vm_distro_of_name "$cand")hwe vm $*${C_RESET}   → $cand"
+            done
+            return 1 ;;
+    esac
+}
+
 vm_ssh() {
-    _virsh dominfo "$HWE_VM_NAME" >/dev/null 2>&1 || die "VM '$HWE_VM_NAME' does not exist (hwe vm up)"
+    _vm_resolve_target ssh || return 1
     local ip; ip="$(_vm_ip)" || die "could not determine VM IP yet — is it booted and is the guest agent up? (hwe vm status)"
     info "ssh $HWE_VM_USER@$ip"
     exec ssh -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/dev/null \
@@ -507,9 +732,7 @@ vm_ssh() {
 }
 
 vm_status() {
-    if ! _virsh dominfo "$HWE_VM_NAME" >/dev/null 2>&1; then
-        warn "VM '$HWE_VM_NAME' is not defined"; return 0
-    fi
+    _vm_resolve_target status || return 1
     _virsh dominfo "$HWE_VM_NAME" | sed 's/^/    /' >&2
     local ip; if ip="$(_vm_ip)"; then ok "IP: $ip"; else warn "no IP yet (booting / agent not ready)"; fi
 }
@@ -517,7 +740,9 @@ vm_status() {
 vm_list() { _virsh list --all; }
 
 vm_destroy() {
-    _virsh dominfo "$HWE_VM_NAME" >/dev/null 2>&1 || { warn "VM '$HWE_VM_NAME' not defined"; return 0; }
+    # Resolution is safe here only because the confirmation below names the VM it
+    # resolved to — the user always gets to see which one is about to go.
+    _vm_resolve_target destroy || return 1
     confirm "Destroy VM '$HWE_VM_NAME' and delete its disks?" || { info "aborted"; return 0; }
     vm_destroy_quiet
     ok "VM '$HWE_VM_NAME' removed"

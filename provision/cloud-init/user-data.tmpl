@@ -5,10 +5,23 @@
 hostname: @@HOSTNAME@@
 manage_etc_hosts: true
 
+# Only the ADMIN group — `wheel` on Arch, `sudo` on Ubuntu.
+#
+# The seat groups this used to grant (video, input, audio, storage, network) are
+# GONE, not moved. They were a pre-logind habit: on a systemd system udev tags
+# the seat's devices `uaccess` and logind ACLs them to the ACTIVE session, while
+# the compositor never opens /dev/input itself — it is handed an fd by logind's
+# TakeDevice. Measured on a working bare-metal HWE box: /dev/dri/card1 carries
+# `user:<you>:rw-`, none of the 17 input devices carries any ACL, the user is in
+# none of those groups, and Hyprland works. Group membership would only widen
+# what EVERY process of that user may read, permanently — including over ssh.
+#
+# It also stopped porting: Ubuntu has no `storage` or `network` group at all, and
+# cloud-init fails the whole user module on the first name that does not resolve.
 users:
   - name: @@USER@@
-    groups: [wheel, video, input, audio, storage, network]
-    shell: /usr/bin/bash
+    groups: [@@ADMIN_GROUP@@]
+    shell: @@SHELL@@
     lock_passwd: false
     plain_text_passwd: @@PASSWORD@@
     sudo: ["ALL=(ALL) NOPASSWD:ALL"]
@@ -39,7 +52,11 @@ runcmd:
     sudo -u @@USER@@ git clone -b '@@BRANCH@@' /mnt/hwe-seed/hwe.bundle /home/@@USER@@/hwe
     umount /mnt/hwe-seed || true
     # Hand off to the HWE installer (packages + config + Hyprland session).
+    # HWE_HYPR_SOURCE carries the host's choice of compositor source into the
+    # guest. It is passed separately from HWE_ASSUME_YES on purpose: the blanket
+    # yes answers prompts, it does not extend trust to a third-party archive.
     sudo -u @@USER@@ env HWE_ASSUME_YES=1 HWE_UNATTENDED=1 \
+      HWE_HYPR_SOURCE='@@HYPR_SOURCE@@' \
       /home/@@USER@@/hwe/bin/hwe install
 
 final_message: "HWE provisioned after $UPTIME s — rebooting into the Hyprland session"
