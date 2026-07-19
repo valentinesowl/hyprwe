@@ -96,6 +96,9 @@ fmt-py:
 # against the same font from a signed Arch package, parses every table, and says
 # what changed since the current pin. Needs ttf-nerd-fonts-symbols-mono (the
 # reference to compare against) and python-fonttools.
+#   just fonts-lock --write     pin it, once the report is clean
+#   just fonts-lock --verify    only ask whether the pinned bytes still match
+#                               (what the scheduled Font watch job runs)
 fonts-lock *ARGS:
     python3 scripts/fontlock.py {{ARGS}}
 

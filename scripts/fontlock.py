@@ -33,8 +33,9 @@ well-formed font can still carry a payload aimed at a specific parser bug. The
 defensible claim is "the same bytes a distribution signed, structurally sound,
 and watched for silent replacement" — not "safe".
 
-    scripts/fontlock.py --check        # report only, write nothing
-    scripts/fontlock.py --write        # ...and update pkg/fonts.lock
+    scripts/fontlock.py                # the full report; writes nothing
+    scripts/fontlock.py --write        # ...and update pkg/fonts.lock if it all passed
+    scripts/fontlock.py --verify       # only: do the pinned bytes still match? (CI)
 
 Maintainer tooling: it runs from `just fonts-lock`, never at install time, so it
 may use any library it likes (fontTools comes from python-fonttools).
@@ -44,6 +45,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import io
+import os
 import re
 import shutil
 import subprocess
@@ -53,7 +55,10 @@ import urllib.request
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-LOCK = REPO / "pkg" / "fonts.lock"
+# Overridable for the same reason the shell side is: so the failure paths can be
+# exercised against a fixture. A watchdog whose alarm has never been seen to fire
+# is not a watchdog.
+LOCK = Path(os.environ.get("HWE_FONTS_LOCK") or REPO / "pkg" / "fonts.lock")
 
 # What we fetch, and what a distribution calls the same thing. `reference` is the
 # path the signed package installs to — the corroboration in step 1 above.
@@ -220,10 +225,79 @@ def write_lock(rows: list[tuple[str, str, str, str, str]]) -> None:
     print(f"\nwrote {LOCK.relative_to(REPO)}")
 
 
+def verify() -> int:
+    """Has upstream replaced what we pinned? The scheduled-CI question.
+
+    A pin turns a silent substitution into a detectable one — but only if somebody
+    looks. Nothing about a font announces itself, and a swap may sit unnoticed for
+    as long as nobody re-downloads. So this runs on a schedule and asks the one
+    question that does not need a maintainer's judgement: do the bytes at that URL
+    still hash to what the lock says?
+
+    Deliberately narrower than the full report. It needs no distribution package
+    to compare against and makes no claim about safety — it fails if, and only if,
+    a published artifact changed under a pin that says it should not have.
+    """
+    locked = read_lock()
+    if not locked:
+        print("pkg/fonts.lock lists nothing — nothing to watch")
+        return 0
+
+    bad = False
+    for ident, row in locked.items():
+        print(f"\n=== {ident} ===")
+        if not row["archive_sha256"] or not row["file_sha256"]:
+            print("  unpinned — nothing to compare against, skipping")
+            continue
+        try:
+            archive = fetch(row["url"])
+        except Exception as exc:
+            print(f"  could not fetch: {type(exc).__name__}: {exc}")
+            print("  (treated as inconclusive, not as a mismatch)")
+            continue
+
+        a_hash = sha256(archive)
+        if a_hash != row["archive_sha256"]:
+            print(f"  ARCHIVE CHANGED\n    pinned {row['archive_sha256']}\n    now    {a_hash}")
+            bad = True
+        else:
+            print("  archive matches the pin")
+
+        try:
+            font = extract(archive, row["member"])
+        except SystemExit as exc:
+            print(f"  {exc}")
+            bad = True
+            continue
+        f_hash = sha256(font)
+        if f_hash != row["file_sha256"]:
+            print(f"  FONT CHANGED\n    pinned {row['file_sha256']}\n    now    {f_hash}")
+            bad = True
+        else:
+            print(f"  {row['member']} matches the pin")
+
+    print("\n" + "=" * 70)
+    if bad:
+        print("A PUBLISHED ARTIFACT CHANGED UNDER ITS PIN.")
+        print("Users are unaffected — the install refuses anything that fails its hash.")
+        print("Find out why upstream replaced it before pinning the new bytes:")
+        print("    just fonts-lock")
+        return 1
+    print("every pinned artifact is unchanged")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--write", action="store_true", help="update pkg/fonts.lock")
+    ap.add_argument(
+        "--verify", action="store_true",
+        help="re-download and compare against the lock; fail if anything changed",
+    )
     args = ap.parse_args()
+
+    if args.verify:
+        return verify()
 
     existing = read_lock()
     rows: list[tuple[str, str, str, str, str]] = []

@@ -1,0 +1,49 @@
+# Font watch — has upstream replaced an artifact we pinned?
+#
+# HWE fetches exactly one thing without a distribution's signature behind it: the
+# Nerd Fonts icon glyphs, which no distribution packages. pkg/fonts.lock pins it
+# by SHA-256, and the installer refuses anything that fails that hash — so a
+# substitution can never reach a user's machine.
+#
+# What a pin cannot do is TELL anyone. A replaced asset sits unnoticed for as long
+# as nobody re-downloads it, and the whole worry about a malicious font is that it
+# would not announce itself. This job is the looking: once a week it fetches what
+# the lock points at and compares. Nothing here judges whether a font is safe —
+# it answers only "did the published bytes change under a pin that says they
+# should not have", which needs no human judgement and so can run unattended.
+#
+# A red tick here is not an incident. It means upstream published something else
+# and a maintainer needs to find out why before pinning the new bytes.
+---
+name: Font watch
+
+"on":
+  schedule:
+    # Weekly, Monday morning UTC. The question changes on upstream's timescale,
+    # not ours; daily would only add noise to the same answer.
+    - cron: "17 6 * * 1"
+  # So a maintainer can ask the question directly after any upstream news.
+  workflow_dispatch:
+  # And whenever the lock itself changes, so a bad paste is caught in the PR
+  # rather than a week later.
+  pull_request:
+    paths:
+      - pkg/fonts.lock
+      - scripts/fontlock.py
+      - .github/workflows/fontwatch.yml
+
+permissions:
+  contents: read
+
+jobs:
+  watch:
+    name: pinned artifacts unchanged
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+    steps:
+      # Only python and git: --verify compares hashes and needs neither the
+      # font tooling nor a reference package to do it.
+      - name: Install tools
+        run: pacman -Syu --noconfirm --needed git python
+      - uses: actions/checkout@v5
+      - run: python3 scripts/fontlock.py --verify
