@@ -9,6 +9,49 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+Groundwork for installing on distributions other than Arch. **Nothing here claims
+that works yet** — no other distribution has been installed on end to end, and the
+CLI, the install and the VM still target Arch. What landed is the machinery, and
+two changes that stand on their own regardless.
+
+### Added
+
+- **The font a theme asks for and the icons it draws are now two separate
+  things.** `[font]` gains `icon_family` (where the bar's and launcher's glyphs
+  come from) and `fallback_family` (what to use when the theme's typeface is not
+  installed), and every surface renders the three as a chain — kitty gets
+  explicit `symbol_map` ranges instead, since it resolves per codepoint rather
+  than by fontconfig's ordering.
+
+  Until now the icons rode along inside a patched copy of the text font, so a
+  typeface that was not packaged meant no icons either — a bar full of empty
+  boxes. Now an absent family degrades to JetBrains Mono with the icons intact.
+  Both roles have defaults, so a theme that says nothing keeps working; the
+  shipped themes declare them for discoverability, as they do the rest of `[font]`.
+
+- **`pkg/fonts.lock`** — the fonts HWE fetches itself, pinned by SHA-256 and
+  verified before use. Today that is one file: the Nerd Fonts glyphs, which no
+  distribution outside Arch packages. An entry nobody has pinned is refused, not
+  fetched.
+
+  A hash on its own would only promise that you get the bytes the maintainer saw,
+  which says nothing about those bytes. `just fonts-lock` gathers what can
+  actually be checked before anyone pins: a byte-for-byte comparison against the
+  same font from the signed Arch package, a full parse of every table, and what
+  the font declares itself to be. It refuses to write a lock while any of that
+  fails. A weekly **Font watch** job then re-fetches and compares, so an artifact
+  replaced upstream is noticed rather than waited on. None of this proves a font
+  is safe, and the tooling says so where it is documented.
+
+### Changed
+
+- Package installation, the drift check and `hwe update` no longer call `pacman`
+  directly: they go through a small layer that knows which package manager this
+  is, with `pkg/map/apt.map` recording the names that differ elsewhere. On Arch
+  nothing changes — the map is a list of differences, and there are none.
+  Arch-only steps (the AUR, the NVIDIA driver and its pacman hook) now say why
+  they are skipped rather than failing.
+
 ## [1.2.0] — 2026-07-19
 
 Making a machine yours without giving up the ability to update it.
