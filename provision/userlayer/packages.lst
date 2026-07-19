@@ -1,0 +1,14 @@
+# ~/.config/hwe/packages.lst — the packages YOU want on this machine.
+#
+# One package per line, '#' starts a comment — the same format as HWE's own
+# lists in pkg/. `hwe install` installs them, `hwe update` offers to install
+# what is missing, and `hwe doctor` reports them alongside HWE's lists.
+#
+# This file is yours and lives outside the repository: pkg/ stays HWE's answer
+# to "what does this environment need", and yours never collides on a pull.
+# Packages listed here are installed with pacman — put AUR ones in
+# packages-aur.lst next to this file.
+
+# thunderbird
+# mpv
+# libreoffice-fresh

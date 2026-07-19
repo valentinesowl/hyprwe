@@ -49,6 +49,26 @@ run() {
 # shellcheck disable=SC2034  # read by the sourced lib/*.sh modules (wall, vm)
 HWE_CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/hwe"
 
+# --- The personal layer ---------------------------------------------------
+# ~/.config/hwe/ holds what is YOURS rather than HWE's: the settings that differ
+# per machine and per person — displays, keybinds, extra packages, the bar's
+# composition. It sits OUTSIDE the checkout on purpose. The repo is deployed by
+# symlink, so a tweak made in place would be a change to a tracked file, and
+# `hwe update`'s fast-forward pull refuses to run on a dirty tree — personalising
+# the machine would cost you the ability to update it. Here, neither can happen:
+# `git status` stays clean, a pull can never conflict, and replacing the clone
+# does not take your settings with it.
+#
+# The files (skeletons in provision/userlayer/, copied once by the install):
+#   hypr.conf           sourced last by hyprland.conf — displays, input, binds
+#   packages.lst        extra packages for this machine (pacman)
+#   packages-aur.lst    same, from the AUR
+#   waybar.jsonc        bar composition, deep-merged over the generated config
+#
+# Overridable like the theme roots, so the tests can exercise the layer without
+# writing into the live ~/.config of whoever runs them.
+: "${HWE_USER_CONFIG:=${XDG_CONFIG_HOME:-$HOME/.config}/hwe}"
+
 # --- Themes ---------------------------------------------------------------
 # Themes live in two roots: the ones HWE ships (repo themes/, tracked by git) and
 # your own (XDG data dir). Keeping yours OUT of the repo is the point: nothing

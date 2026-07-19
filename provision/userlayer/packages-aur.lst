@@ -1,0 +1,8 @@
+# ~/.config/hwe/packages-aur.lst — the AUR packages YOU want on this machine.
+#
+# Same format and the same rules as packages.lst, installed with paru instead of
+# pacman. HWE bootstraps paru the first time any AUR list is non-empty, so
+# naming something here is enough — you do not need a helper installed first.
+
+# visual-studio-code-bin
+# spotify

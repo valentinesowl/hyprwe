@@ -15,18 +15,38 @@ if [[ -z "${HWE_ROOT:-}" ]]; then
 fi
 
 # --- package helpers ------------------------------------------------------
-_pkgs_from() {
+_pkgs_read() {
     # Read a .lst file: strip comments/blank lines, emit one package per line.
-    local f="$HWE_ROOT/pkg/$1"
+    local f="$1"
     [[ -f "$f" ]] || return 0
     sed -e 's/#.*//' -e '/^[[:space:]]*$/d' -e 's/[[:space:]]//g' "$f"
 }
+
+# HWE's own lists (pkg/, tracked) and yours (~/.config/hwe/, untracked). Same
+# format, two sources: the repo answers "what does this environment need", your
+# list answers "what does THIS machine need" — see the personal layer in
+# lib/common.sh. A missing file is simply an empty list.
+_pkgs_from() { _pkgs_read "$HWE_ROOT/pkg/$1"; }
+_pkgs_user() { _pkgs_read "$HWE_USER_CONFIG/$1"; }
+
+# Everything wanted from the AUR: HWE's list plus yours. Used both to decide
+# whether bootstrapping paru is warranted at all and to install.
+_aur_wanted() { _pkgs_from aur.lst; _pkgs_user packages-aur.lst; }
 
 _pacman_install() {
     local pkgs=()
     mapfile -t pkgs < <(_pkgs_from "$1")
     [[ ${#pkgs[@]} -eq 0 ]] && return 0
     log "Installing ${#pkgs[@]} packages from pkg/$1"
+    _pacman_retry -S --needed "${pkgs[@]}"
+}
+
+# Your own packages (~/.config/hwe/packages.lst), installed exactly like HWE's.
+_install_user_packages() {
+    local pkgs=()
+    mapfile -t pkgs < <(_pkgs_user packages.lst)
+    [[ ${#pkgs[@]} -eq 0 ]] && return 0
+    log "Installing ${#pkgs[@]} packages from ~/.config/hwe/packages.lst"
     _pacman_retry -S --needed "${pkgs[@]}"
 }
 
@@ -48,7 +68,7 @@ _pacman_retry() {
 
 _bootstrap_paru() {
     command -v paru >/dev/null 2>&1 && return 0
-    local aur; mapfile -t aur < <(_pkgs_from aur.lst)
+    local aur; mapfile -t aur < <(_aur_wanted)
     [[ ${#aur[@]} -eq 0 ]] && return 0   # no AUR packages requested → skip
     log "Bootstrapping paru (AUR helper)"
     _pacman_retry -S --needed base-devel git
@@ -59,7 +79,7 @@ _bootstrap_paru() {
 }
 
 _aur_install() {
-    local aur; mapfile -t aur < <(_pkgs_from aur.lst)
+    local aur; mapfile -t aur < <(_aur_wanted)
     [[ ${#aur[@]} -eq 0 ]] && return 0
     command -v paru >/dev/null 2>&1 || { warn "paru unavailable, skipping AUR packages"; return 0; }
     log "Installing ${#aur[@]} AUR packages"
@@ -79,6 +99,43 @@ _config_is_staging() {
         color-schemes|kvantum|sddm) return 0 ;;
         *) return 1 ;;
     esac
+}
+
+# --- the personal layer ---------------------------------------------------
+# Create ~/.config/hwe/ from the skeletons in provision/userlayer/ — see the
+# rationale on HWE_USER_CONFIG in lib/common.sh. Copy-once, never overwrite: an
+# existing file is yours and is left exactly as it is, so this is safe to run on
+# every install and every update.
+#
+# hypr.conf MUST exist, because hyprland.conf sources it unconditionally and a
+# missing source file is a Hyprland config error. The rest are created only so
+# the layer is discoverable — an empty machine should show you where your
+# settings go, rather than documenting a path you have to create by hand.
+# The skeleton directory IS the definition of the layer: lib/doctor.sh reads the
+# same list, so the check cannot drift from what the install lays down.
+HWE_USER_SKEL="$HWE_ROOT/provision/userlayer"
+
+_user_layer_files() {
+    local f
+    for f in "$HWE_USER_SKEL"/*; do
+        [[ -f "$f" ]] && printf '%s\n' "${f##*/}"
+    done
+    return 0
+}
+
+_deploy_user_layer() {
+    local name dst created=0
+    mkdir -p "$HWE_USER_CONFIG"
+    while IFS= read -r name; do
+        [[ -n "$name" ]] || continue
+        dst="$HWE_USER_CONFIG/$name"
+        [[ -e "$dst" ]] && continue      # yours — never overwritten
+        cp "$HWE_USER_SKEL/$name" "$dst"
+        info "created ~/.config/hwe/$name"
+        created=1
+    done < <(_user_layer_files)
+    [[ $created -eq 1 ]] && log "Personal layer ready in $HWE_USER_CONFIG — yours to edit, HWE won't touch it again"
+    return 0
 }
 
 _deploy_configs() {
@@ -454,8 +511,12 @@ install_main() {
     _install_preflight
     log "HWE install starting on $(uname -n)"
     _pacman_sync
+    # Before the package steps: your own lists have to exist before they can be
+    # read, and hypr.conf before the compositor ever parses hyprland.conf.
+    _deploy_user_layer
     _pacman_install core.lst
     _pacman_install dev.lst
+    _install_user_packages
     _install_vm_packages
     _setup_nvidia
     _bootstrap_paru
@@ -527,6 +588,9 @@ uninstall_main() {
     rm -f "$HWE_ROOT/config/hypr/assets/current.wall"
     warn "packages + enabled services (SDDM/NetworkManager/bluetooth) were left as-is"
     info "remove them manually if you want a full teardown"
+    # The personal layer is not ours to delete: it is the one thing here that
+    # was never HWE's, and it outlives both the install and the checkout.
+    [[ -d "$HWE_USER_CONFIG" ]] && info "your settings in ~/.config/hwe were left untouched"
     ok "HWE uninstalled — the repo at $HWE_ROOT is untouched"
 }
 

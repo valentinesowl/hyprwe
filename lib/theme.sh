@@ -235,7 +235,7 @@ PY
 # file; theme switches and `git pull` never clobber it. Best-effort: a broken
 # override warns and is ignored — it must never break the apply.
 _theme_waybar_overrides() {
-    local ov="${XDG_CONFIG_HOME:-$HOME/.config}/hwe/waybar.jsonc"
+    local ov="$HWE_USER_CONFIG/waybar.jsonc"
     local gen="$HWE_THEME_OUT/waybar/config.jsonc"
     [[ -f "$ov" && -f "$gen" ]] || return 0
     local merged

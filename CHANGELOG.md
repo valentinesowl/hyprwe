@@ -9,7 +9,27 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+### Added
+
+- **A personal layer in `~/.config/hwe/`** — the settings that are yours rather
+  than the repository's, kept outside the checkout. `hypr.conf` (sourced last by
+  Hyprland, so your displays, input and keybinds override what HWE ships),
+  `packages.lst` and `packages-aur.lst` (extra packages for this machine,
+  installed and drift-checked exactly like HWE's own lists), and the Waybar
+  overrides that already lived there. The files are created once on install and
+  never rewritten — `hwe update` only ever puts back one you deleted.
+
+  This closes a collision between two things HWE promised. `config/` is deployed
+  by symlink, so personalising the environment meant editing tracked files —
+  and `hwe update`'s fast-forward pull refuses to run on a dirty tree. Setting
+  up your monitors used to cost you the ability to update. Now `git status`
+  stays clean whatever you change, and a pull can never conflict with it.
+
 ### Changed
+
+- `hwe doctor host` reports the personal layer: a file of your own is stated as
+  such and never counted as drift, a missing one is a finding. `config/hypr/monitors.conf`
+  now says where your monitor lines belong instead of inviting an edit in place.
 
 - `hwe update` on a branch with no upstream now names the way out instead of just
   the problem: the exact `git branch --set-upstream-to=…` command when the matching

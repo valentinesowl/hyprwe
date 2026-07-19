@@ -32,7 +32,7 @@ ${C_BOLD}hwe doctor${C_RESET} — health checks
 ${C_BOLD}Usage:${C_RESET} hwe doctor [host|vm]
 
   ${C_CYAN}host${C_RESET}   Drift-check this installed machine (symlinks, packages,
-         Hyprland config, shell). Read-only. This is the default.
+         personal layer, Hyprland config, shell). Read-only. This is the default.
   ${C_CYAN}vm${C_RESET}     Host prerequisites for the dev VM (libvirt, KVM, network).
 
 Fix drift with ${C_BOLD}hwe update${C_RESET}.
@@ -76,6 +76,39 @@ _doctor_config_targets() {
     done
 }
 
+# Your own settings in ~/.config/hwe (see HWE_USER_CONFIG in lib/common.sh).
+# The layer being EDITED is not drift — it is the point of it, so a customised
+# file is reported and not counted against the machine. Only a missing file is a
+# finding, and only hypr.conf is a real one: hyprland.conf sources it
+# unconditionally, so its absence is a config error at every login. The file
+# list comes from the install's own skeleton dir, so the two cannot diverge.
+_doctor_user_layer() {
+    local name dst missing=() customised=0 rc=0
+    while IFS= read -r name; do
+        [[ -n "$name" ]] || continue
+        dst="$HWE_USER_CONFIG/$name"
+        if [[ ! -e "$dst" ]]; then
+            missing+=("$name")
+        elif ! cmp -s "$dst" "$HWE_USER_SKEL/$name"; then
+            customised=$((customised + 1))
+        fi
+    done < <(_user_layer_files)
+
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        warn "personal layer incomplete: ~/.config/hwe/{${missing[*]}} missing"
+        if [[ " ${missing[*]} " == *" hypr.conf "* ]]; then
+            info "hyprland.conf sources hypr.conf — until it exists, every login logs a config error"
+        fi
+        info "recreate the missing file(s): ${C_BOLD}hwe update${C_RESET} (it never overwrites an existing one)"
+        rc=1
+    elif [[ $customised -gt 0 ]]; then
+        ok "personal layer in ~/.config/hwe ($customised file(s) of your own)"
+    else
+        ok "personal layer in ~/.config/hwe (untouched defaults)"
+    fi
+    return $rc
+}
+
 doctor_host() {
     log "Checking this installed HWE machine for drift..."
     local fail=0
@@ -109,14 +142,19 @@ doctor_host() {
         fail=1
     fi
 
+    # --- the personal layer ----------------------------------------------
+    _doctor_user_layer || fail=1
+
     # --- packages ---------------------------------------------------------
-    # core + dev are both relevant on a real workstation (it's a dev box);
+    # core + dev are both relevant on a real workstation (it's a dev box), and
+    # your own list is as binding as HWE's — it is what this machine needs.
     # pacman -T understands versions, provides and virtual packages, so it's the
     # right "is this satisfied" test. AUR is best-effort — only meaningful with a
     # helper, and its packages register locally so pacman -T still sees them.
     if command -v pacman >/dev/null 2>&1; then
         local want=() missing=()
-        mapfile -t want < <(_pkgs_from core.lst; _pkgs_from dev.lst; command -v paru >/dev/null 2>&1 && _pkgs_from aur.lst)
+        mapfile -t want < <(_pkgs_from core.lst; _pkgs_from dev.lst; _pkgs_user packages.lst
+                            command -v paru >/dev/null 2>&1 && _aur_wanted)
         if [[ ${#want[@]} -gt 0 ]]; then
             mapfile -t missing < <(pacman -T "${want[@]}" 2>/dev/null || true)
         fi

@@ -1,0 +1,15 @@
+// ~/.config/hwe/waybar.jsonc — your bar composition.
+//
+// Which modules the bar carries, in what order, and what a click does is your
+// choice rather than a theme's — so it lives here instead of in theme.toml.
+// This file is deep-merged over the generated Waybar config on every
+// `hwe theme apply`, so your bar survives theme switches and updates.
+//
+// Merge rules: objects merge key by key; a list replaces the generated one
+// wholesale (you state the order you want); a key set to null deletes it.
+// Colours and fonts do NOT belong here — those come from the theme.
+{
+    // "modules-right": ["pulseaudio", "network", "battery", "clock"],
+    // "clock": { "format": "{:%H:%M  %a %d.%m}" },
+    // "cpu": null
+}

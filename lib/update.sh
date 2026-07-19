@@ -6,7 +6,12 @@
 #                            you drive real merges/rebases, update never guesses)
 #   2. re-link configs      (_deploy_configs — idempotent, repairs the symlinks)
 #   3. re-apply the theme    (regenerate every component + live-reload)
-#   4. install missing pkgs  (core + dev, AUR best-effort; confirm before it acts)
+#   4. install missing pkgs  (core + dev + your own list, AUR best-effort;
+#                             confirm before it acts)
+#
+# Nothing here touches your personal layer (~/.config/hwe) — which is exactly why
+# step 1 can afford to be strict about a dirty tree: your settings are not in the
+# tree. Step 2 only recreates a file of the layer that is missing entirely.
 #
 # `hwe update --check` runs the read-only drift report (== hwe doctor host) and
 # changes nothing. You run this yourself, so the live reload in step 3 is your
@@ -46,6 +51,11 @@ EOF
 
     _update_pull || return 1
     log "Reconciling this machine with the repo"
+    # FIRST, before anything else: the pull may have just brought in a
+    # hyprland.conf that sources a personal file this machine does not have yet,
+    # and Hyprland treats a missing source as a config error the moment it
+    # reloads. Copy-once, so anything already there is yours and is left alone.
+    _deploy_user_layer
     _deploy_configs
     _update_apply_theme
     _update_packages
@@ -115,7 +125,7 @@ _update_apply_theme() {
 _update_packages() {
     command -v pacman >/dev/null 2>&1 || { info "pacman not found — skipping package sync"; return 0; }
     local want=() missing=()
-    mapfile -t want < <(_pkgs_from core.lst; _pkgs_from dev.lst)
+    mapfile -t want < <(_pkgs_from core.lst; _pkgs_from dev.lst; _pkgs_user packages.lst)
     if [[ ${#want[@]} -gt 0 ]]; then
         mapfile -t missing < <(pacman -T "${want[@]}" 2>/dev/null || true)
     fi
@@ -135,7 +145,7 @@ _update_packages() {
     # AUR: only if a helper exists and aur.lst names anything not yet installed.
     if command -v paru >/dev/null 2>&1; then
         local aur=() aur_missing=()
-        mapfile -t aur < <(_pkgs_from aur.lst)
+        mapfile -t aur < <(_aur_wanted)
         if [[ ${#aur[@]} -gt 0 ]]; then
             mapfile -t aur_missing < <(pacman -T "${aur[@]}" 2>/dev/null || true)
             if [[ ${#aur_missing[@]} -gt 0 ]]; then
