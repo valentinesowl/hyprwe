@@ -3,7 +3,9 @@
 # Cutting a release:
 #   1. bump HWE_VERSION in bin/hwe
 #   2. add the matching `## [X.Y.Z] — YYYY-MM-DD` section to CHANGELOG.md
-#   3. git tag vX.Y.Z && git push origin vX.Y.Z
+#   3. bump the release badge in README.md and README.ru.md (tests/test_release.py
+#      pins it; the badge is static because shields' dynamic endpoints go down)
+#   4. git tag vX.Y.Z && git push origin vX.Y.Z
 #
 # The verify job below refuses to publish if those disagree with each other or
 # with the tag. That check is the whole point of this workflow: a tag is

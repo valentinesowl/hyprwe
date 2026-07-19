@@ -1,11 +1,12 @@
 """Release consistency — the version must mean the same thing everywhere.
 
-Three places claim the version: `HWE_VERSION` in bin/hwe, the newest CHANGELOG
-heading, and the git tag a release is cut from. Nothing forces them to agree, and
-the failure is quiet: `hwe version` reports one number while the release page
-shows another, and nobody notices until a user pastes the wrong one into a bug
-report. These tests make the disagreement loud instead. The tag half of it is
-enforced by .github/workflows/release.yml, which refuses to publish a mismatch.
+Four places claim the version: `HWE_VERSION` in bin/hwe, the newest CHANGELOG
+heading, the release badge in both READMEs, and the git tag a release is cut from.
+Nothing forces them to agree, and the failure is quiet: `hwe version` reports one
+number while the release page shows another, and nobody notices until a user pastes
+the wrong one into a bug report. These tests make the disagreement loud instead. The
+tag half of it is enforced by .github/workflows/release.yml, which refuses to publish
+a mismatch.
 """
 import re
 
@@ -74,6 +75,21 @@ def test_the_changelog_keeps_an_unreleased_section(changelog):
     """Where the next change gets written down — its absence is how changelogs die."""
     assert re.search(r"^## \[Unreleased\]", changelog, re.MULTILINE), (
         "CHANGELOG.md has no [Unreleased] section"
+    )
+
+
+@pytest.mark.parametrize("readme", ["README.md", "README.ru.md"])
+def test_the_readme_badge_states_the_declared_version(repo, declared_version, readme):
+    """The badge is static on purpose — shields' dynamic github/* endpoints go down.
+
+    The price of not asking a third party at render time is that the number is ours
+    to keep current; that is what this test is for.
+    """
+    text = (repo / readme).read_text()
+    found = re.findall(r"img\.shields\.io/badge/release-v([\d.]+)-", text)
+    assert found, f"{readme} has no static release badge"
+    assert found == [declared_version], (
+        f"{readme} badge says {found}, bin/hwe says {declared_version} — bump the badge"
     )
 
 
