@@ -52,6 +52,9 @@ python-pytest	python3-pytest
 python-fonttools	python3-fonttools
 python-numpy	python3-numpy
 man-pages	manpages
+# Debian splits the format's name from the tool's; the package carrying `xz` is
+# xz-utils, while a package literally named `xz` does not exist there.
+xz	xz-utils
 # Upstream ships a GitHub Action; the standalone binary is not packaged.
 actionlint	-
 # Not in the archive at all (the only search hit is python3-scruffy, by

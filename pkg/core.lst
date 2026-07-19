@@ -99,3 +99,13 @@ ttf-iawriter-nerd            # linen    (iMWriting / iA Writer)
 
 # --- Remote access (client + optional server; daemon enabled only in the VM) ---
 openssh
+
+# --- Tools HWE's own code calls ---
+# Not "nice to have": the installer and the CLI shell out to these by name, so an
+# absent one is a failure in our code path rather than a missing convenience. On
+# Arch they arrive with `base` and nothing ever noticed they were undeclared —
+# which is exactly why they are written down now.
+curl                         # base image, fonts, PPA key downloads
+gnupg                        # verifies the VM base image and the PPA signing key
+tar                          # unpacks the pinned font archives (.tar.xz)
+xz                           # …which are xz-compressed
