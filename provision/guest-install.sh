@@ -33,21 +33,28 @@ _pkgs_user() { _pkgs_read "$HWE_USER_CONFIG/$1"; }
 # whether bootstrapping paru is warranted at all and to install.
 _aur_wanted() { _pkgs_from aur.lst; _pkgs_user packages-aur.lst; }
 
+# Install one of HWE's lists. The names in pkg/*.lst are Arch's — the canonical
+# vocabulary — so they go through _pm_translate before they reach the local
+# package manager. On Arch that is a pass-through; elsewhere it renames what
+# needs renaming and drops what does not exist there (lib/distro.sh).
 _pacman_install() {
     local pkgs=()
-    mapfile -t pkgs < <(_pkgs_from "$1")
+    mapfile -t pkgs < <(_pkgs_from "$1" | _pm_translate)
     [[ ${#pkgs[@]} -eq 0 ]] && return 0
     log "Installing ${#pkgs[@]} packages from pkg/$1"
-    _pacman_retry -S --needed "${pkgs[@]}"
+    _pm_install "${pkgs[@]}"
 }
 
-# Your own packages (~/.config/hwe/packages.lst), installed exactly like HWE's.
+# Your own packages (~/.config/hwe/packages.lst), installed exactly like HWE's —
+# except that these are NOT translated. Your list names what your machine should
+# have, in the vocabulary of the machine you are on; second-guessing it would be
+# wrong the moment you name something that only exists here.
 _install_user_packages() {
     local pkgs=()
     mapfile -t pkgs < <(_pkgs_user packages.lst)
     [[ ${#pkgs[@]} -eq 0 ]] && return 0
     log "Installing ${#pkgs[@]} packages from ~/.config/hwe/packages.lst"
-    _pacman_retry -S --needed "${pkgs[@]}"
+    _pm_install "${pkgs[@]}"
 }
 
 # Slow-mirror tolerant: --disable-download-timeout + retry against a refreshed
@@ -66,7 +73,17 @@ _pacman_retry() {
     done
 }
 
+# The AUR is Arch's, and so is paru. Elsewhere an aur.lst entry is simply not
+# installable — say so once rather than failing per package.
+_aur_supported() {
+    [[ "$(_distro_family)" == pacman ]] && return 0
+    local aur; mapfile -t aur < <(_aur_wanted)
+    [[ ${#aur[@]} -gt 0 ]] && info "AUR packages are Arch-only — skipping ${#aur[@]} of them on ${HWE_DISTRO}"
+    return 1
+}
+
 _bootstrap_paru() {
+    _aur_supported || return 0
     command -v paru >/dev/null 2>&1 && return 0
     local aur; mapfile -t aur < <(_aur_wanted)
     [[ ${#aur[@]} -eq 0 ]] && return 0   # no AUR packages requested → skip
@@ -79,6 +96,7 @@ _bootstrap_paru() {
 }
 
 _aur_install() {
+    _aur_supported || return 0
     local aur; mapfile -t aur < <(_aur_wanted)
     [[ ${#aur[@]} -eq 0 ]] && return 0
     command -v paru >/dev/null 2>&1 || { warn "paru unavailable, skipping AUR packages"; return 0; }
@@ -258,6 +276,14 @@ _setup_nvidia() {
     [[ "${HWE_NO_NVIDIA:-0}" == 1 ]] && { info "HWE_NO_NVIDIA=1: skipping NVIDIA setup"; return 0; }
     systemd-detect-virt --quiet 2>/dev/null && return 0   # VM → virtio-gpu, not NVIDIA
     _nvidia_gpu_present || return 0                        # no NVIDIA → nothing to do
+    # Driver names, the mkinitcpio rebuild and the pacman update hook are all
+    # Arch's. Ubuntu has its own story (ubuntu-drivers, dkms, update-initramfs);
+    # until that is written and tested, say so rather than guess at it.
+    if [[ "$(_distro_family)" != pacman ]]; then
+        warn "NVIDIA GPU detected, but HWE only automates the driver on Arch"
+        info "install it the ${HWE_DISTRO} way (e.g. ubuntu-drivers install), then re-run"
+        return 0
+    fi
 
     local driver
     if [[ -n "${HWE_NVIDIA_DRIVER:-}" ]]; then
@@ -468,9 +494,11 @@ _apply_default_theme() {
 # -Sy (the partial-upgrade footgun) — installs use the current DB.
 _pacman_sync() {
     if [[ "${HWE_FULL_UPGRADE:-0}" == 1 || "${HWE_UNATTENDED:-0}" == 1 ]]; then
-        log "Refreshing keyring + full system upgrade"
-        _pacman_retry -Sy archlinux-keyring
-        _pacman_retry -Su
+        _pm_sync 1
+    elif [[ "$(_distro_family)" == apt ]]; then
+        # apt has no partial-upgrade footgun: refreshing the lists without
+        # upgrading is normal and is in fact required before any install.
+        _pm_sync 0
     else
         info "full upgrade skipped (set HWE_FULL_UPGRADE=1 to enable)"
         info "installing against your current package DB — if that errors, run 'sudo pacman -Syu' first, then re-run"
@@ -505,7 +533,7 @@ SUMMARY
 }
 
 install_main() {
-    need pacman "this installer targets Arch Linux (pacman not found)" || return 1
+    _distro_supported || return 1
     [[ $EUID -eq 0 ]] && die "run 'hwe install' as a normal user (it uses sudo where needed)"
 
     _install_preflight

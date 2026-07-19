@@ -148,15 +148,18 @@ doctor_host() {
     # --- packages ---------------------------------------------------------
     # core + dev are both relevant on a real workstation (it's a dev box), and
     # your own list is as binding as HWE's — it is what this machine needs.
-    # pacman -T understands versions, provides and virtual packages, so it's the
-    # right "is this satisfied" test. AUR is best-effort — only meaningful with a
-    # helper, and its packages register locally so pacman -T still sees them.
-    if command -v pacman >/dev/null 2>&1; then
+    # _pm_missing asks the local package manager the "is this satisfied" question
+    # in its own terms. HWE's lists are translated first (Arch names are the
+    # canonical vocabulary); your own list is not, since it already names local
+    # packages. AUR is best-effort — only meaningful with a helper, and its
+    # packages register locally so the check still sees them.
+    if _distro_supported 2>/dev/null; then
         local want=() missing=()
-        mapfile -t want < <(_pkgs_from core.lst; _pkgs_from dev.lst; _pkgs_user packages.lst
-                            command -v paru >/dev/null 2>&1 && _aur_wanted)
+        mapfile -t want < <({ _pkgs_from core.lst; _pkgs_from dev.lst
+                              command -v paru >/dev/null 2>&1 && _aur_wanted; } | _pm_translate
+                            _pkgs_user packages.lst)
         if [[ ${#want[@]} -gt 0 ]]; then
-            mapfile -t missing < <(pacman -T "${want[@]}" 2>/dev/null || true)
+            mapfile -t missing < <(_pm_missing "${want[@]}")
         fi
         if [[ ${#missing[@]} -eq 0 ]]; then
             ok "all listed packages installed"
@@ -166,7 +169,7 @@ doctor_host() {
             fail=1
         fi
     else
-        info "pacman not found — skipping package check"
+        info "unknown distribution (${HWE_DISTRO:-?}) — skipping the package check"
     fi
 
     # --- login shell ------------------------------------------------------

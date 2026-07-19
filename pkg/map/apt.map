@@ -7,7 +7,14 @@
 # set of lists.
 #
 # Every entry below was verified against a real ubuntu:26.04 package index, not
-# guessed. Re-check with:  apt-cache show <name>
+# guessed. Re-check the WHOLE translated set at once — and with a resolve, not a
+# lookup:
+#
+#     apt-get install -s $(… | _pm_translate)
+#
+# `apt-cache show <name>` is not enough: it answers for names that have no
+# installation candidate at all, which is exactly how `bluez-utils` and `ruff`
+# slipped through the first pass. Only the simulated install resolves.
 #
 # --- session plumbing ---
 polkit	polkitd
@@ -22,6 +29,11 @@ rofi-wayland	rofi
 mako	mako-notifier
 networkmanager	network-manager
 lm_sensors	lm-sensors
+# Arch splits the daemon from the tools; Debian ships bluetoothctl inside bluez.
+# apt knows the name `bluez-utils` from some dependency but has no candidate for
+# it, so it must be named explicitly — `apt-cache show` is satisfied by such a
+# name, only `apt-get install -s` reveals that nothing can be installed.
+bluez-utils	bluez
 
 # --- absent, with no equivalent in the archive ---
 # Screenshot annotation. Two keybinds use it; they degrade to a plain screenshot.
@@ -41,6 +53,11 @@ python-numpy	python3-numpy
 man-pages	manpages
 # Upstream ships a GitHub Action; the standalone binary is not packaged.
 actionlint	-
+# Not in the archive at all (the only search hit is python3-scruffy, by
+# substring). `just lint-py` / `just fmt-py` need it from pip or uv on this
+# distro — a dev-machine concern, not something an install should silently skip
+# without saying so.
+ruff	-
 
 # --- fonts ---
 # Ubuntu packages the upstream families but NOT the Nerd-patched variants, and

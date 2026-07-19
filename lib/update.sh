@@ -123,11 +123,12 @@ _update_apply_theme() {
 # Install packages the lists name but the system lacks (core + dev; AUR only if a
 # helper is present). Report-only for what's already there; confirm before acting.
 _update_packages() {
-    command -v pacman >/dev/null 2>&1 || { info "pacman not found — skipping package sync"; return 0; }
+    _distro_supported 2>/dev/null || { info "unknown distribution — skipping package sync"; return 0; }
     local want=() missing=()
-    mapfile -t want < <(_pkgs_from core.lst; _pkgs_from dev.lst; _pkgs_user packages.lst)
+    mapfile -t want < <({ _pkgs_from core.lst; _pkgs_from dev.lst; } | _pm_translate
+                        _pkgs_user packages.lst)
     if [[ ${#want[@]} -gt 0 ]]; then
-        mapfile -t missing < <(pacman -T "${want[@]}" 2>/dev/null || true)
+        mapfile -t missing < <(_pm_missing "${want[@]}")
     fi
 
     if [[ ${#missing[@]} -eq 0 ]]; then
@@ -136,7 +137,7 @@ _update_packages() {
         warn "${#missing[@]} package(s) from the lists are not installed:"
         info "${missing[*]}"
         if confirm "Install the missing packages now?"; then
-            _pacman_retry -S --needed "${missing[@]}"
+            _pm_install "${missing[@]}"
         else
             info "skipped — install later with: ${C_BOLD}hwe update${C_RESET}"
         fi
@@ -147,7 +148,7 @@ _update_packages() {
         local aur=() aur_missing=()
         mapfile -t aur < <(_aur_wanted)
         if [[ ${#aur[@]} -gt 0 ]]; then
-            mapfile -t aur_missing < <(pacman -T "${aur[@]}" 2>/dev/null || true)
+            mapfile -t aur_missing < <(_pm_missing "${aur[@]}")
             if [[ ${#aur_missing[@]} -gt 0 ]]; then
                 warn "${#aur_missing[@]} AUR package(s) missing: ${aur_missing[*]}"
                 if confirm "Install missing AUR packages with paru?"; then
