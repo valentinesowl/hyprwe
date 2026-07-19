@@ -1,0 +1,61 @@
+# pkg/map/apt.map — Arch package names → their Ubuntu/Debian equivalents.
+#
+# Format: <arch name> TAB <local name(s), space separated>   or   `-` to drop.
+# Only DIFFERENCES belong here. A name absent from this file passes through
+# unchanged, which is the common case — of HWE's 96 packages, 65 are spelled the
+# same on both sides. See lib/distro.sh for why this is a map and not a second
+# set of lists.
+#
+# Every entry below was verified against a real ubuntu:26.04 package index, not
+# guessed. Re-check with:  apt-cache show <name>
+#
+# --- session plumbing ---
+polkit	polkitd
+python-jinja	python3-jinja2
+qt5-wayland	qtwayland5
+kvantum	qt-style-kvantum
+
+# --- desktop components ---
+# rofi 2.0.0 absorbed the rofi-wayland fork: it links libwayland-client and
+# carries the zwlr_layer_shell_v1 symbols, so the plain package is the Wayland one.
+rofi-wayland	rofi
+mako	mako-notifier
+networkmanager	network-manager
+lm_sensors	lm-sensors
+
+# --- absent, with no equivalent in the archive ---
+# Screenshot annotation. Two keybinds use it; they degrade to a plain screenshot.
+satty	-
+# Arch-only by definition (paccache, checkupdates…). Nothing to install.
+pacman-contrib	-
+
+# --- shell / tooling ---
+openssh	openssh-client openssh-server
+base-devel	build-essential
+github-cli	gh
+# The binary is `fdfind` on Debian — `fd` is taken. Anything calling `fd` by name
+# needs to know that; the package is what this map is about.
+fd	fd-find
+python-pytest	python3-pytest
+python-numpy	python3-numpy
+man-pages	manpages
+# Upstream ships a GitHub Action; the standalone binary is not packaged.
+actionlint	-
+
+# --- fonts ---
+# Ubuntu packages the upstream families but NOT the Nerd-patched variants, and
+# every HWE theme names a Nerd family in [font]. Mapping to the plain font here
+# would silently give you a working font with no icons — worse than missing, so
+# these are dropped and the Nerd fonts are installed from their own release
+# archives instead (see _install_nerd_fonts).
+noto-fonts	fonts-noto-core
+noto-fonts-emoji	fonts-noto-color-emoji
+ttf-jetbrains-mono-nerd	-
+ttf-cascadia-code-nerd	-
+otf-geist-mono-nerd	-
+ttf-intone-nerd	-
+otf-monaspace-nerd	-
+ttf-0xproto-nerd	-
+ttf-lilex-nerd	-
+ttf-ibmplex-mono-nerd	-
+ttf-iawriter-nerd	-

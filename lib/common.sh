@@ -49,6 +49,11 @@ run() {
 # shellcheck disable=SC2034  # read by the sourced lib/*.sh modules (wall, vm)
 HWE_CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/hwe"
 
+# Which distribution this is, and the _pm_* verbs for driving its package
+# manager. Sourced here so HWE_DISTRO is set for every module.
+# shellcheck source=lib/distro.sh
+source "$HWE_ROOT/lib/distro.sh"
+
 # --- The personal layer ---------------------------------------------------
 # ~/.config/hwe/ holds what is YOURS rather than HWE's: the settings that differ
 # per machine and per person — displays, keybinds, extra packages, the bar's
