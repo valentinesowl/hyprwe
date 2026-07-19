@@ -67,6 +67,20 @@ _aur_install() {
 }
 
 # --- config deployment ----------------------------------------------------
+# A few config/<name>/ dirs hold theme-apply BUILD OUTPUT that is consumed
+# elsewhere, NOT read from ~/.config — so they must not be symlinked there
+# (a ~/.config/<name> link would be inert, and misleadingly show as "config"):
+#   color-schemes -> ~/.local/share/color-schemes/HWE.colors  (KDE reads XDG_DATA)
+#   kvantum       -> assembled into ~/.config/Kvantum/HWE by `hwe theme` (theme.sh)
+#   sddm          -> installed into /usr/share/sddm/themes/hwe by `hwe theme sddm`
+# Shared with lib/doctor.sh so the drift check can't diverge from the deploy.
+_config_is_staging() {
+    case "$1" in
+        color-schemes|kvantum|sddm) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 _deploy_configs() {
     log "Deploying configs -> ~/.config (symlinked to the repo)"
     local src dst name backup
@@ -74,6 +88,7 @@ _deploy_configs() {
     for src in "$HWE_ROOT"/config/*/; do
         [[ -d "$src" ]] || continue
         name="$(basename "$src")"
+        _config_is_staging "$name" && continue   # build output, consumed elsewhere
         dst="$HOME/.config/$name"
         if [[ -L "$dst" ]]; then
             rm -f "$dst"

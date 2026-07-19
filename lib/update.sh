@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+# lib/update.sh — `hwe update`: reconcile this machine with the repo.
+#
+# The counterpart to `hwe doctor host`: doctor DETECTS drift, update FIXES it.
+#   1. git pull --ff-only   (safe: aborts on a dirty tree or a non-ff history —
+#                            you drive real merges/rebases, update never guesses)
+#   2. re-link configs      (_deploy_configs — idempotent, repairs the symlinks)
+#   3. re-apply the theme    (regenerate every component + live-reload)
+#   4. install missing pkgs  (core + dev, AUR best-effort; confirm before it acts)
+#
+# `hwe update --check` runs the read-only drift report (== hwe doctor host) and
+# changes nothing. You run this yourself, so the live reload in step 3 is your
+# own action — see the drive-live-envs discipline.
+#
+# Sourced by bin/hwe. Reuses install primitives from guest-install.sh.
+# shellcheck source=provision/guest-install.sh
+HWE_INSTALL_STANDALONE=1 source "$HWE_ROOT/provision/guest-install.sh"
+
+update_main() {
+    local check=0
+    case "${1:-}" in
+        --check|-n) check=1 ;;
+        help|-h|--help)
+            cat >&2 <<EOF
+${C_BOLD}hwe update${C_RESET} — pull the repo and reconcile this machine
+
+${C_BOLD}Usage:${C_RESET} hwe update [--check]
+
+  (no args)   ff-only pull, re-link configs, re-apply theme, install missing pkgs
+  ${C_CYAN}--check${C_RESET}     read-only drift report only (same as ${C_BOLD}hwe doctor host${C_RESET})
+EOF
+            return 0 ;;
+        "") ;;
+        *)  err "unknown update flag: $1"; update_main help; return 1 ;;
+    esac
+
+    if [[ $check -eq 1 ]]; then
+        # shellcheck source=lib/doctor.sh
+        source "$HWE_ROOT/lib/doctor.sh"
+        doctor_host
+        return
+    fi
+
+    need git "sudo pacman -S git" || return 1
+    [[ $EUID -eq 0 ]] && die "run 'hwe update' as a normal user (it uses sudo where needed)"
+
+    _update_pull || return 1
+    log "Reconciling this machine with the repo"
+    _deploy_configs
+    _update_apply_theme
+    _update_packages
+
+    echo
+    ok "hwe update complete."
+}
+
+# Fast-forward only. Refuse to touch a repo with uncommitted TRACKED changes
+# (gitignored generated files don't count) or one that can't fast-forward — those
+# are yours to resolve, and a silent merge/stash here would be exactly the kind of
+# surprise state change to avoid.
+_update_pull() {
+    git -C "$HWE_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+        || { err "$HWE_ROOT is not a git checkout — nothing to pull"; return 1; }
+
+    if ! git -C "$HWE_ROOT" diff --quiet || ! git -C "$HWE_ROOT" diff --cached --quiet; then
+        err "uncommitted changes in $HWE_ROOT — commit or stash them first"
+        info "update only fast-forwards; it won't touch your work in progress"
+        return 1
+    fi
+
+    local branch upstream
+    branch="$(git -C "$HWE_ROOT" symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
+    [[ -n "$branch" ]] || { err "HEAD is detached — check out a branch first"; return 1; }
+    upstream="$(git -C "$HWE_ROOT" rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null || true)"
+    [[ -n "$upstream" ]] || { err "branch '$branch' has no upstream to pull from"; return 1; }
+
+    log "Pulling $branch (fast-forward only) from $upstream"
+    if ! run git -C "$HWE_ROOT" pull --ff-only; then
+        err "cannot fast-forward — $branch has diverged from $upstream"
+        info "reconcile it yourself (git rebase / git merge), then re-run hwe update"
+        return 1
+    fi
+}
+
+# Re-apply the currently-selected theme (regenerate every component and live
+# reload). No-op-safe if nothing is selected yet.
+_update_apply_theme() {
+    local cur; cur="$(cat "$HWE_THEME_CURRENT" 2>/dev/null || true)"
+    [[ -n "$cur" ]] || { info "no theme selected yet — skipping theme apply"; return 0; }
+    log "Re-applying theme '$cur'"
+    # shellcheck source=lib/theme.sh
+    source "$HWE_ROOT/lib/theme.sh"
+    theme_apply "$cur"
+}
+
+# Install packages the lists name but the system lacks (core + dev; AUR only if a
+# helper is present). Report-only for what's already there; confirm before acting.
+_update_packages() {
+    command -v pacman >/dev/null 2>&1 || { info "pacman not found — skipping package sync"; return 0; }
+    local want=() missing=()
+    mapfile -t want < <(_pkgs_from core.lst; _pkgs_from dev.lst)
+    if [[ ${#want[@]} -gt 0 ]]; then
+        mapfile -t missing < <(pacman -T "${want[@]}" 2>/dev/null || true)
+    fi
+
+    if [[ ${#missing[@]} -eq 0 ]]; then
+        ok "packages already in sync"
+    else
+        warn "${#missing[@]} package(s) from the lists are not installed:"
+        info "${missing[*]}"
+        if confirm "Install the missing packages now?"; then
+            _pacman_retry -S --needed "${missing[@]}"
+        else
+            info "skipped — install later with: ${C_BOLD}hwe update${C_RESET}"
+        fi
+    fi
+
+    # AUR: only if a helper exists and aur.lst names anything not yet installed.
+    if command -v paru >/dev/null 2>&1; then
+        local aur=() aur_missing=()
+        mapfile -t aur < <(_pkgs_from aur.lst)
+        if [[ ${#aur[@]} -gt 0 ]]; then
+            mapfile -t aur_missing < <(pacman -T "${aur[@]}" 2>/dev/null || true)
+            if [[ ${#aur_missing[@]} -gt 0 ]]; then
+                warn "${#aur_missing[@]} AUR package(s) missing: ${aur_missing[*]}"
+                if confirm "Install missing AUR packages with paru?"; then
+                    run paru -S --needed --noconfirm "${aur_missing[@]}"
+                fi
+            fi
+        fi
+    fi
+}

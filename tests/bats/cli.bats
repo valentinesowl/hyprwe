@@ -64,10 +64,37 @@ setup() {
 
 @test "every command in the usage text dispatches" {
     # Catches a command documented but never wired into the case statement.
-    for cmd in vm install uninstall doctor theme wall power keys clip record checkconfig version; do
+    for cmd in vm install update uninstall doctor theme wall power keys clip record checkconfig version; do
         run bash -c "grep -qE '^\s+$cmd[)|]' '$HWE_ROOT/bin/hwe' || grep -qE '^\s+$cmd\|' '$HWE_ROOT/bin/hwe'"
         assert_success
     done
+}
+
+@test "doctor help shows the doctor usage on stderr" {
+    run --separate-stderr "$HWE_ROOT/bin/hwe" doctor help
+    assert_success
+    [[ "$stderr" == *"hwe doctor"* ]]
+    [[ "$stderr" == *"host"* ]]
+    [[ "$stderr" == *"vm"* ]]
+}
+
+@test "an unknown doctor subject fails and says which" {
+    run --separate-stderr "$HWE_ROOT/bin/hwe" doctor not-a-subject
+    assert_failure
+    [[ "$stderr" == *"unknown doctor subject: not-a-subject"* ]]
+}
+
+@test "update help shows the update usage on stderr" {
+    run --separate-stderr "$HWE_ROOT/bin/hwe" update help
+    assert_success
+    [[ "$stderr" == *"hwe update"* ]]
+    [[ "$stderr" == *"--check"* ]]
+}
+
+@test "an unknown update flag fails and says which" {
+    run --separate-stderr "$HWE_ROOT/bin/hwe" update --bogus
+    assert_failure
+    [[ "$stderr" == *"unknown update flag: --bogus"* ]]
 }
 
 @test "the CLI resolves its root through a symlink" {

@@ -4,7 +4,8 @@
 # Subcommands:
 #   vm       Manage the libvirt/virt-manager-compatible dev VM (see: hwe vm help)
 #   install  Install packages + deploy configs onto THIS machine (bare metal or guest)
-#   doctor   Check that the host has everything needed to run the VM
+#   update   Pull the repo and reconcile this machine (configs, theme, packages)
+#   doctor   Health-check this machine (host, default) or the VM prereqs (doctor vm)
 #   version  Print version
 #
 # Run `hwe <subcommand> help` for details.
@@ -33,6 +34,8 @@ ${C_BOLD}Commands:${C_RESET}
   ${C_CYAN}vm${C_RESET} <up|ssh|console|status|list|down|destroy|rebuild>
               Manage the local dev VM (libvirt + cloud-init, shows in virt-manager)
   ${C_CYAN}install${C_RESET}   Install packages and deploy configs onto the current machine
+  ${C_CYAN}update${C_RESET} [--check]
+              Pull the repo and reconcile this machine (configs, theme, packages)
   ${C_CYAN}uninstall${C_RESET} Revert config symlinks + login shell (leaves packages/services)
   ${C_CYAN}theme${C_RESET} <list|apply|pick|validate|current|sddm>
               Generate every component's colours from a theme's parameters
@@ -45,7 +48,8 @@ ${C_BOLD}Commands:${C_RESET}
   ${C_CYAN}record${C_RESET} <toggle|region>
               Toggle screen recording (wf-recorder -> ~/Videos)
   ${C_CYAN}checkconfig${C_RESET}  Report Hyprland config errors from the running compositor
-  ${C_CYAN}doctor${C_RESET}    Verify host prerequisites for the VM workflow
+  ${C_CYAN}doctor${C_RESET} [host|vm]
+              Health-check this machine (host, default) or VM prerequisites (vm)
   ${C_CYAN}version${C_RESET}   Print version
 
 ${C_BOLD}Examples:${C_RESET}
@@ -75,9 +79,14 @@ case "$cmd" in
         uninstall_main "$@"
         ;;
     doctor)
-        # shellcheck source=lib/vm.sh
-        source "$HWE_ROOT/lib/vm.sh"
-        vm_doctor
+        # shellcheck source=lib/doctor.sh
+        source "$HWE_ROOT/lib/doctor.sh"
+        doctor_main "$@"
+        ;;
+    update)
+        # shellcheck source=lib/update.sh
+        source "$HWE_ROOT/lib/update.sh"
+        update_main "$@"
         ;;
     theme)
         # shellcheck source=lib/theme.sh
