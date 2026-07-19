@@ -77,6 +77,12 @@ pacman-contrib               # paccache, checkupdates, rankmirrors
 
 # --- Fonts (icons + emoji for bar/prompt) ---
 ttf-jetbrains-mono-nerd      # default theme + renderer fallback
+# The two fonts the [font] contract falls back to, for every theme. A theme's
+# own typeface may not be packaged on the distribution you are on; these two
+# always are, so text degrades to a good mono and icons keep working instead of
+# rendering as tofu. See FONT_DEFAULTS in scripts/render-theme.py.
+ttf-jetbrains-mono           # fallback_family — packaged everywhere HWE runs
+ttf-nerd-fonts-symbols-mono  # icon_family — the glyphs, split out of the text font
 noto-fonts
 noto-fonts-emoji
 

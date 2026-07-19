@@ -43,7 +43,7 @@ label {
     monitor =
     text = $LAYOUT
     font_size = 14
-    font_family = {{ font.family }}
+    font_family = {{ font.family }}, {{ font.fallback_family }}, {{ font.icon_family }}
     color = {{ sem.fg_normal|rgb }}
     position = 0, -104
     halign = center
@@ -55,7 +55,7 @@ label {
     monitor =
     text = cmd[update:1000] date +"%H:%M"
     font_size = 96
-    font_family = {{ font.family }}
+    font_family = {{ font.family }}, {{ font.fallback_family }}, {{ font.icon_family }}
     color = {{ sem.fg_bright|rgb }}
     position = 0, 160
     halign = center
@@ -67,7 +67,7 @@ label {
     monitor =
     text = cmd[update:60000] date +"%A, %d %B"
     font_size = 20
-    font_family = {{ font.family }}
+    font_family = {{ font.family }}, {{ font.fallback_family }}, {{ font.icon_family }}
     color = {{ sem.fg_normal|rgb }}
     position = 0, 60
     halign = center

@@ -69,6 +69,8 @@ bar_ws_speed     = 220
 # ── Typography (contract) ─────────────────────────────────────────────────
 [font]
 family    = "BlexMono Nerd Font"
+icon_family     = "Symbols Nerd Font Mono"   # the bar/launcher glyphs
+fallback_family = "JetBrains Mono"           # used where `family` is not installed
 ui_family = "Sans"
 terminal  = 9.5
 bar       = 12

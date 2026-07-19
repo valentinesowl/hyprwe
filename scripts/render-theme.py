@@ -56,7 +56,23 @@ UGLY = "#ff00ff"  # loud placeholder so a forgotten role screams on screen
 # so a theme can tune one surface without redeclaring the rest. Every shipped
 # theme still declares the whole block for discoverability.
 FONT_DEFAULTS = {
-    "family":    "JetBrainsMono Nerd Font",  # the mono font (terminal, bar, rofi, mako, lock)
+    # The mono font a theme is written in (terminal, bar, rofi, mako, lock).
+    # A PLAIN family on purpose: the icon glyphs come from icon_family below,
+    # not from a patched copy of this one.
+    "family":    "JetBrains Mono",
+    # Where the bar's and launcher's icons come from. Splitting it out of
+    # `family` is what lets a theme choose its typeface freely: any font can be
+    # the text font, because none of them has to carry the icons as well. It
+    # also shrinks what has to be trusted — one small glyph font instead of a
+    # patched build of every family — and every surface below declares it as a
+    # fallback, so a missing glyph resolves here instead of rendering as tofu.
+    "icon_family": "Symbols Nerd Font Mono",
+    # What to fall back to when `family` is not installed. Every surface names it
+    # between the theme's font and the icons, so a theme whose typeface is not
+    # packaged on this distribution degrades to a good mono rather than to
+    # whatever the system happens to pick. JetBrains Mono because it is packaged
+    # everywhere HWE runs — that is the whole requirement for this slot.
+    "fallback_family": "JetBrains Mono",
     "ui_family": "Sans",  # the UI/proportional font for GTK apps (size from [font].gtk)
     "terminal":  9.5,   # kitty
     "bar":       12,    # waybar
@@ -66,7 +82,7 @@ FONT_DEFAULTS = {
 }
 FONT_ROLES = list(FONT_DEFAULTS)
 # The two [font] keys that are FAMILIES (strings), not point sizes.
-FONT_FAMILY_KEYS = ("family", "ui_family")
+FONT_FAMILY_KEYS = ("family", "icon_family", "fallback_family", "ui_family")
 
 # ── Waybar workspace focus indicator ──────────────────────────────────────
 # How the ACTIVE tag is marked. GTK3 CSS has no `transform` (it is simply not a

@@ -12,5 +12,5 @@
 
     /* Default rofi font from the [font] contract (launcher base + 2). config.rasi
        imports this and doesn't set its own font, so the launcher inherits it. */
-    font: "{{ font.family }} {{ (font.launcher + 2) | round | int }}";
+    font: "{{ font.family }}, {{ font.fallback_family }}, {{ font.icon_family }} {{ (font.launcher + 2) | round | int }}";
 }

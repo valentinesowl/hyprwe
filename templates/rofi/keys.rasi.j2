@@ -13,7 +13,7 @@
     urgent:       {{ sem.urgent }};
     transparent:  #00000000;
 
-    font: "{{ font.family }} {{ font.launcher | round | int }}";
+    font: "{{ font.family }}, {{ font.fallback_family }}, {{ font.icon_family }} {{ font.launcher | round | int }}";
     background-color: @transparent;
     text-color: @fg-bright;
 }

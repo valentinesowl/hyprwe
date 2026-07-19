@@ -556,3 +556,58 @@ def test_ui_family_is_a_family_not_a_size(render_theme, minimal_theme):
 def test_a_theme_name_param_cannot_smuggle_structural_characters(render_theme, minimal_theme):
     minimal_theme["params"]["gtk_theme"] = 'Adwaita"; exec'
     assert any("gtk_theme" in p for p in render_theme.check_values(minimal_theme))
+
+
+# ── The font fallback chain ───────────────────────────────────────────────
+# A theme names the typeface it wants; nothing guarantees that typeface is
+# packaged on the distribution you installed on. Every surface therefore renders
+# a CHAIN — the theme's font, then a mono packaged everywhere, then the icon
+# glyphs — so an absent family degrades to a good substitute with working icons
+# instead of a screen full of tofu. These pin the chain to the templates.
+def test_the_icon_and_fallback_families_are_part_of_the_contract(render_theme):
+    for role in ("icon_family", "fallback_family"):
+        assert role in render_theme.FONT_ROLES
+        assert role in render_theme.FONT_FAMILY_KEYS, f"{role} is a family, not a size"
+
+
+@pytest.mark.parametrize("role", ["icon_family", "fallback_family"])
+def test_the_new_families_are_validated_like_the_text_font(render_theme, minimal_theme, role):
+    """They reach the same quoted values `family` does, so the injection guard
+    that closed the theme.conf hole has to cover them too."""
+    minimal_theme["font"][role] = 'Iosevka"; exec-once = x'
+    assert any(role in p for p in render_theme.check_values(minimal_theme))
+
+
+def test_every_text_surface_renders_the_whole_chain(
+    render_theme, minimal_theme, templates_dir, tmp_path
+):
+    """Bar, launcher, notifications and the lock screen all draw icons, so each
+    must name the fallback AND the icon family — dropping either is how tofu
+    gets shipped."""
+    minimal_theme["font"] = {
+        "family": "TestMono", "fallback_family": "FallbackMono", "icon_family": "IconGlyphs",
+    }
+    out = _render(render_theme, minimal_theme, templates_dir, tmp_path)
+    surfaces = [
+        "waybar/theme.css", "mako/config", "rofi/theme.rasi",
+        "rofi/powermenu.rasi", "rofi/keys.rasi", "hypr/hyprlock.conf",
+    ]
+    for rel in surfaces:
+        text = (out / rel).read_text()
+        assert "FallbackMono" in text, f"{rel} lost the fallback family"
+        assert "IconGlyphs" in text, f"{rel} lost the icon family"
+
+
+def test_kitty_maps_the_glyph_ranges_to_the_icon_font(
+    render_theme, minimal_theme, templates_dir, tmp_path
+):
+    """kitty resolves glyphs per codepoint rather than by fontconfig ordering, so
+    it gets explicit symbol_map ranges instead of a family list."""
+    minimal_theme["font"] = {"family": "TestMono", "icon_family": "IconGlyphs"}
+    out = _render(render_theme, minimal_theme, templates_dir, tmp_path)
+    conf = (out / "kitty/font.conf").read_text()
+    assert "font_family      TestMono" in conf
+    maps = [ln for ln in conf.splitlines() if ln.startswith("symbol_map")]
+    assert maps, "kitty renders no symbol_map — icons would fall to fontconfig"
+    assert all(ln.endswith("IconGlyphs") for ln in maps)
+    assert any("U+E000" in ln for ln in maps), "the main Private Use Area is unmapped"

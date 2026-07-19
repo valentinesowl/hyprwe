@@ -2,7 +2,7 @@
 # Do NOT edit; edit templates/mako/config.j2 or the theme's roles instead.
 # Reload after a theme change with:  makoctl reload  (hwe theme apply does this).
 
-font={{ font.family }} {{ font.notify }}
+font={{ font.family }}, {{ font.fallback_family }}, {{ font.icon_family }} {{ font.notify }}
 width=360
 height=120
 margin=10

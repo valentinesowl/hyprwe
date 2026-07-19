@@ -10,7 +10,7 @@
 /* Bar font family + size from the theme's [font] contract. style.css no longer
    sets these on `*`, so these values are the ones that apply. */
 * {
-    font-family: "{{ font.family }}", "Noto Sans", sans-serif;
+    font-family: "{{ font.family }}", "{{ font.fallback_family }}", "{{ font.icon_family }}", "Noto Sans", sans-serif;
     font-size: {{ font.bar }}px;
 }
 

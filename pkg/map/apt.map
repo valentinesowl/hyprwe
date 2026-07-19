@@ -67,6 +67,12 @@ ruff	-
 # archives instead (see _install_nerd_fonts).
 noto-fonts	fonts-noto-core
 noto-fonts-emoji	fonts-noto-color-emoji
+# The text fallback IS packaged here, which is exactly why it was chosen.
+ttf-jetbrains-mono	fonts-jetbrains-mono
+# The icon font is not packaged anywhere in the archive. It is the one font HWE
+# fetches itself on this distribution — one small file, attested — rather than
+# the nine patched families below, which are dropped entirely.
+ttf-nerd-fonts-symbols-mono	-
 ttf-jetbrains-mono-nerd	-
 ttf-cascadia-code-nerd	-
 otf-geist-mono-nerd	-

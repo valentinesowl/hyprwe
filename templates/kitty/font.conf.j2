@@ -3,3 +3,14 @@
 # Regenerate: hwe theme apply <name>.  (Source: templates/kitty/font.conf.j2)
 font_family      {{ font.family }}
 font_size        {{ font.terminal }}
+
+# Icons come from icon_family, not from a patched copy of the text font. kitty
+# resolves these per codepoint instead of leaving it to fontconfig's ordering,
+# so the ranges are named explicitly — the blocks the Nerd Fonts glyphs occupy
+# (the two Private Use Areas, plus the few assigned ones they also use).
+symbol_map U+23FB-U+23FE,U+2665,U+26A1,U+2B58 {{ font.icon_family }}
+symbol_map U+E000-U+E00A,U+E0A0-U+E0A3,U+E0B0-U+E0D7 {{ font.icon_family }}
+symbol_map U+E200-U+E2A9,U+E300-U+E3E3,U+E5FA-U+E6B7 {{ font.icon_family }}
+symbol_map U+E700-U+E8EF,U+EA60-U+EC1E,U+ED00-U+EFCE {{ font.icon_family }}
+symbol_map U+F000-U+F2FF,U+F300-U+F381,U+F400-U+F533 {{ font.icon_family }}
+symbol_map U+F0001-U+F1AF0 {{ font.icon_family }}

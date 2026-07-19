@@ -13,7 +13,7 @@
     accent-soft:  {{ sem.accent_soft }};
     transparent:  #00000000;
 
-    font: "{{ font.family }} {{ (font.launcher - 1) | round | int }}";
+    font: "{{ font.family }}, {{ font.fallback_family }}, {{ font.icon_family }} {{ (font.launcher - 1) | round | int }}";
     background-color: @transparent;
     text-color: @fg-bright;
 }
@@ -88,5 +88,5 @@ element-text {
     cursor:           inherit;
     background-color: @transparent;
     text-color:       inherit;
-    font:             "{{ font.family }} {{ (font.launcher - 2) | round | int }}";
+    font:             "{{ font.family }}, {{ font.fallback_family }}, {{ font.icon_family }} {{ (font.launcher - 2) | round | int }}";
 }
