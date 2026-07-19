@@ -56,6 +56,7 @@ ${C_BOLD}Examples:${C_RESET}
   hwe doctor
   hwe vm up                 # deploy current local branch into a fresh VM
   hwe vm up feature-x       # deploy a specific local branch
+  hwe vm up --uncommitted   # deploy the working tree as it is, before committing
   hwe vm ssh                # ssh into the running VM
   hwe install               # provision the current machine (bare metal)
 EOF

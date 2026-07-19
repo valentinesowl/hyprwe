@@ -44,13 +44,15 @@ ${C_BOLD}Usage:${C_RESET} hwe vm <action> [args]
 
 ${C_BOLD}Actions:${C_RESET}
   ${C_CYAN}up${C_RESET} [branch]     Create & boot a VM deploying the given local branch (default: current)
+                  ${C_CYAN}--uncommitted${C_RESET}  deploy the working tree as it is now (uncommitted
+                  changes and new files included) instead of the branch's last commit
   ${C_CYAN}ssh${C_RESET} [cmd...]    SSH into the running VM (optionally run a command)
   ${C_CYAN}console${C_RESET}         Attach to the serial console (Ctrl+] to detach)
   ${C_CYAN}status${C_RESET}          Show VM state, IP and cloud-init progress hint
   ${C_CYAN}list${C_RESET}           List HWE VMs known to libvirt
   ${C_CYAN}down${C_RESET}            Gracefully shut the VM down
   ${C_CYAN}destroy${C_RESET}        Remove the VM and its disks (irreversible)
-  ${C_CYAN}rebuild${C_RESET} [br]    destroy + up (fresh provision)
+  ${C_CYAN}rebuild${C_RESET} [br]    destroy + up (fresh provision; takes --uncommitted too)
   ${C_CYAN}doctor${C_RESET}         Check host prerequisites
 
 ${C_BOLD}Env overrides:${C_RESET} HWE_VM_NAME=$HWE_VM_NAME  HWE_VM_MEMORY=$HWE_VM_MEMORY
@@ -273,18 +275,80 @@ _vm_branch_ok() {
 }
 
 _vm_build_bundle() {
-    local branch="$1" dest="$2"
+    local branch="$1" dest="$2" uncommitted="${3:-0}" workdir="${4:-}"
     git -C "$HWE_ROOT" rev-parse --git-dir >/dev/null 2>&1 \
         || die "$HWE_ROOT is not a git repo. Run: git init && git add -A && git commit -m init"
     git -C "$HWE_ROOT" rev-parse HEAD >/dev/null 2>&1 \
         || die "no commits yet. Commit your work first: git add -A && git commit -m init"
     git -C "$HWE_ROOT" rev-parse --verify --quiet "refs/heads/$branch" >/dev/null \
         || die "local branch '$branch' not found (git branch to list)"
+
+    if [[ "$uncommitted" == 1 ]]; then
+        _vm_bundle_uncommitted "$branch" "$dest" "$workdir"
+        return
+    fi
+
     info "bundling branch '$branch' from local repo"
     git -C "$HWE_ROOT" bundle create "$dest" "$branch" >/dev/null
-    if ! git -C "$HWE_ROOT" diff --quiet || ! git -C "$HWE_ROOT" diff --cached --quiet; then
+    if ! _vm_tree_clean; then
         warn "working tree has uncommitted changes — only committed content of '$branch' is deployed"
+        info "to test them anyway: ${C_BOLD}hwe vm up $branch --uncommitted${C_RESET}"
     fi
+}
+
+# True when nothing is modified, staged, deleted or newly added (ignored files
+# don't count — they are build output the guest regenerates).
+_vm_tree_clean() { [[ -z "$(git -C "$HWE_ROOT" status --porcelain 2>/dev/null)" ]]; }
+
+# --- Deploy the working tree as it is right now (--uncommitted) ------------
+# Testing a change normally means committing it first. This ships the tree
+# instead: the branch's history plus everything uncommitted on top of it —
+# modified, staged, deleted and untracked-but-not-ignored files — as one
+# throwaway snapshot commit, so the VM boots exactly what you are editing.
+#
+# Nothing in the real repo moves. `git add -A` runs against an ALTERNATE index
+# ($GIT_INDEX_FILE), so the true index and working tree are untouched; the
+# snapshot commit is written into a temporary `--shared` clone (objects are read
+# through alternates, nothing is copied) and bundled from there, so no ref, no
+# branch and no reflog entry of yours ever mentions it. Ignored files stay out —
+# `config/*/colors.*` and friends are generated in the guest by `hwe install`.
+_vm_bundle_uncommitted() {
+    local branch="$1" dest="$2" workdir="$3"
+    [[ -d "$workdir" ]] || die "internal: no scratch dir for the uncommitted snapshot"
+
+    # The working tree belongs to whatever HEAD points at, so snapshotting it
+    # onto a *different* branch would silently graft unrelated changes.
+    local head; head="$(git -C "$HWE_ROOT" symbolic-ref --quiet --short HEAD || true)"
+    [[ "$head" == "$branch" ]] || die "--uncommitted deploys the working tree, which belongs to the checked-out branch (${head:-detached HEAD}), not to '$branch'. Check '$branch' out first, or drop --uncommitted."
+
+    # Nothing to snapshot: deploy the branch itself rather than an empty commit.
+    if _vm_tree_clean; then
+        info "working tree is clean — deploying branch '$branch' as committed"
+        git -C "$HWE_ROOT" bundle create "$dest" "$branch" >/dev/null
+        return
+    fi
+    warn "deploying the UNCOMMITTED working tree of '$branch':"
+    git -C "$HWE_ROOT" status --short | sed 's/^/    /' >&2
+
+    local index="$workdir/snapshot.index" clone="$workdir/snapshot.git"
+    local tree commit
+
+    # A commit needs an identity; borrow the repo's, and fall back to a neutral
+    # one so an unconfigured git can't fail the build over a throwaway commit.
+    local ident=()
+    git -C "$HWE_ROOT" config --get user.email >/dev/null 2>&1 \
+        || ident=(-c user.name="hwe vm" -c user.email="hwe-vm@localhost")
+
+    GIT_INDEX_FILE="$index" git -C "$HWE_ROOT" read-tree HEAD
+    GIT_INDEX_FILE="$index" git -C "$HWE_ROOT" add -A
+    tree="$(GIT_INDEX_FILE="$index" git -C "$HWE_ROOT" write-tree)"
+    commit="$(git -C "$HWE_ROOT" "${ident[@]}" commit-tree "$tree" -p HEAD \
+        -m "WIP: working tree of $branch (hwe vm --uncommitted)")"
+
+    info "bundling the working-tree snapshot of '$branch'"
+    git clone --quiet --shared --no-checkout "$HWE_ROOT" "$clone"
+    git -C "$clone" update-ref "refs/heads/$branch" "$commit"
+    git -C "$clone" bundle create "$dest" "$branch" >/dev/null
 }
 
 # --- cloud-init seed ------------------------------------------------------
@@ -301,7 +365,7 @@ _vm_collect_ssh_keys() {
 }
 
 _vm_render_seed() {
-    local branch="$1" workdir="$2"
+    local branch="$1" workdir="$2" uncommitted="${3:-0}"
     local ci="$workdir/cloud-init"
     mkdir -p "$ci"
 
@@ -319,7 +383,7 @@ _vm_render_seed() {
     _vm_subst "$HWE_ROOT/provision/cloud-init/meta-data.tmpl" "$ci/meta-data" \
         HOSTNAME="$HWE_VM_NAME" INSTANCE_ID="$instance_id"
 
-    _vm_build_bundle "$branch" "$ci/hwe.bundle"
+    _vm_build_bundle "$branch" "$ci/hwe.bundle" "$uncommitted" "$workdir"
 
     local seed="$workdir/seed.iso"
     info "building NoCloud seed ISO"
@@ -350,7 +414,15 @@ _pool_put()     { run sudo cp -f "$1" "$2"; }   # libvirt dynamic-ownership chow
 
 # --- Create & boot --------------------------------------------------------
 vm_up() {
-    local branch="${1:-}"
+    local branch="" uncommitted=0 arg
+    for arg in "$@"; do
+        case "$arg" in
+            --uncommitted) uncommitted=1 ;;
+            -*) err "unknown vm up flag: $arg"; vm_usage; return 1 ;;
+            *)  [[ -n "$branch" ]] && { err "vm up takes at most one branch (got '$branch' and '$arg')"; return 1; }
+                branch="$arg" ;;
+        esac
+    done
     [[ -z "$branch" ]] && branch="$(git -C "$HWE_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo master)"
     _vm_branch_ok "$branch" \
         || die "refusing branch name '$branch' — letters, digits and . _ / - only (it is interpolated into the guest's cloud-init)"
@@ -366,9 +438,11 @@ vm_up() {
     # Unbound-safe: this RETURN trap can fire again as outer functions return,
     # by which point `work` is out of scope (set -u would otherwise abort).
     trap 'rm -rf "${work:-}"' RETURN
-    local seed; seed="$(_vm_render_seed "$branch" "$work")"
+    local seed; seed="$(_vm_render_seed "$branch" "$work" "$uncommitted")"
 
-    log "Provisioning VM '$HWE_VM_NAME' (branch: $branch)"
+    local what="branch: $branch"
+    [[ "$uncommitted" == 1 ]] && what="working tree of $branch"
+    log "Provisioning VM '$HWE_VM_NAME' ($what)"
     _pool_prepare
     local disk="$HWE_POOL_DIR/$HWE_VM_NAME.qcow2"
     local seed_dst="$HWE_POOL_DIR/$HWE_VM_NAME-seed.iso"
