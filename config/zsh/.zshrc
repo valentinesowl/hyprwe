@@ -55,7 +55,16 @@ if command -v eza >/dev/null; then
     alias ll='eza -lah --icons=auto --group-directories-first'
     alias tree='eza --tree --icons=auto'
 fi
-command -v bat >/dev/null && alias cat='bat --plain --paging=never'
+# Debian renames both of these binaries — `bat` is `batcat` there and `fd` is
+# `fdfind`, because the short names were already taken in its archive. The
+# package map fixes what gets INSTALLED; only the caller can fix what gets RUN.
+# Guarded rather than assumed, so a machine without them just keeps plain cat.
+if command -v bat >/dev/null; then
+    alias cat='bat --plain --paging=never'
+elif command -v batcat >/dev/null; then
+    alias cat='batcat --plain --paging=never'
+fi
+command -v fd >/dev/null || { command -v fdfind >/dev/null && alias fd='fdfind'; }
 alias grep='grep --color=auto'
 alias ..='cd ..'
 alias ...='cd ../..'
