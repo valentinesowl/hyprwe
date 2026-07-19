@@ -9,6 +9,11 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-07-19
+
+Lifecycle: keeping an installed machine in line with the repository, and testing a
+change before committing it.
+
 ### Added
 
 - **`hwe update`** — bring the machine in line with the repository: `git pull
@@ -127,5 +132,6 @@ to it only ship in 2.0.0.
   that environment's uninstaller. If the login screen looks foreign after
   `hwe theme sddm`, look at what is in that directory.
 
-[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.1.0
 [1.0.0]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.0.0

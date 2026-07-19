@@ -335,8 +335,10 @@ pipeline. How to contribute — [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Status
 
-`v1.0.0` — the first stable release: the VM workflow, the installer, the theme engine
-(10 themes), the SDDM greeter, zsh. Next: more bar components, more workflows, polish.
+`v1.1.0` — the lifecycle release: `hwe update`, `hwe doctor host` and
+`hwe vm up --uncommitted` on top of the stable 1.0.0 base (the VM workflow, the
+installer, the theme engine with 10 themes, the SDDM greeter, zsh). Next: more bar
+components, more workflows, polish.
 
 ## Acknowledgements
 
