@@ -9,6 +9,17 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+### Changed
+
+- `hwe update` on a branch with no upstream now names the way out instead of just
+  the problem: the exact `git branch --set-upstream-to=…` command when the matching
+  remote branch exists, and what is actually missing when it does not. A clone sets
+  tracking up on its own, so this is mostly a checkout built locally and pushed
+  without `-u`.
+- The release badge in both READMEs is a static one, pinned to `HWE_VERSION` by
+  `tests/test_release.py`. The dynamic `shields.io/github/v/release` endpoint was
+  answering 520 and rendering as broken alt text.
+
 ## [1.1.0] — 2026-07-19
 
 Lifecycle: keeping an installed machine in line with the repository, and testing a

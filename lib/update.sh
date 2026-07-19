@@ -72,7 +72,24 @@ _update_pull() {
     branch="$(git -C "$HWE_ROOT" symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
     [[ -n "$branch" ]] || { err "HEAD is detached — check out a branch first"; return 1; }
     upstream="$(git -C "$HWE_ROOT" rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null || true)"
-    [[ -n "$upstream" ]] || { err "branch '$branch' has no upstream to pull from"; return 1; }
+    if [[ -z "$upstream" ]]; then
+        # A clone sets tracking on its own, so this is mostly a checkout that was
+        # created locally and pushed without -u. Name the fix when the matching
+        # remote branch is actually there; guessing one that isn't would send the
+        # user to a command that fails.
+        err "branch '$branch' has no upstream to pull from"
+        local remote
+        remote="$(git -C "$HWE_ROOT" remote | head -n1)"
+        if [[ -n "$remote" ]] && \
+           git -C "$HWE_ROOT" show-ref --verify --quiet "refs/remotes/$remote/$branch"; then
+            info "set it once: ${C_BOLD}git -C $HWE_ROOT branch --set-upstream-to=$remote/$branch $branch${C_RESET}"
+        elif [[ -n "$remote" ]]; then
+            info "'$remote' has no branch '$branch' — push it first, or switch to a tracked branch"
+        else
+            info "this checkout has no remote at all — add one, or update it by hand"
+        fi
+        return 1
+    fi
 
     log "Pulling $branch (fast-forward only) from $upstream"
     if ! run git -C "$HWE_ROOT" pull --ff-only; then
