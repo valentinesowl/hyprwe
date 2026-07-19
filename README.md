@@ -4,13 +4,15 @@
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
+[![Ubuntu](https://img.shields.io/badge/Ubuntu_26.04-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
 [![Release](https://img.shields.io/badge/release-v1.2.0-blue)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
-**A working environment on Arch — Hyprland and everything around it: bar, launcher,
-notifications, themes, login screen.** It installs with one command and deploys the same
-way on bare metal (`hwe install`) and on a disposable VM (`hwe vm up`), from one source.
+**A working environment on Arch and Ubuntu — Hyprland and everything around it: bar,
+launcher, notifications, themes, login screen.** It installs with one command and deploys
+the same way on bare metal (`hwe install`) and on a disposable VM (`hwe vm up`), from one
+source.
 
 The environment is described in full inside the repository and reproduces on any machine
 from that description. Colours, geometry and fonts of every component are rendered from a
@@ -21,7 +23,7 @@ reproducibility keeps the whole stack in one tone.
   `hwe theme apply` changes the desktop live. Ten themes included.
 - **Modular Hyprland config** — hyprland, kitty, waybar, rofi, mako, hyprlock and
   hypridle wired together with `source` includes.
-- **Dev VM in one command** — `hwe vm up` brings up an Arch VM through
+- **Dev VM in one command** — `hwe vm up` brings up an Arch or Ubuntu VM through
   `libvirt`/`virt-install` (visible in virt-manager), provisions it with `cloud-init`
   and deploys your chosen local git branch straight from your own repository.
 
@@ -48,9 +50,9 @@ Everything below is the tour: install it, run it, hack on it.
 
 ## Installation
 
-Installing onto an Arch machine is one command: the installer adds packages, deploys the
-configs and sets up the login screen. It does so **reversibly**, preserving whatever is
-already on the machine.
+Installing onto an Arch or Ubuntu machine is one command: the installer adds packages,
+deploys the configs and sets up the login screen. It does so **reversibly**, preserving
+whatever is already on the machine.
 
 ```bash
 # 1. Clone the repository
@@ -96,6 +98,44 @@ After the install `hwe` is linked into `/usr/local/bin/hwe` — from then on you
 > Configs are deployed as **symlinks** into the repository: edit `~/hwe/config/...` and the
 > change is live right away. Settings of your own belong in `~/.config/hwe/` instead —
 > see [Your own settings](#your-own-settings).
+
+### On Ubuntu
+
+HWE installs on **Ubuntu 26.04**. The environment itself is not forked for it: one
+`config/hypr/` parses cleanly under both Hyprland versions involved, and every theme
+renders identically. What differs is the packaging around it, and that is worth knowing
+before you start.
+
+**Where the compositor comes from is your decision, and HWE will not make it quietly.**
+
+| `HWE_HYPR_SOURCE` | What you get | What you grant |
+|---|---|---|
+| `repo` *(default)* | Ubuntu's own `hyprland`, currently **0.53.3**, from `universe` | nothing new — the machine already trusts its distribution |
+| `ppa` | a current Hyprland (**0.55.4**) from a third-party archive | a stranger's signing key, confined by apt pinning to the Hyprland stack alone |
+
+```bash
+hwe install                        # Ubuntu's package
+HWE_HYPR_SOURCE=ppa hwe install    # opt in to the third-party archive
+```
+
+Two things to be plain about. `universe` is community-maintained: it carries **no
+five-year security commitment** — that promise covers `main` only. And adding a
+third-party archive the ordinary way hands its key the right to install *any* package on
+that machine, for good; HWE pins such an archive so it can supply the compositor stack and
+nothing else. Setting `HWE_HYPR_SOURCE=ppa` **is** the consent, which is why
+`HWE_ASSUME_YES` does not cover it — a blanket yes to prompts should not be what extends
+trust to a stranger. Building the compositor from source is not offered.
+
+Two smaller differences, so they do not surprise you:
+
+- **Ubuntu enables what it installs.** Debian-family packages start and enable their
+  services on install, including systemd *user* units for session programs. Since HWE
+  starts those from `config/hypr/autostart.conf`, the packaged units are stood down —
+  otherwise you get two bars and two idle daemons.
+- **A few tools are not in the archive.** `satty` (screenshot annotation, two keybinds
+  degrade to a plain screenshot), `ruff` and `actionlint` — the last two are development
+  gates, so `just lint-py` and `just fmt-py` need them from `pip`/`uv` on this
+  distribution. `pkg/map/apt.map` records every such difference, and says why.
 
 ### Keeping a machine in sync
 
@@ -302,7 +342,9 @@ Configs inside the VM are deployed as **symlinks** into the repository, so edits
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `HWE_VM_NAME` | `hwe-dev` | libvirt domain name |
+| `HWE_VM_DISTRO` | `arch` | guest distribution: `arch` or `ubuntu` |
+| `HWE_HYPR_SOURCE` | `repo` | where the guest's Hyprland comes from: `repo` or `ppa` |
+| `HWE_VM_NAME` | per distro | libvirt domain name (`hwe-dev`, `hwe-dev-ubuntu`) |
 | `HWE_VM_MEMORY` | `4096` | RAM, MiB |
 | `HWE_VM_VCPUS` | `4` | vCPUs |
 | `HWE_VM_DISK_SIZE` | `24G` | root disk size |
@@ -310,7 +352,7 @@ Configs inside the VM are deployed as **symlinks** into the repository, so edits
 | `HWE_VM_PASSWORD` | *random* | password (set it to pin one) |
 | `HWE_LIBVIRT_URI` | `qemu:///system` | libvirt URI (the virt-manager default) |
 | `HWE_VM_NETWORK` | `default` | libvirt network name |
-| `HWE_IMAGE_URL` | Arch cloudimg | base qcow2 |
+| `HWE_IMAGE_URL` | per distro | base image (signed; an unverifiable one is refused) |
 
 ---
 
@@ -375,12 +417,15 @@ pipeline. How to contribute — [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Status
 
-`v1.2.0` — a machine can now be made yours without losing the ability to update it:
-your displays, keybinds and packages live in `~/.config/hwe/`, outside the checkout.
-On top of the lifecycle release (`hwe update`, `hwe doctor host`,
-`hwe vm up --uncommitted`) and the stable 1.0.0 base — the VM workflow, the installer,
-the theme engine with 10 themes, the SDDM greeter, zsh. Next: more bar components,
-more workflows, polish.
+`v1.3.0` — HWE is no longer Arch-only: it installs on **Ubuntu 26.04**, and `hwe vm up`
+boots either distribution, each in its own VM so the two can be compared side by side.
+The environment did not fork to get there — one `config/hypr/` parses cleanly under both
+Hyprland versions involved. On top of the personal layer (`~/.config/hwe/`), the lifecycle
+commands (`hwe update`, `hwe doctor host`, `hwe vm up --uncommitted`) and the stable 1.0.0
+base — the installer, the theme engine with 10 themes, the SDDM greeter, zsh.
+
+Tried and used daily on Arch; Ubuntu is verified end to end in a VM, not yet on bare
+metal. Next: more bar components, more workflows, polish.
 
 ## Acknowledgements
 
