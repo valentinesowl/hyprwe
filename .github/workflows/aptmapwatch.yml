@@ -1,0 +1,63 @@
+# Apt map watch — does pkg/map/apt.map still describe Ubuntu's archive?
+#
+# HWE names packages the way Arch does, and pkg/map/apt.map records the ~20 names
+# that are spelled differently on Ubuntu, plus the ones that do not exist there at
+# all. Those are not decisions we control: they are facts about someone else's
+# archive, measured on one day. Archives rename and retire packages.
+#
+# A stale entry has no symptom on Arch and no symptom in any test — it surfaces as
+# a failed `hwe install` on the first Ubuntu machine that tries, which is both the
+# worst place to find out and the least likely to be a maintainer. This job is the
+# looking, on the same reasoning as Font watch: an external fact written into the
+# repository needs something that notices it going stale.
+#
+# It runs in a clean ubuntu:26.04 container on purpose. On a machine that already
+# has the packages, the resolution cannot fail and the check proves nothing — so
+# the script refuses to pass when its simulation would install nothing.
+#
+# A red tick here is not an incident. It means Ubuntu moved and the map needs a
+# maintainer's eye. `just apt-map-check` asks the same question locally.
+---
+name: Apt map watch
+
+"on":
+  schedule:
+    # Weekly, Tuesday morning UTC — a different day from Font watch so two red
+    # ticks never arrive together looking like one bigger problem.
+    - cron: "23 6 * * 2"
+  # So a maintainer can ask directly after any Ubuntu news.
+  workflow_dispatch:
+  # And on any change to what the check reads, so a bad edit is caught in the PR
+  # rather than up to a week later.
+  pull_request:
+    paths:
+      - pkg/map/apt.map
+      - pkg/core.lst
+      - pkg/dev.lst
+      - pkg/vm.lst
+      - lib/distro.sh
+      - scripts/aptmapcheck.sh
+      - .github/workflows/aptmapwatch.yml
+
+permissions:
+  contents: read
+
+jobs:
+  watch:
+    name: apt map still describes the archive
+    runs-on: ubuntu-latest
+    # The distribution HWE claims to install on, not the runner's own image —
+    # the question is about 26.04's archive specifically.
+    container: ubuntu:26.04
+    steps:
+      # git for actions/checkout; ca-certificates so apt can reach the archive
+      # over https once the check runs.
+      - name: Install tools
+        run: |
+          apt-get update -qq
+          apt-get install -y -q --no-install-recommends git ca-certificates
+      - uses: actions/checkout@v5
+      # checkout leaves the tree owned by a uid this (root) job is not, and git
+      # then refuses with "dubious ownership". Trust the ephemeral checkout.
+      - run: git config --global --add safe.directory '*'
+      - run: bash scripts/aptmapcheck.sh

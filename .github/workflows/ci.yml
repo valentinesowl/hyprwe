@@ -1,9 +1,14 @@
 # CI — every gate `just check` runs locally, run again on PRs and on main.
 #
-# Runs on Arch (the only distro HWE targets) via the official container image. Each
-# job installs just the tools its gate needs inline — the same tools a contributor
-# gets from `hwe install` (pkg/dev.lst), but as a per-job subset. Keep the two in
-# sync when adding a gate.
+# Runs on Arch via the official container image, plus one job on Ubuntu — HWE
+# installs on both, and the Arch jobs cannot see a path that only exists on the
+# other. Each job installs just the tools its gate needs inline — the same tools a
+# contributor gets from `hwe install` (pkg/dev.lst), but as a per-job subset. Keep
+# the two in sync when adding a gate.
+#
+# Whether pkg/map/apt.map still matches Ubuntu's archive is a question about
+# someone else's servers, not about a commit, so it lives in its own scheduled
+# workflow (aptmapwatch.yml) rather than gating every PR.
 #
 # The jobs are split by tool rather than lumped into one `just check` so a red
 # tick names the thing that broke without anyone opening the log.
@@ -72,6 +77,29 @@ jobs:
       - uses: actions/checkout@v5
       # The suite runs `hwe theme validate` against every shipped theme, which
       # shells out to the Python renderer — hence python-jinja above.
+      - run: just test-sh
+
+  shell-tests-ubuntu:
+    name: bats (Ubuntu)
+    runs-on: ubuntu-latest
+    # HWE claims to install on Ubuntu, so the gates have to pass there too — and
+    # this is the only job that exercises the non-Arch paths at all: helper.bash
+    # probing for bats-assert outside /usr/lib/bats, and every tool our own code
+    # shells out to being present under its Debian name rather than Arch's.
+    #
+    # It has already earned its place: adding it surfaced that curl, gnupg, tar
+    # and xz were called by HWE and declared nowhere, invisible on Arch because
+    # `base` supplies them.
+    container: ubuntu:26.04
+    steps:
+      - name: Install tools
+        run: |
+          apt-get update -qq
+          apt-get install -y -q --no-install-recommends \
+            git just bats bats-assert bats-support python3 python3-jinja2 \
+            gnupg curl xz-utils
+      - uses: actions/checkout@v5
+      - run: git config --global --add safe.directory '*'
       - run: just test-sh
 
   workflows:
