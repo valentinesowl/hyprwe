@@ -141,11 +141,34 @@ _pm_sync() {
 }
 
 # Install the given packages (already-local names), skipping the ones present.
+#
+# --no-install-recommends is not thrift, it is the translation. pkg/*.lst is
+# written in Arch's vocabulary AND Arch's semantics: pacman never installs
+# optdepends, so the list means "these packages". apt installs Recommends by
+# default, so the same list means "these packages and whatever their maintainers
+# suggest" — a different system wearing the same name.
+#
+# Not hypothetical. The first Ubuntu VM came up at 1926 packages and greeted its
+# user with a GDM password prompt: network-manager-applet Recommends gnome-shell,
+# which depends on gdm3, and Debian ENABLES a service the moment it is installed.
+# A greeter nobody asked for took over the login path, from a recommendation.
+# Anything genuinely needed belongs in pkg/*.lst by name, where it can be seen.
 _pm_install() {
     [[ $# -gt 0 ]] || return 0
     case "$(_distro_family)" in
         pacman) _pm_retry sudo pacman -S --needed --noconfirm --disable-download-timeout "$@" ;;
-        apt)    _pm_retry sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$@" ;;
+        # -q, NOT -qq. `-qq` means "no output at all", which on a slow mirror
+        # produces several silent minutes that are indistinguishable from a hang
+        # — during provisioning the console is the only feedback there is, and a
+        # progress-free install reads as a dead one. `-q` still drops the
+        # progress bars that would be useless in a log, and keeps the per-package
+        # Get:/Setting up: lines that show it is alive.
+        #
+        # apt-get rather than apt on purpose: apt is the human-facing front end
+        # and says outright that its CLI is not stable across versions; apt-get
+        # is the interface meant to be scripted against.
+        apt)    _pm_retry sudo env DEBIAN_FRONTEND=noninteractive \
+                    apt-get install -y -q --no-install-recommends "$@" ;;
     esac
 }
 
