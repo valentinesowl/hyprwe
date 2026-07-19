@@ -5,7 +5,7 @@
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
-[![Release](https://img.shields.io/badge/release-v1.1.0-blue)](../../releases/latest)
+[![Release](https://img.shields.io/badge/release-v1.2.0-blue)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 **A working environment on Arch — Hyprland and everything around it: bar, launcher,
@@ -375,10 +375,12 @@ pipeline. How to contribute — [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Status
 
-`v1.1.0` — the lifecycle release: `hwe update`, `hwe doctor host` and
-`hwe vm up --uncommitted` on top of the stable 1.0.0 base (the VM workflow, the
-installer, the theme engine with 10 themes, the SDDM greeter, zsh). Next: more bar
-components, more workflows, polish.
+`v1.2.0` — a machine can now be made yours without losing the ability to update it:
+your displays, keybinds and packages live in `~/.config/hwe/`, outside the checkout.
+On top of the lifecycle release (`hwe update`, `hwe doctor host`,
+`hwe vm up --uncommitted`) and the stable 1.0.0 base — the VM workflow, the installer,
+the theme engine with 10 themes, the SDDM greeter, zsh. Next: more bar components,
+more workflows, polish.
 
 ## Acknowledgements
 

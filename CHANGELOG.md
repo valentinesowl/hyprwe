@@ -9,6 +9,10 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+## [1.2.0] — 2026-07-19
+
+Making a machine yours without giving up the ability to update it.
+
 ### Added
 
 - **A personal layer in `~/.config/hwe/`** — the settings that are yours rather
@@ -39,6 +43,15 @@ the three sources cannot drift apart.
 - The release badge in both READMEs is a static one, pinned to `HWE_VERSION` by
   `tests/test_release.py`. The dynamic `shields.io/github/v/release` endpoint was
   answering 520 and rendering as broken alt text.
+
+### Upgrading from 1.1.0
+
+`hyprland.conf` now sources `~/.config/hwe/hypr.conf` unconditionally, and Hyprland
+treats a missing source file as a config error. `hwe update` creates the personal
+layer as its first step after the pull, before anything reloads, so the supported
+path needs nothing from you. Updating by hand with a bare `git pull` does not: run
+`hwe update` afterwards, or copy the skeleton yourself with
+`install -Dm644 provision/userlayer/hypr.conf ~/.config/hwe/hypr.conf`.
 
 ## [1.1.0] — 2026-07-19
 
@@ -163,6 +176,7 @@ to it only ship in 2.0.0.
   that environment's uninstaller. If the login screen looks foreign after
   `hwe theme sddm`, look at what is in that directory.
 
-[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.2.0
 [1.1.0]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.1.0
 [1.0.0]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.0.0

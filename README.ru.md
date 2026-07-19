@@ -5,7 +5,7 @@
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
-[![Release](https://img.shields.io/badge/release-v1.1.0-blue)](../../releases/latest)
+[![Release](https://img.shields.io/badge/release-v1.2.0-blue)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 **Рабочее окружение на Arch — Hyprland и всё вокруг него: бар, лаунчер,
@@ -374,10 +374,11 @@ just gallery    # пересобрать assets/themes.png из превью
 
 ## Статус
 
-`v1.1.0` — релиз про жизненный цикл: `hwe update`, `hwe doctor host` и
-`hwe vm up --uncommitted` поверх стабильной базы 1.0.0 (VM-воркфлоу, установщик, движок
-тем с 10 темами, SDDM-гритер, zsh). Дальше: больше компонентов панели, воркфлоу и
-полировка.
+`v1.2.0` — машину теперь можно сделать своей, не теряя возможности её обновлять: твои
+мониторы, бинды и пакеты живут в `~/.config/hwe/`, вне клона. Поверх релиза про
+жизненный цикл (`hwe update`, `hwe doctor host`, `hwe vm up --uncommitted`) и стабильной
+базы 1.0.0 — VM-воркфлоу, установщик, движок тем с 10 темами, SDDM-гритер, zsh.
+Дальше: больше компонентов панели, воркфлоу и полировка.
 
 ## Благодарности
 
