@@ -119,6 +119,75 @@ _config_is_staging() {
     esac
 }
 
+# --- fonts we fetch ourselves ---------------------------------------------
+# Almost every font HWE uses comes from the distribution, signed. The Nerd Fonts
+# icon glyphs are the exception on distributions that do not package them, and
+# that download is the only artifact here without a distribution's signature
+# behind it — so it is pinned in pkg/fonts.lock and verified before use.
+#
+# The refusal is the point: an entry with a blank hash means no maintainer has
+# vouched for those bytes, and HWE would rather come up without icons than
+# install something nobody checked. See scripts/fontlock.py for what the pin is
+# and is not worth.
+_fonts_lock_rows() {
+    local f="$HWE_ROOT/pkg/fonts.lock"
+    [[ -f "$f" ]] || return 0
+    sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$f"
+}
+
+_install_fetched_fonts() {
+    local dest="${XDG_DATA_HOME:-$HOME/.local/share}/fonts/hwe"
+    local id url a_sha member f_sha installed=0
+    while IFS=$'\t' read -r id url a_sha member f_sha; do
+        [[ -n "${id:-}" && -n "${member:-}" ]] || continue
+
+        # Already provided by a package on this distro? Then it is not ours to fetch.
+        if fc-list 2>/dev/null | grep -qF "$member"; then
+            info "$member already installed by a package — not fetching"
+            continue
+        fi
+        # `-` is the unpinned marker. It has to be a real character: tab is IFS
+        # whitespace, so `read` collapses a run of them and an empty column would
+        # disappear — the row would be skipped in silence rather than refused.
+        if [[ "$f_sha" == "-" || "$a_sha" == "-" || -z "$f_sha" || -z "$a_sha" ]]; then
+            warn "$id is not pinned in pkg/fonts.lock — skipping the download"
+            info "nobody has vouched for those bytes yet; run 'just fonts-lock' to review and pin"
+            continue
+        fi
+
+        local tmp; tmp="$(mktemp -d)"
+        log "Fetching $member (pinned)"
+        if ! run curl -fL --progress-bar "$url" -o "$tmp/archive"; then
+            warn "could not download $id — icons will fall back to whatever is installed"
+            rm -rf "$tmp"; continue
+        fi
+        local got; got="$(sha256sum "$tmp/archive" | awk '{print $1}')"
+        if [[ "$got" != "$a_sha" ]]; then
+            err "$id: archive hash mismatch — refusing to use it"
+            info "expected $a_sha, got $got (tampered mirror, or upstream replaced the asset)"
+            rm -rf "$tmp"; continue
+        fi
+        # tar, not unzip: tar is everywhere, unzip is not on a bare Ubuntu.
+        if ! tar -xJf "$tmp/archive" -C "$tmp" "./$member" 2>/dev/null \
+           && ! tar -xJf "$tmp/archive" -C "$tmp" "$member" 2>/dev/null; then
+            err "$id: '$member' is not in the archive — upstream changed its layout"
+            rm -rf "$tmp"; continue
+        fi
+        got="$(sha256sum "$tmp/$member" | awk '{print $1}')"
+        if [[ "$got" != "$f_sha" ]]; then
+            err "$id: font hash mismatch inside a matching archive — refusing to install"
+            rm -rf "$tmp"; continue
+        fi
+        mkdir -p "$dest"
+        install -m 644 "$tmp/$member" "$dest/$member"
+        rm -rf "$tmp"
+        info "installed $member -> $dest"
+        installed=1
+    done < <(_fonts_lock_rows)
+    [[ $installed -eq 1 ]] && command -v fc-cache >/dev/null 2>&1 && run fc-cache -f "$dest" >/dev/null 2>&1
+    return 0
+}
+
 # --- the personal layer ---------------------------------------------------
 # Create ~/.config/hwe/ from the skeletons in provision/userlayer/ — see the
 # rationale on HWE_USER_CONFIG in lib/common.sh. Copy-once, never overwrite: an
@@ -545,6 +614,7 @@ install_main() {
     _pacman_install core.lst
     _pacman_install dev.lst
     _install_user_packages
+    _install_fetched_fonts
     _install_vm_packages
     _setup_nvidia
     _bootstrap_paru

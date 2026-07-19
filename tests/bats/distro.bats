@@ -120,3 +120,60 @@ translate() {
         grep -qP "^\Q$f\E\t" "$HWE_ROOT/pkg/map/apt.map" || fail "$f is not in apt.map"
     done
 }
+
+# ── fonts we fetch ourselves ──────────────────────────────────────────────
+# The icon font is the one artifact HWE downloads without a distribution's
+# signature behind it. The refusal below is the whole safety property: an entry
+# nobody has pinned must not be fetched, however inconvenient that is.
+fonts_fn() {
+    bash -c '
+        set -euo pipefail
+        HWE_ROOT="$HWE_REPO_ROOT"
+        source "$HWE_ROOT/lib/common.sh"
+        HWE_INSTALL_STANDALONE=1 source "$HWE_ROOT/provision/guest-install.sh"
+        fn="$1"; shift
+        "$fn" "$@"
+    ' _ "$@"
+}
+
+@test "the lock file parses, keeping an unpinned hash empty" {
+    run fonts_fn _fonts_lock_rows
+    assert_success
+    assert_output --partial "symbols-mono"
+    # Five tab-separated fields, the last of which is empty while unpinned.
+    run bash -c "printf '%s' \"\$(HWE_REPO_ROOT='$HWE_ROOT' bash -c '
+        HWE_ROOT=\"\$HWE_REPO_ROOT\"; source \"\$HWE_ROOT/lib/common.sh\"
+        HWE_INSTALL_STANDALONE=1 source \"\$HWE_ROOT/provision/guest-install.sh\"
+        _fonts_lock_rows')\" | awk -F'\t' '{print NF}'"
+    assert_output "5"
+}
+
+@test "an unpinned font is refused, and the message says why" {
+    HOME="$BATS_TEST_TMPDIR/home" XDG_DATA_HOME="$BATS_TEST_TMPDIR/data" \
+        run fonts_fn _install_fetched_fonts
+    assert_success                      # a refusal is not an install failure
+    assert_output --partial "not pinned"
+    assert_output --partial "vouched"
+    [[ ! -d "$BATS_TEST_TMPDIR/data/fonts/hwe" ]] || fail "it installed something unpinned"
+}
+
+@test "the shipped lock is currently unpinned" {
+    # If this ever fails, someone pinned a hash — which is a deliberate act that
+    # should come with the fontlock report in the commit that does it.
+    # Strip comments FIRST: the header line names the columns, so its own fifth
+    # field is the literal string "file_sha256". `-` is the unpinned marker.
+    run bash -c "sed '/^#/d' '$HWE_ROOT/pkg/fonts.lock' | cut -f5 | tr -d '[:space:]'"
+    assert_success
+    # assert_equal, not assert_output: a lone `-` tells bats-assert to read the
+    # expected value from stdin, so it would compare against nothing at all.
+    assert_equal "$output" "-"
+}
+
+@test "an empty hash column would be a silent skip, so the marker is a real character" {
+    # Tab is IFS whitespace: bash's `read` collapses a run of tabs, so an empty
+    # column vanishes and the fields after it shift left. That turned "refuse to
+    # fetch" into "quietly do nothing" — the row failed its own sanity check
+    # instead of reaching the refusal. Guard the convention, not just the value.
+    run bash -c "sed '/^#/d' '$HWE_ROOT/pkg/fonts.lock' | grep -c \$'\t\t'"
+    assert_output "0"
+}

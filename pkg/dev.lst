@@ -38,6 +38,7 @@ bats-assert                  # assert_success / assert_output helpers
 bats-support                 # required by bats-assert
 ruff                         # python lint+format (just lint-py / fmt-py)
 python-pytest                # python tests       (just test-py)
+python-fonttools             # font structure check (just fonts-lock)
 actionlint                   # GitHub Actions workflow linter (just lint-ci)
 yamllint                     # YAML linter        (just lint-ci)
 

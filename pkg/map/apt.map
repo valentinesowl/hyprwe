@@ -49,6 +49,7 @@ github-cli	gh
 # needs to know that; the package is what this map is about.
 fd	fd-find
 python-pytest	python3-pytest
+python-fonttools	python3-fonttools
 python-numpy	python3-numpy
 man-pages	manpages
 # Upstream ships a GitHub Action; the standalone binary is not packaged.

@@ -91,6 +91,14 @@ fmt-check:
 fmt-py:
     ruff format .
 
+# Review and pin the fonts HWE fetches itself (pkg/fonts.lock).
+# Reports only. Read what it prints before you pin: it compares the download
+# against the same font from a signed Arch package, parses every table, and says
+# what changed since the current pin. Needs ttf-nerd-fonts-symbols-mono (the
+# reference to compare against) and python-fonttools.
+fonts-lock *ARGS:
+    python3 scripts/fontlock.py {{ARGS}}
+
 # Regenerate every theme's wallpaper gradient
 walls:
     for t in themes/*/theme.toml; do python3 scripts/genwall.py --theme "$t" "$(dirname "$t")/wallpaper.png"; done
