@@ -44,6 +44,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import io
+import re
 import shutil
 import subprocess
 import sys
@@ -123,10 +124,19 @@ def verify_package_file(spec: dict) -> str:
         if "was not found" in out or "not found" in out.lower():
             return f"{spec['arch_package']} is NOT INSTALLED — nothing to compare against"
         return f"pacman could not verify {spec['arch_package']}: {out.splitlines()[0] if out else 'no output'}"
-    bad = [ln for ln in out.splitlines() if "warning" in ln.lower() or "altered" in ln.lower()]
-    if bad:
-        return "reference file was MODIFIED since install: " + "; ".join(bad[:2])
-    return f"reference verified against the package DB ({spec['arch_package']})"
+    # pacman's summary line is "N total files, M altered files" — so the word
+    # "altered" is present whether or not anything was. Read the COUNT. Matching
+    # on the word alone cried wolf on a clean package, and a check that cries
+    # wolf is one you learn to scroll past, which is worse than not having it.
+    altered = re.search(r"(\d+)\s+altered files", out)
+    if altered and int(altered.group(1)) > 0:
+        return f"reference file was MODIFIED since install: {altered.group(0)}"
+    warnings = [ln for ln in out.splitlines() if "warning:" in ln.lower()]
+    if warnings:
+        return "pacman warned about the reference: " + "; ".join(warnings[:2])
+    total = re.search(r"(\d+)\s+total files", out)
+    counted = f", {total.group(0)} checked" if total else ""
+    return f"reference verified against the package DB ({spec['arch_package']}{counted})"
 
 
 def structure(font: bytes) -> tuple[bool, list[str]]:

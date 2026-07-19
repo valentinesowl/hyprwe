@@ -1,25 +1,17 @@
 # pkg/fonts.lock — the fonts HWE fetches itself, pinned.
 #
-# HWE takes fonts from the distribution's signed packages wherever it can. What
-# is listed here is what no distribution packages, so it is downloaded — and it
-# is the only artifact in the project that arrives without a distribution
-# signature behind it. The install refuses to use a file whose hash is not here,
-# and refuses an entry whose hash is blank.
+# HWE takes fonts from the distribution's signed packages wherever it can.
+# What is listed here is what no distribution packages, so it is downloaded
+# — and it is the only artifact in the project that arrives without a
+# distribution signature behind it. The install refuses to use a file whose
+# hash is not here, and refuses an entry whose hash is blank.
 #
 # Regenerate the evidence, and read it, before changing a line:
 #     just fonts-lock
 # It compares the download byte for byte against the same font from a signed
-# Arch package, parses every table, and reports what the font claims to be. A
-# hash here is the maintainer's word that they read that report — not a claim
-# that the font is safe. See scripts/fontlock.py for what that is worth.
-#
-# UNPINNED: the hashes below are `-`, meaning nobody has vouched for those bytes.
-# A literal `-` rather than an empty field on purpose: tab is IFS whitespace, so
-# bash's `read` collapses two tabs into one and an empty column silently vanishes
-# — the row would be skipped instead of refused. `just fonts-lock` fills
-# them in once its checks pass, on a machine that has ttf-nerd-fonts-symbols-mono
-# installed to compare against. Until then the install says the icon font is
-# unavailable rather than fetching something nobody vouched for.
+# Arch package, parses every table, and reports what the font claims to be.
+# A hash here is the maintainer's word that they read that report — not a
+# claim that the font is safe. See scripts/fontlock.py for what that is worth.
 #
 # id	url	archive_sha256	member	file_sha256
-symbols-mono	https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/NerdFontsSymbolsOnly.tar.xz	-	SymbolsNerdFontMono-Regular.ttf	-
+symbols-mono	https://github.com/ryanoasis/nerd-fonts/releases/download/v3.4.0/NerdFontsSymbolsOnly.tar.xz	7f8c090da3b0eaa7108646bf34cbbb6ed13d5358a72460522108b06c7ecd716a	SymbolsNerdFontMono-Regular.ttf	f0f624d9b474bea1662cf7e862d44aebe1ae1f6c7f9cb7a0ca5d0e5ac9561c60

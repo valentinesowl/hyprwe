@@ -148,25 +148,92 @@ fonts_fn() {
     assert_output "5"
 }
 
+# Build a lock pointing at a local archive, so the whole fetch-and-verify path
+# runs without touching the network. curl reads file:// just as it reads https://.
+make_fixture() {
+    local sha_archive="$1" sha_font="$2"
+    local d="$BATS_TEST_TMPDIR/fx"; mkdir -p "$d/src"
+    printf 'not really a font, but bytes all the same\n' > "$d/src/TestGlyphs.ttf"
+    tar -cJf "$d/archive.tar.xz" -C "$d/src" TestGlyphs.ttf
+    REAL_ARCHIVE_SHA="$(sha256sum "$d/archive.tar.xz" | awk '{print $1}')"
+    REAL_FONT_SHA="$(sha256sum "$d/src/TestGlyphs.ttf" | awk '{print $1}')"
+    [[ "$sha_archive" == AUTO ]] && sha_archive="$REAL_ARCHIVE_SHA"
+    [[ "$sha_font" == AUTO ]] && sha_font="$REAL_FONT_SHA"
+    printf '# fixture\ntestfont\tfile://%s\t%s\tTestGlyphs.ttf\t%s\n' \
+        "$d/archive.tar.xz" "$sha_archive" "$sha_font" > "$d/fonts.lock"
+    printf '%s' "$d/fonts.lock"
+}
+
+run_install() {
+    HWE_FONTS_LOCK="$1" HOME="$BATS_TEST_TMPDIR/home" \
+        XDG_DATA_HOME="$BATS_TEST_TMPDIR/data" fonts_fn _install_fetched_fonts
+}
+
 @test "an unpinned font is refused, and the message says why" {
-    HOME="$BATS_TEST_TMPDIR/home" XDG_DATA_HOME="$BATS_TEST_TMPDIR/data" \
-        run fonts_fn _install_fetched_fonts
+    local lock; lock="$(make_fixture - -)"
+    run run_install "$lock"
     assert_success                      # a refusal is not an install failure
     assert_output --partial "not pinned"
     assert_output --partial "vouched"
-    [[ ! -d "$BATS_TEST_TMPDIR/data/fonts/hwe" ]] || fail "it installed something unpinned"
+    [[ ! -e "$BATS_TEST_TMPDIR/data/fonts/hwe/TestGlyphs.ttf" ]] \
+        || fail "it installed something nobody pinned"
 }
 
-@test "the shipped lock is currently unpinned" {
-    # If this ever fails, someone pinned a hash — which is a deliberate act that
-    # should come with the fontlock report in the commit that does it.
-    # Strip comments FIRST: the header line names the columns, so its own fifth
-    # field is the literal string "file_sha256". `-` is the unpinned marker.
-    run bash -c "sed '/^#/d' '$HWE_ROOT/pkg/fonts.lock' | cut -f5 | tr -d '[:space:]'"
+@test "an archive whose hash does not match is refused" {
+    local lock; lock="$(make_fixture "$(printf '0%.0s' {1..64})" AUTO)"
+    run run_install "$lock"
+    assert_output --partial "hash mismatch"
+    [[ ! -e "$BATS_TEST_TMPDIR/data/fonts/hwe/TestGlyphs.ttf" ]] \
+        || fail "it installed an archive that failed its own check"
+}
+
+@test "a tampered font inside a matching archive is refused" {
+    # The archive hash alone is not enough: it is the file we install that has to
+    # be the file that was vouched for.
+    local lock; lock="$(make_fixture AUTO "$(printf 'f%.0s' {1..64})")"
+    run run_install "$lock"
+    assert_output --partial "font hash mismatch"
+    [[ ! -e "$BATS_TEST_TMPDIR/data/fonts/hwe/TestGlyphs.ttf" ]] \
+        || fail "it installed a font that failed its own check"
+}
+
+@test "a correctly pinned font is installed" {
+    local lock; lock="$(make_fixture AUTO AUTO)"
+    run run_install "$lock"
     assert_success
-    # assert_equal, not assert_output: a lone `-` tells bats-assert to read the
-    # expected value from stdin, so it would compare against nothing at all.
-    assert_equal "$output" "-"
+    [[ -f "$BATS_TEST_TMPDIR/data/fonts/hwe/TestGlyphs.ttf" ]] \
+        || fail "the happy path installed nothing"
+}
+
+@test "every pinned hash is a full sha256, or the explicit unpinned marker" {
+    # Half a hash, or a truncated paste, would fail at install time on the user's
+    # machine rather than here. `-` stays legal: it is how an entry says nobody
+    # has vouched for it yet.
+    # Strip comments FIRST — the header line names the columns, so its own fifth
+    # field is the literal string "file_sha256".
+    local id url a_sha member f_sha
+    while IFS=$'\t' read -r id url a_sha member f_sha; do
+        [[ -n "$id" ]] || continue
+        for h in "$a_sha" "$f_sha"; do
+            [[ "$h" == "-" || "$h" =~ ^[0-9a-f]{64}$ ]] \
+                || fail "$id: '$h' is neither a sha256 nor the unpinned marker"
+        done
+        [[ "$url" == https://* ]] || fail "$id: '$url' is not an https URL"
+    done < <(sed '/^#/d' "$HWE_ROOT/pkg/fonts.lock")
+}
+
+@test "the archive and the font are pinned together or not at all" {
+    # Verifying the archive but not the file it yields (or the reverse) would
+    # leave half the path unchecked.
+    local id url a_sha member f_sha
+    while IFS=$'\t' read -r id url a_sha member f_sha; do
+        [[ -n "$id" ]] || continue
+        local a_unpinned=0 f_unpinned=0
+        [[ "$a_sha" == "-" ]] && a_unpinned=1
+        [[ "$f_sha" == "-" ]] && f_unpinned=1
+        [[ "$a_unpinned" == "$f_unpinned" ]] \
+            || fail "$id: one hash is pinned and the other is not"
+    done < <(sed '/^#/d' "$HWE_ROOT/pkg/fonts.lock")
 }
 
 @test "an empty hash column would be a silent skip, so the marker is a real character" {

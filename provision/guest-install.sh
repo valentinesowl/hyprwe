@@ -130,7 +130,9 @@ _config_is_staging() {
 # install something nobody checked. See scripts/fontlock.py for what the pin is
 # and is not worth.
 _fonts_lock_rows() {
-    local f="$HWE_ROOT/pkg/fonts.lock"
+    # Overridable so the tests can exercise the refusals against a fixture
+    # instead of the shipped lock — and without reaching the network.
+    local f="${HWE_FONTS_LOCK:-$HWE_ROOT/pkg/fonts.lock}"
     [[ -f "$f" ]] || return 0
     sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$f"
 }
