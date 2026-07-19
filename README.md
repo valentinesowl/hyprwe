@@ -94,7 +94,8 @@ After the install `hwe` is linked into `/usr/local/bin/hwe` — from then on you
 `SUPER + /`, the keybinding cheatsheet.
 
 > Configs are deployed as **symlinks** into the repository: edit `~/hwe/config/...` and the
-> change is live right away.
+> change is live right away. Settings of your own belong in `~/.config/hwe/` instead —
+> see [Your own settings](#your-own-settings).
 
 ### Keeping a machine in sync
 
@@ -109,8 +110,43 @@ hwe doctor vm         # host prerequisites for the VM workflow instead
 diverged — it will never silently merge or stash your work. Then it relinks the configs,
 re-applies the current theme and offers to install packages that are missing from the
 lists. `hwe doctor` reports the same drift without touching anything: config symlinks,
-packages, login shell, Hyprland config errors. Detection and repair share the install
-primitives, so a check cannot drift from what the installer actually lays down.
+packages, the personal layer, login shell, Hyprland config errors. Detection and repair
+share the install primitives, so a check cannot drift from what the installer actually
+lays down.
+
+---
+
+## Your own settings
+
+Some things cannot come from the repository, because they are not the same twice: your
+displays, the keys your hands already know, the packages this particular machine needs.
+Those live in `~/.config/hwe/` — **outside the checkout**, created for you on install and
+never rewritten afterwards.
+
+| File | What it holds |
+|---|---|
+| `hypr.conf` | displays, input, keybinds — sourced **last**, so it overrides what HWE ships |
+| `packages.lst` | extra packages for this machine (pacman) |
+| `packages-aur.lst` | the same, from the AUR |
+| `waybar.jsonc` | your bar's composition — merged over the generated config on every theme apply |
+
+```bash
+$EDITOR ~/.config/hwe/hypr.conf    # your monitors go here, not in config/hypr/monitors.conf
+hyprctl reload                     # SUPER+SHIFT+R
+```
+
+The location is the whole point. `config/` is deployed as symlinks into the repository, so
+tuning something in place would be an edit to a **tracked file** — and `hwe update` refuses
+to pull onto a dirty tree. Personalising the environment would cost you the ability to
+update it. Kept here instead, `git status` stays clean whatever you change, a pull can never
+conflict with your setup, and replacing the checkout does not take it with you.
+
+The same rule holds one level up: a theme of your own goes in
+`~/.local/share/hwe/themes/<name>/`, where it shadows a shipped theme of the same name.
+
+`hwe doctor` states what you have made your own and never calls it drift. The one thing it
+does report is a **missing** file — `hwe update` puts it back, and never touches one that
+is already there.
 
 ---
 
@@ -183,13 +219,16 @@ The entry point is `config/hypr/hyprland.conf`, which does nothing but pull in t
 |---|---|
 | `colors.conf` | **generated** by `hwe theme` (`$accent`, …) |
 | `environment.conf` | session env + `$mainMod`, `$terminal`, `$launcher` |
-| `monitors.conf` | monitors and scaling |
+| `monitors.conf` | the default: every output at its preferred mode (**yours** go in `~/.config/hwe/hypr.conf`) |
 | `appearance.conf` | general / decoration / blur / animations |
 | `theme.conf` | **generated** — border, rounding, opacity from the theme |
 | `input.conf` | keyboard (us/ru), touchpad, gestures |
 | `keybindings.conf` | keybinds (SUPER; focus on the arrows; no duplicates) |
 | `windowrules.conf` | window and layer rules |
 | `autostart.conf` | autostart (waybar, mako, hyprpaper, polkit, tray…) |
+
+And last of all, `~/.config/hwe/hypr.conf` — yours, outside the repository, overriding
+everything above it.
 
 Plus `hypridle.conf` (idle → lock/DPMS) and `hyprlock.conf` (generated). On every login
 `hwe checkconfig --notify` puts syntax errors on screen, should Hyprland change its grammar.
@@ -296,6 +335,7 @@ hyprwe/
 ├── provision/
 │   ├── cloud-init/         # user-data.tmpl, meta-data.tmpl (@@VAR@@ tokens)
 │   ├── guest-install.sh    # installs packages + deploys configs (guest and bare metal alike)
+│   ├── userlayer/          # skeletons of ~/.config/hwe — copied once, never overwritten
 │   ├── sddm/hwe/           # the SDDM QML greeter (themed from the active palette)
 │   ├── hyprland-uwsm.desktop  # the Hyprland (uwsm) session for SDDM
 │   └── arch-boxes.asc      # pinned signing key of the cloud image
