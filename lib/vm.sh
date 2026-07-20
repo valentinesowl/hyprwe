@@ -585,7 +585,11 @@ _vm_subst() {
 
 # --- Privileged pool helpers (system URI needs root to write the pool dir) --
 _pool_prepare() { run sudo install -d -m 0711 "$HWE_POOL_DIR"; }
-_pool_put()     { run sudo cp -f "$1" "$2"; }   # libvirt dynamic-ownership chowns disks at start
+# Copy with an EXPLICIT mode rather than cp's inherited one: the pool dir is
+# world-traversable (0711) at a predictable path, and the seed ISO carries the
+# guest's plain_text_passwd, so it must not land world-readable. libvirt chowns
+# the disk to qemu at start, so its group/owner here is immaterial.
+_pool_put()     { run sudo install -m "${3:-0644}" "$1" "$2"; }
 
 # --- Create & boot --------------------------------------------------------
 vm_up() {
@@ -635,7 +639,7 @@ vm_up() {
     qemu-img convert -O qcow2 "$HWE_BASE_IMG" "$tmpdisk"
     qemu-img resize "$tmpdisk" "$HWE_VM_DISK_SIZE" >/dev/null
     _pool_put "$tmpdisk" "$disk"
-    _pool_put "$seed" "$seed_dst"
+    _pool_put "$seed" "$seed_dst" 0600
 
     local cpu_arg=host-passthrough
     [[ -r /dev/kvm ]] || cpu_arg=qemu64

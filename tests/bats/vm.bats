@@ -162,3 +162,24 @@ dirty_the_tree() {
     assert_success
     [[ "$stderr" == *"--uncommitted"* ]]
 }
+
+@test "the seed ISO is copied into the pool root-only, the disk with the default mode" {
+    # The pool dir is world-traversable and the seed carries the guest password,
+    # so it must not be world-readable. A fake sudo runs install as the test user.
+    local fakebin="$BATS_TEST_TMPDIR/fakebin"; mkdir -p "$fakebin"
+    printf '#!/usr/bin/env bash\nexec "$@"\n' > "$fakebin/sudo"; chmod +x "$fakebin/sudo"
+    printf 'x' > "$BATS_TEST_TMPDIR/src"
+    export FAKEBIN="$fakebin" T="$BATS_TEST_TMPDIR"
+    run --separate-stderr bash -c '
+        set -euo pipefail
+        export PATH="$FAKEBIN:$PATH"
+        HWE_ROOT="$HWE_REPO_ROOT"
+        source "$HWE_ROOT/lib/common.sh"
+        source "$HWE_ROOT/lib/vm.sh"
+        _pool_put "$T/src" "$T/seed" 0600
+        _pool_put "$T/src" "$T/disk"
+        printf "seed=%s disk=%s\n" "$(stat -c %a "$T/seed")" "$(stat -c %a "$T/disk")"
+    '
+    assert_success
+    assert_output "seed=600 disk=644"
+}
