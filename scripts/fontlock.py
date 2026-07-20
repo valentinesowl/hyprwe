@@ -244,6 +244,8 @@ def verify() -> int:
         return 0
 
     bad = False
+    inconclusive = 0
+    compared = 0
     for ident, row in locked.items():
         print(f"\n=== {ident} ===")
         if not row["archive_sha256"] or not row["file_sha256"]:
@@ -254,14 +256,18 @@ def verify() -> int:
         except Exception as exc:
             print(f"  could not fetch: {type(exc).__name__}: {exc}")
             print("  (treated as inconclusive, not as a mismatch)")
+            inconclusive += 1
             continue
 
         a_hash = sha256(archive)
         if a_hash != row["archive_sha256"]:
             print(f"  ARCHIVE CHANGED\n    pinned {row['archive_sha256']}\n    now    {a_hash}")
             bad = True
-        else:
-            print("  archive matches the pin")
+            # Do NOT go on to extract: a byte stream the pin already rejects is
+            # exactly what must not reach the tar/xz parser (decompression bombs,
+            # liblzma parser bugs). The hash mismatch is the whole finding.
+            continue
+        print("  archive matches the pin")
 
         try:
             font = extract(archive, row["member"])
@@ -275,6 +281,7 @@ def verify() -> int:
             bad = True
         else:
             print(f"  {row['member']} matches the pin")
+            compared += 1
 
     print("\n" + "=" * 70)
     if bad:
@@ -283,7 +290,14 @@ def verify() -> int:
         print("Find out why upstream replaced it before pinning the new bytes:")
         print("    just fonts-lock")
         return 1
-    print("every pinned artifact is unchanged")
+    if inconclusive and compared == 0:
+        # A watchdog that compared nothing must not read as a pass. Distinct exit
+        # 2 (as aptmapcheck.sh uses) so CI fails the run without crying tamper.
+        print("verified NOTHING — every pinned artifact was unreachable this run")
+        return 2
+    if inconclusive:
+        print(f"note: {inconclusive} artifact(s) were unreachable; the rest are unchanged")
+    print("every reachable pinned artifact is unchanged")
     return 0
 
 

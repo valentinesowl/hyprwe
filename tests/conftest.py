@@ -67,6 +67,11 @@ def wbmerge():
     return _load("wbmerge")
 
 
+@pytest.fixture(scope="session")
+def fontlock():
+    return _load("fontlock")
+
+
 def theme_paths() -> list[Path]:
     """Every shipped theme's theme.toml, sorted (used to parametrise tests)."""
     return sorted(THEMES.glob("*/theme.toml"))
