@@ -51,7 +51,7 @@ EOF
     fi
 
     need git git || return 1
-    [[ $EUID -eq 0 ]] && die "run 'hwe update' as a normal user (it uses sudo where needed)"
+    _update_refuse_root || return 1
 
     local head_before head_after
     head_before="$(git -C "$HWE_ROOT" rev-parse HEAD 2>/dev/null || true)"
@@ -86,6 +86,14 @@ EOF
 
     echo
     ok "hwe update complete."
+}
+
+# Root would own every file the update writes into the user's checkout and
+# ~/.config. A function rather than an inline check so the suite — which runs
+# as root in the CI containers — can stub it and still exercise update_main.
+_update_refuse_root() {
+    [[ $EUID -eq 0 ]] && die "run 'hwe update' as a normal user (it uses sudo where needed)"
+    return 0
 }
 
 # Fast-forward only. Refuse to touch a repo with uncommitted TRACKED changes

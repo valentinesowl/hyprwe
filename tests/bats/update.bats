@@ -177,6 +177,8 @@ add_cli_to_origin() {
 
 # update_main with every reconcile step stubbed to a marker — if the re-exec
 # is broken, the run must fail an assertion, not deploy into the runner's home.
+# The root refusal is stubbed too: the CI containers run this suite as root,
+# and what is under test here is the pull-and-restart logic, not the refusal.
 run_update_main() {
     run bash -c '
         set -euo pipefail
@@ -185,6 +187,7 @@ run_update_main() {
         source "$HWE_ROOT/lib/common.sh"
         source "$HWE_ROOT/lib/update.sh"
         HWE_ROOT="$REPO"
+        _update_refuse_root() { :; }
         for step in _deploy_user_layer _deploy_configs _link_cli \
                     _update_apply_theme _update_packages _install_fetched_fonts; do
             eval "$step() { echo \"stub:$step\"; }"
