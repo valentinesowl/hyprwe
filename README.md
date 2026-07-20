@@ -6,7 +6,7 @@
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu_26.04-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
-[![Release](https://img.shields.io/badge/release-v1.3.0-blue)](../../releases/latest)
+[![Release](https://img.shields.io/badge/release-v1.3.1-blue)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 **A working environment on Arch and Ubuntu — Hyprland and everything around it: bar,
@@ -426,12 +426,14 @@ pipeline. How to contribute — [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Status
 
-`v1.3.0` — HWE is no longer Arch-only: it installs on **Ubuntu 26.04**, and `hwe vm up`
-boots either distribution, each in its own VM so the two can be compared side by side.
-The environment did not fork to get there — one `config/hypr/` parses cleanly under both
-Hyprland versions involved. On top of the personal layer (`~/.config/hwe/`), the lifecycle
-commands (`hwe update`, `hwe doctor host`, `hwe vm up --uncommitted`) and the stable 1.0.0
-base — the installer, the theme engine with 10 themes, the SDDM greeter, zsh.
+`v1.3.1` — a correctness and safety pass over the surface 1.3.0 opened (no new features,
+no change to the `hwe` interface). 1.3.0 made HWE no longer Arch-only: it installs on
+**Ubuntu 26.04**, and `hwe vm up` boots either distribution, each in its own VM so the two
+can be compared side by side. The environment did not fork to get there — one `config/hypr/`
+parses cleanly under both Hyprland versions involved. On top of the personal layer
+(`~/.config/hwe/`), the lifecycle commands (`hwe update`, `hwe doctor host`,
+`hwe vm up --uncommitted`) and the stable 1.0.0 base — the installer, the theme engine with
+10 themes, the SDDM greeter, zsh.
 
 Tried and used daily on Arch; Ubuntu is verified end to end in a VM, not yet on bare
 metal. Next: more bar components, more workflows, polish.

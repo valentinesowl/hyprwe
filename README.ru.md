@@ -6,7 +6,7 @@
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu_26.04-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
-[![Release](https://img.shields.io/badge/release-v1.3.0-blue)](../../releases/latest)
+[![Release](https://img.shields.io/badge/release-v1.3.1-blue)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 **Рабочее окружение на Arch и Ubuntu — Hyprland и всё вокруг него: бар, лаунчер,
@@ -423,12 +423,14 @@ just gallery    # пересобрать assets/themes.png из превью
 
 ## Статус
 
-`v1.3.0` — HWE больше не только про Arch: он ставится на **Ubuntu 26.04**, а `hwe vm up`
-поднимает любой из двух дистрибутивов, каждый в своей виртуалке, чтобы их можно было
-сравнивать рядом. Окружение ради этого не разветвилось — один и тот же `config/hypr/`
-разбирается без ошибок обеими версиями Hyprland. Поверх личного слоя (`~/.config/hwe/`),
-команд жизненного цикла (`hwe update`, `hwe doctor host`, `hwe vm up --uncommitted`) и
-стабильной базы 1.0.0 — установщик, движок тем с 10 темами, SDDM-гритер, zsh.
+`v1.3.1` — проход по корректности и безопасности поверх того, что открыла 1.3.0 (без новых
+фич, без изменения интерфейса `hwe`). В 1.3.0 HWE перестал быть только про Arch: он ставится
+на **Ubuntu 26.04**, а `hwe vm up` поднимает любой из двух дистрибутивов, каждый в своей
+виртуалке, чтобы их можно было сравнивать рядом. Окружение ради этого не разветвилось — один
+и тот же `config/hypr/` разбирается без ошибок обеими версиями Hyprland. Поверх личного слоя
+(`~/.config/hwe/`), команд жизненного цикла (`hwe update`, `hwe doctor host`,
+`hwe vm up --uncommitted`) и стабильной базы 1.0.0 — установщик, движок тем с 10 темами,
+SDDM-гритер, zsh.
 
 Обкатано и используется ежедневно на Arch; Ubuntu проверена end-to-end на виртуалке, но
 не на живом железе. Дальше: больше компонентов панели, воркфлоу и полировка.

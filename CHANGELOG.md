@@ -9,6 +9,11 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+## [1.3.1] — 2026-07-20
+
+A correctness and safety pass over the surface 1.3.0 opened. No new features and no
+change to the public `hwe` interface — every entry below is a bug that could bite.
+
 ### Fixed
 
 - **`hwe install` and `hwe uninstall` ignored their arguments**, so `hwe uninstall --help`
@@ -348,7 +353,9 @@ to it only ship in 2.0.0.
   that environment's uninstaller. If the login screen looks foreign after
   `hwe theme sddm`, look at what is in that directory.
 
-[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.3.1
+[1.3.0]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.3.0
 [1.2.0]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.2.0
 [1.1.0]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.1.0
 [1.0.0]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.0.0
