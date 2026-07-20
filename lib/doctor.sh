@@ -64,6 +64,16 @@ _doctor_link_status() {
     fi
 }
 
+# The login-shell verdict from a passwd shell field: ok (zsh) | drift (something
+# else) | unknown (unreadable — not drift we can be sure of). Pure, so the drift
+# rule is pinned without a live account.
+_doctor_shell_verdict() {
+    local sh="$1"
+    [[ -z "$sh" ]] && { echo unknown; return; }
+    [[ "$(basename "$sh")" == zsh ]] && { echo ok; return; }
+    echo drift
+}
+
 # The set of ~/.config entries `_deploy_configs` links: every config/*/ subdir,
 # plus the loose top-level generated files. Mirror that list exactly so a drift
 # report matches what install/update actually deploys.
@@ -197,13 +207,19 @@ doctor_host() {
     fi
 
     # --- login shell ------------------------------------------------------
-    local sh; sh="$(getent passwd "$USER" 2>/dev/null | cut -d: -f7)"
-    if [[ "$(basename "${sh:-}")" == zsh ]]; then
-        ok "login shell is zsh"
-    else
-        warn "login shell is ${sh:-unknown}, not zsh"
-        info "set it: ${C_BOLD}hwe install${C_RESET} configures the shell (or: chsh -s \$(command -v zsh))"
-    fi
+    # $(id -un), not $USER: the latter is unbound under set -u (cron, env -i), and
+    # the || true keeps a failing getent (pipefail) from aborting the whole report.
+    local user sh; user="$(id -un)"
+    sh="$(getent passwd "$user" 2>/dev/null | cut -d: -f7 || true)"
+    case "$(_doctor_shell_verdict "$sh")" in
+        ok)      ok "login shell is zsh" ;;
+        unknown) info "could not read the login shell for $user — skipping that check" ;;
+        drift)   # Counts as drift like every other check: install sets zsh, so bash
+                 # here is a machine that no longer matches the repo, not a neutral fact.
+                 warn "login shell is $sh, not zsh"
+                 info "set it: ${C_BOLD}hwe install${C_RESET} configures the shell (or: chsh -s \$(command -v zsh))"
+                 fail=1 ;;
+    esac
 
     # --- Hyprland config errors ------------------------------------------
     if command -v hyprctl >/dev/null 2>&1 && \
