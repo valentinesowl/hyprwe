@@ -772,7 +772,9 @@ install_main() {
     if [[ "${HWE_UNATTENDED:-0}" == 1 ]]; then
         info "reboot into the Hyprland session:  sudo reboot"
     else
-        info "start Hyprland from a TTY with:  Hyprland   (or reboot if autologin was configured)"
+        # Match the sanctioned path _setup_login just configured: SDDM's greeter,
+        # or the uwsm session entry from a TTY — not a bare 'Hyprland', which warns.
+        info "reboot to reach the SDDM greeter, or start now from a TTY:  uwsm start hyprland.desktop"
     fi
 }
 
