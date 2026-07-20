@@ -117,7 +117,7 @@ ${C_BOLD}Actions:${C_RESET}
   ${C_CYAN}list${C_RESET}           List HWE VMs known to libvirt
   ${C_CYAN}down${C_RESET}            Gracefully shut the VM down
   ${C_CYAN}destroy${C_RESET}        Remove the VM and its disks (irreversible)
-  ${C_CYAN}rebuild${C_RESET} [br]    destroy + up (fresh provision; takes --uncommitted too)
+  ${C_CYAN}rebuild${C_RESET} [br]    destroy (asks first) + up (fresh provision; takes --uncommitted too)
   ${C_CYAN}doctor${C_RESET}         Check host prerequisites
 
 ${C_BOLD}Guest distribution:${C_RESET} ${C_CYAN}HWE_VM_DISTRO${C_RESET}=$HWE_VM_DISTRO  (arch | ubuntu)
@@ -150,7 +150,7 @@ vm_main() {
         list|ls)  vm_list ;;
         down|stop) _vm_resolve_target down && _virsh shutdown "$HWE_VM_NAME" && ok "shutdown signal sent" ;;
         destroy|rm) vm_destroy ;;
-        rebuild)  vm_destroy_quiet; vm_up "$@" ;;
+        rebuild)  vm_rebuild "$@" ;;
         doctor)   vm_doctor ;;
         ""|help|-h|--help) vm_usage ;;
         *) err "unknown vm action: $action"; vm_usage; return 1 ;;
@@ -750,6 +750,24 @@ vm_destroy() {
     confirm "Destroy VM '$HWE_VM_NAME' and delete its disks?" || { info "aborted"; return 0; }
     vm_destroy_quiet
     ok "VM '$HWE_VM_NAME' removed"
+}
+
+# Destroy + recreate the VM named by HWE_VM_DISTRO (default 'hwe-dev'). Unlike the
+# other targeted verbs it does NOT resolve to whichever VM happens to exist: the
+# image vm_up builds is chosen by HWE_VM_DISTRO, so operating on a differently-named
+# VM would rebuild it with the wrong distro's image. Instead it confirms by NAME —
+# which both gates the disk deletion (destroy asks; rebuild used not to) and makes
+# a forgotten HWE_VM_DISTRO visible ("Rebuild VM 'hwe-dev'?" when you meant ubuntu).
+vm_rebuild() {
+    if _virsh dominfo "$HWE_VM_NAME" >/dev/null 2>&1; then
+        confirm "Rebuild VM '$HWE_VM_NAME' — destroy its disks and recreate it?" \
+            || { info "rebuild cancelled — nothing changed"; return 0; }
+        vm_destroy_quiet
+    else
+        info "no VM '$HWE_VM_NAME' to rebuild — building it fresh"
+        info "(set ${C_BOLD}HWE_VM_DISTRO${C_RESET} to target a differently-named VM)"
+    fi
+    vm_up "$@"
 }
 
 vm_destroy_quiet() {

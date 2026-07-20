@@ -183,3 +183,53 @@ dirty_the_tree() {
     assert_success
     assert_output "seed=600 disk=644"
 }
+
+@test "vm rebuild confirms, destroys and rebuilds when the VM exists" {
+    run --separate-stderr bash -c '
+        set -euo pipefail
+        HWE_ROOT="$HWE_REPO_ROOT"
+        source "$HWE_ROOT/lib/common.sh"
+        source "$HWE_ROOT/lib/vm.sh"
+        _virsh() { return 0; }                 # the VM exists
+        vm_destroy_quiet() { echo DESTROYED; }
+        vm_up() { echo "UP $*"; }
+        HWE_ASSUME_YES=1 vm_rebuild feature-x
+    '
+    assert_success
+    [[ "$output" == *"DESTROYED"* ]]
+    [[ "$output" == *"UP feature-x"* ]]
+}
+
+@test "vm rebuild declined destroys nothing and does not build" {
+    run --separate-stderr bash -c '
+        set -euo pipefail
+        HWE_ROOT="$HWE_REPO_ROOT"
+        source "$HWE_ROOT/lib/common.sh"
+        source "$HWE_ROOT/lib/vm.sh"
+        _virsh() { return 0; }                 # the VM exists
+        vm_destroy_quiet() { echo DESTROYED; }
+        vm_up() { echo "UP $*"; }
+        vm_rebuild feature-x </dev/null        # confirm hits EOF -> declines
+    '
+    assert_success
+    [[ "$output" != *"DESTROYED"* ]]
+    [[ "$output" != *"UP"* ]]
+    [[ "$stderr" == *"cancelled"* ]]
+}
+
+@test "vm rebuild with no such VM builds fresh, destroying nothing" {
+    run --separate-stderr bash -c '
+        set -euo pipefail
+        HWE_ROOT="$HWE_REPO_ROOT"
+        source "$HWE_ROOT/lib/common.sh"
+        source "$HWE_ROOT/lib/vm.sh"
+        _virsh() { return 1; }                 # nothing exists
+        vm_destroy_quiet() { echo DESTROYED; }
+        vm_up() { echo "UP $*"; }
+        vm_rebuild </dev/null
+    '
+    assert_success
+    [[ "$output" != *"DESTROYED"* ]]
+    [[ "$output" == *"UP"* ]]
+    [[ "$stderr" == *"building it fresh"* ]]
+}
