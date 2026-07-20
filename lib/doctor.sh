@@ -15,6 +15,10 @@
 # defines functions — install_main runs only when the file is executed directly.
 # shellcheck source=provision/guest-install.sh
 HWE_INSTALL_STANDALONE=1 source "$HWE_ROOT/provision/guest-install.sh"
+# For _hypr_config_clean — the same "is the config clean?" predicate checkconfig
+# uses, so a login notification and a doctor line can never disagree.
+# shellcheck source=lib/checkconfig.sh
+source "$HWE_ROOT/lib/checkconfig.sh"
 
 doctor_main() {
     local sub="${1:-host}"; shift || true
@@ -206,7 +210,7 @@ doctor_host() {
        [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" || -d "${XDG_RUNTIME_DIR:-/run/user/$UID}/hypr" ]]; then
         local errs
         errs="$(hyprctl configerrors 2>/dev/null | sed '/^[[:space:]]*$/d' || true)"
-        if [[ -z "$errs" || "$errs" == *"no errors"* ]]; then
+        if _hypr_config_clean "$errs"; then
             ok "Hyprland config: no errors"
         else
             warn "Hyprland reports config errors:"

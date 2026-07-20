@@ -20,6 +20,14 @@ _checkconfig_find_sig() {
     printf '%s\n' "$sig"
 }
 
+# A clean configerrors result: no output at all, or a build that says so in words
+# rather than emptily. Shared with doctor (which sources this file) so the two
+# never disagree on what "clean" is — a version that prints "no errors" must not
+# raise a red login notification here while doctor calls the same config fine.
+_hypr_config_clean() {
+    [[ -z "$1" || "$1" == *"no errors"* ]]
+}
+
 checkconfig_main() {
     local notify=0
     [[ "${1:-}" == "--notify" ]] && notify=1
@@ -34,7 +42,7 @@ checkconfig_main() {
 
     # Clean config => empty output. Drop blank lines so whitespace isn't read as an error.
     local errs; errs="$(hyprctl configerrors 2>/dev/null | sed '/^[[:space:]]*$/d')"
-    if [[ -z "$errs" ]]; then
+    if _hypr_config_clean "$errs"; then
         ok "Hyprland config OK — no errors"
         return 0
     fi
