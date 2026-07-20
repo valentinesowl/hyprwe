@@ -396,8 +396,13 @@ _setup_nvidia() {
         driver="$HWE_NVIDIA_DRIVER"
         info "NVIDIA GPU detected — using pinned driver '$driver' (HWE_NVIDIA_DRIVER)"
     else
-        local cn; cn="$(_nvidia_codename)"
-        driver="$(_nvidia_driver_for_codename "$cn")"
+        # Both probes RETURN non-zero on their documented fallback paths — an
+        # empty codename from old hwdata, and the unknown-codename default — so
+        # under `set -e` a bare assignment here would abort the whole install
+        # before the warn/default arms below could run. `|| true` keeps the
+        # stdout they already printed while neutralising the status.
+        local cn; cn="$(_nvidia_codename || true)"
+        driver="$(_nvidia_driver_for_codename "$cn" || true)"
         if [[ -n "$cn" ]]; then
             info "NVIDIA $cn detected — selecting '$driver'"
         else
@@ -424,7 +429,10 @@ _setup_nvidia() {
     # Edit a temp copy with the tested function, then install it back under sudo —
     # so the exact logic the bats suite pins is what runs against real /etc.
     local tmp; tmp="$(mktemp)"; cp /etc/mkinitcpio.conf "$tmp" 2>/dev/null || true
-    _mkinitcpio_add_nvidia_modules "$tmp"; local rc=$?
+    # `f; local rc=$?` would never reach the assignment: under `set -e` the
+    # non-zero return (2 already-present, 1 no MODULES line) aborts first, so the
+    # idempotent and warn arms below were dead. Capture the status without aborting.
+    local rc=0; _mkinitcpio_add_nvidia_modules "$tmp" || rc=$?
     case $rc in
         0)  run sudo cp -n /etc/mkinitcpio.conf "/etc/mkinitcpio.conf.hwe-bak.$$" 2>/dev/null || true
             run sudo install -m644 "$tmp" /etc/mkinitcpio.conf

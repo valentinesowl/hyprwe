@@ -102,3 +102,43 @@ load_install() {
     run grep -q nvidia "$f"
     assert_failure
 }
+
+# --- the caller's errexit safety (regression) ------------------------------
+# The pure functions above return non-zero on their fallback paths BY DESIGN.
+# _setup_nvidia runs under `set -e` (from bin/hwe), so a bare `cn=$(_nvidia_
+# codename)` or `f; rc=$?` used to abort the whole install on exactly the
+# machines those fallbacks exist for. These pin that the caller absorbs it.
+
+@test "an empty codename drives _setup_nvidia to its default arm, not an abort" {
+    run bash -c '
+        set -euo pipefail
+        HWE_ROOT="'"$HWE_ROOT"'"
+        source "$HWE_ROOT/lib/common.sh"       # warn/info/confirm/run live here
+        source "$HWE_ROOT/provision/guest-install.sh"
+        systemd-detect-virt() { return 1; }   # pretend bare metal
+        _nvidia_gpu_present()  { return 0; }
+        _distro_family()       { echo pacman; }
+        _nvidia_codename()     { return 1; }   # old hwdata: empty codename, non-zero status
+        _setup_nvidia </dev/null               # confirm hits EOF, declines, returns 0 cleanly
+    '
+    assert_success
+    [[ "$output" == *"generation is unreadable"* ]]
+}
+
+@test "a pinned HWE_NVIDIA_DRIVER selects it without probing the codename" {
+    run bash -c '
+        set -euo pipefail
+        HWE_ROOT="'"$HWE_ROOT"'"
+        export HWE_NVIDIA_DRIVER=nvidia-open-dkms
+        source "$HWE_ROOT/lib/common.sh"
+        source "$HWE_ROOT/provision/guest-install.sh"
+        systemd-detect-virt() { return 1; }
+        _nvidia_gpu_present()  { return 0; }
+        _distro_family()       { echo pacman; }
+        _nvidia_codename()     { echo "SHOULD-NOT-BE-CALLED"; }
+        _setup_nvidia </dev/null
+    '
+    assert_success
+    [[ "$output" == *"nvidia-open-dkms"* ]]
+    [[ "$output" != *"SHOULD-NOT-BE-CALLED"* ]]
+}
