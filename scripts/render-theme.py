@@ -16,6 +16,7 @@ rendered — see check_values().
 """
 from __future__ import annotations
 
+import math
 import re
 import sys
 import tomllib
@@ -176,6 +177,12 @@ def _number(low=None, high=None):
         # bool is an int in Python — `blur_size = true` must not read as 1.
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             return "must be a number"
+        # TOML has literal inf/nan. They pass the bound checks (nan compares
+        # False both ways; inf slips any unbounded param) and then either crash
+        # the renderer on arithmetic or render the token 'inf' into a config —
+        # a malicious theme turned into a desktop DoS.
+        if isinstance(value, float) and not math.isfinite(value):
+            return "must be a finite number"
         if low is not None and value < low:
             return f"must be >= {low}"
         if high is not None and value > high:
@@ -448,9 +455,13 @@ def build_context(theme: dict, *, lenient: bool) -> dict:
     # cpu/ram/temp modules) can reference helper scripts wherever HWE lives.
     scripts_dir = str(Path(__file__).resolve().parent)
 
+    # [palette] is the theme's private workbench and no template reads it, so it
+    # is deliberately NOT put in the render context: injecting a free-form,
+    # loosely-checked value that nothing uses only widens the surface. A future
+    # template that wants it will fail loudly on StrictUndefined — the signal to
+    # add it here AND tighten its check — rather than smuggle syntax silently.
     return {"name": theme["name"], "sem": sem, "params": params, "font": font,
-            "scripts_dir": scripts_dir,
-            "palette": theme.get("palette", {})}
+            "scripts_dir": scripts_dir}
 
 
 # ── Jinja filters for the various config colour syntaxes ───────────────────

@@ -132,6 +132,9 @@ def test_ordinary_punctuation_in_name_and_family_still_passes(render_theme, mini
         ("bar_float", 1),          # ...and the reverse
         ("opacity", 1.4),          # alpha is 0..1
         ("opacity", -0.1),
+        ("opacity", float("nan")), # nan compares False both ways — must be caught
+        ("rounding", float("inf")),  # inf slips any UNbounded param's checks
+        ("rounding", float("nan")),
         ("border_angle", 400),     # degrees
         ("border_inactive", "nope"),
         ("border_gradient", "#ffffff"),        # a bare colour, not a list
@@ -159,9 +162,18 @@ def test_the_private_palette_stays_free_form(render_theme, minimal_theme):
 
 
 def test_the_private_palette_still_cannot_smuggle_a_newline(render_theme, minimal_theme):
-    """Free-form, but it does reach the render context — hold the safety line."""
+    """Validated for well-formedness even though it is no longer injected, so a
+    theme that later starts reading it is already known to be sound."""
     minimal_theme["palette"] = {"mauve": "#cba6f7\nexec-once = x"}
     assert any("palette.mauve" in p for p in render_theme.check_values(minimal_theme))
+
+
+def test_the_private_palette_is_not_injected_into_the_render_context(render_theme, minimal_theme):
+    """No template reads [palette], so it must not sit in the context as inert,
+    loosely-checked free-form syntax waiting for a future template to interpolate."""
+    minimal_theme["palette"] = {"mauve": "#cba6f7"}
+    ctx = render_theme.build_context(minimal_theme, lenient=False)
+    assert "palette" not in ctx
 
 
 @pytest.mark.parametrize("theme_path", theme_paths(), ids=theme_ids())
