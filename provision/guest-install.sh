@@ -137,15 +137,30 @@ _fonts_lock_rows() {
     sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$f"
 }
 
+# True if a font member is already available — provided by a package (fc-list
+# knows it) or fetched by us into the hwe font dir. Shared by the installer (skip
+# the download) and doctor (no drift), so the two cannot disagree.
+#
+# `grep -q` would exit on the first match and SIGPIPE fc-list; under `set -o
+# pipefail` that 141 is reported as the pipeline's status, so a PRESENT font read
+# as absent — the installer then re-downloaded a packaged font every run. grep
+# reads all of fc-list instead of short-circuiting, which keeps fc-list's exit 0.
+_font_installed() {
+    local member="$1"
+    local dest="${XDG_DATA_HOME:-$HOME/.local/share}/fonts/hwe"
+    [[ -f "$dest/$member" ]] && return 0
+    fc-list 2>/dev/null | grep -F "$member" >/dev/null 2>&1
+}
+
 _install_fetched_fonts() {
     local dest="${XDG_DATA_HOME:-$HOME/.local/share}/fonts/hwe"
     local id url a_sha member f_sha installed=0
     while IFS=$'\t' read -r id url a_sha member f_sha; do
         [[ -n "${id:-}" && -n "${member:-}" ]] || continue
 
-        # Already provided by a package on this distro? Then it is not ours to fetch.
-        if fc-list 2>/dev/null | grep -qF "$member"; then
-            info "$member already installed by a package — not fetching"
+        # Already provided by a package on this distro (or fetched before)? Not ours to fetch.
+        if _font_installed "$member"; then
+            info "$member already installed — not fetching"
             continue
         fi
         # `-` is the unpinned marker. It has to be a real character: tab is IFS

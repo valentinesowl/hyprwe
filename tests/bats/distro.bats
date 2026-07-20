@@ -155,6 +155,45 @@ fonts_fn() {
     ' _ "$@"
 }
 
+@test "a present font is found even under pipefail (no grep -q SIGPIPE false-negative)" {
+    # fc-list prints many lines; `grep -q` exits on the match and SIGPIPEs fc-list,
+    # which pipefail then reports as a failed pipeline — reading a PRESENT font as
+    # absent and re-downloading a packaged font every run. The member sits early,
+    # with plenty of output after it, so a short-circuiting grep would trip.
+    # The match must land early and the producer must keep writing past the pipe
+    # buffer, or grep -q's early exit never SIGPIPEs it (a small `cat` fits the
+    # buffer and finishes first, hiding the bug). A real incremental producer does.
+    local fakebin="$BATS_TEST_TMPDIR/bin"; mkdir -p "$fakebin"
+    cat > "$fakebin/fc-list" <<'SH'
+#!/usr/bin/env bash
+echo "/x/SymbolsNerdFontMono-Regular.ttf: Symbols"
+seq 1 200000 | sed 's|^|/x/pad-|; s|$|.ttf: pad|'
+SH
+    chmod +x "$fakebin/fc-list"
+    PATH="$fakebin:$PATH" XDG_DATA_HOME="$BATS_TEST_TMPDIR/xdg" \
+        run fonts_fn _font_installed "SymbolsNerdFontMono-Regular.ttf"
+    assert_success
+}
+
+@test "an absent font reports absent" {
+    local fakebin="$BATS_TEST_TMPDIR/bin"; mkdir -p "$fakebin"
+    printf '#!/usr/bin/env bash\necho "/x/other.ttf: Other"\n' > "$fakebin/fc-list"
+    chmod +x "$fakebin/fc-list"
+    PATH="$fakebin:$PATH" XDG_DATA_HOME="$BATS_TEST_TMPDIR/xdg" \
+        run fonts_fn _font_installed "SymbolsNerdFontMono-Regular.ttf"
+    assert_failure
+}
+
+@test "a font we fetched ourselves counts as present with an empty fc-list" {
+    local fakebin="$BATS_TEST_TMPDIR/bin"; mkdir -p "$fakebin"
+    printf '#!/usr/bin/env bash\n:\n' > "$fakebin/fc-list"; chmod +x "$fakebin/fc-list"
+    local xdg="$BATS_TEST_TMPDIR/xdg"; mkdir -p "$xdg/fonts/hwe"
+    : > "$xdg/fonts/hwe/SymbolsNerdFontMono-Regular.ttf"
+    PATH="$fakebin:$PATH" XDG_DATA_HOME="$xdg" \
+        run fonts_fn _font_installed "SymbolsNerdFontMono-Regular.ttf"
+    assert_success
+}
+
 @test "the lock file parses, keeping an unpinned hash empty" {
     run fonts_fn _fonts_lock_rows
     assert_success

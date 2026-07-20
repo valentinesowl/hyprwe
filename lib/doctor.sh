@@ -172,6 +172,26 @@ doctor_host() {
         info "unknown distribution (${HWE_DISTRO:-?}) — skipping the package check"
     fi
 
+    # --- pinned fonts -----------------------------------------------------
+    # The icon font is a package on Arch but a fetched-and-pinned download where
+    # nothing packages it (Ubuntu). Reuse _font_installed so detect and fix share
+    # one predicate. An unpinned row is not fetchable, so it is not drift update
+    # could fix — skip it, don't cry.
+    local fid _ fa fmember ff fonts_missing=0
+    while IFS=$'\t' read -r fid _ fa fmember ff; do
+        [[ -n "${fid:-}" && -n "${fmember:-}" ]] || continue
+        _font_installed "$fmember" && continue
+        [[ "$ff" == "-" || "$fa" == "-" || -z "$ff" || -z "$fa" ]] && continue
+        warn "pinned font not installed: $fmember"
+        fonts_missing=1
+    done < <(_fonts_lock_rows)
+    if [[ $fonts_missing -eq 0 ]]; then
+        ok "pinned fonts present"
+    else
+        info "install them with: ${C_BOLD}hwe update${C_RESET}"
+        fail=1
+    fi
+
     # --- login shell ------------------------------------------------------
     local sh; sh="$(getent passwd "$USER" 2>/dev/null | cut -d: -f7)"
     if [[ "$(basename "${sh:-}")" == zsh ]]; then

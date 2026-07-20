@@ -5,9 +5,11 @@
 #   1. git pull --ff-only   (safe: aborts on a dirty tree or a non-ff history —
 #                            you drive real merges/rebases, update never guesses)
 #   2. re-link configs      (_deploy_configs — idempotent, repairs the symlinks)
-#   3. re-apply the theme    (regenerate every component + live-reload)
-#   4. install missing pkgs  (core + dev + your own list, AUR best-effort;
+#   3. re-link the CLI      (_link_cli — so `doctor`'s advertised fix is real)
+#   4. re-apply the theme    (regenerate every component + live-reload)
+#   5. install missing pkgs  (core + dev + your own list, AUR best-effort;
 #                             confirm before it acts)
+#   6. fetch newly-pinned fonts (idempotent: skips what a package already provides)
 #
 # Nothing here touches your personal layer (~/.config/hwe) — which is exactly why
 # step 1 can afford to be strict about a dirty tree: your settings are not in the
@@ -31,7 +33,7 @@ ${C_BOLD}hwe update${C_RESET} — pull the repo and reconcile this machine
 
 ${C_BOLD}Usage:${C_RESET} hwe update [--check]
 
-  (no args)   ff-only pull, re-link configs, re-apply theme, install missing pkgs
+  (no args)   ff-only pull, re-link configs + CLI, re-apply theme, install missing pkgs + fonts
   ${C_CYAN}--check${C_RESET}     read-only drift report only (same as ${C_BOLD}hwe doctor host${C_RESET})
 EOF
             return 0 ;;
@@ -57,8 +59,10 @@ EOF
     # reloads. Copy-once, so anything already there is yours and is left alone.
     _deploy_user_layer
     _deploy_configs
+    _link_cli
     _update_apply_theme
     _update_packages
+    _install_fetched_fonts
 
     echo
     ok "hwe update complete."
