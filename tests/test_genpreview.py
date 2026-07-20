@@ -242,6 +242,29 @@ def test_main_refuses_a_malformed_theme(genpreview, monkeypatch, tmp_path):
     assert "malformed theme" in str(exc.value)
 
 
+@pytest.mark.parametrize(
+    "toml_line",
+    [
+        # A leading `@` makes `magick -annotate` read a file into the card — an
+        # arbitrary-file read that ends up in a committed PNG.
+        'name = "@/etc/passwd"',
+        'tagline = "@/etc/passwd"',
+        # `%` is an ImageMagick property-expansion escape.
+        'tagline = "100%w wide"',
+        # `tagline` was previously not validated at all — a newline (a real one,
+        # from the TOML escape) could smuggle a second annotate line.
+        'tagline = "line one\\nexec"',
+    ],
+)
+def test_main_refuses_an_imagemagick_metacharacter(genpreview, monkeypatch, tmp_path, toml_line):
+    monkeypatch.setattr(genpreview.shutil, "which", lambda _: "/usr/bin/magick")
+    theme = tmp_path / "theme.toml"
+    theme.write_text(f'{toml_line}\n[sem]\naccent = "#ff0000"\n')
+    with pytest.raises(SystemExit) as exc:
+        genpreview.main([str(theme), str(tmp_path / "o.png")])
+    assert "malformed theme" in str(exc.value)
+
+
 @magick_required
 @pytest.mark.slow
 @pytest.mark.parametrize("theme_path", theme_paths(), ids=theme_ids())

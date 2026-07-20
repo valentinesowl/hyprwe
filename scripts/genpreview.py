@@ -76,6 +76,26 @@ def _reject_malformed_theme(doc: dict, path: Path) -> None:
     checked = dict(doc)
     checked.setdefault("name", path.parent.name)
     problems = rt.check_values(checked)
+    # `name` and `tagline` are drawn onto the card as the text argument of
+    # `magick -annotate`, where ImageMagick reads a leading `@` as "the rest is a
+    # file to read in" (an arbitrary-file-read that lands in a committed PNG) and
+    # expands `%` as a property escape. check_values never sees `tagline`, and
+    # neither metacharacter is barred for config output — so both are held here,
+    # before either value reaches an ImageMagick argument. A leading space does
+    # not help: ImageMagick strips whitespace before testing for the `@`.
+    tag = checked.get("tagline")
+    if tag is not None:
+        problem = rt._inline(tag)
+        if problem:
+            problems.append(f"tagline {problem}")
+    for label in ("name", "tagline"):
+        value = checked.get(label)
+        if not isinstance(value, str):
+            continue
+        if value.lstrip().startswith("@"):
+            problems.append(f"{label} must not begin with '@' (ImageMagick would read it as a file)")
+        elif "%" in value:
+            problems.append(f"{label} must not contain '%' (ImageMagick would expand it as an escape)")
     if problems:
         sys.exit(f"{path}: refusing a malformed theme:\n  " + "\n  ".join(problems))
 
