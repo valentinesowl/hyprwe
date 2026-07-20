@@ -94,7 +94,7 @@ theme_list() {
 theme_pick() {
     # toggle: a second press closes the picker (matches wall/power menus)
     if pgrep -x rofi >/dev/null 2>&1; then pkill -x rofi; return 0; fi
-    need rofi "sudo pacman -S rofi-wayland" || return 1
+    need rofi rofi-wayland || return 1
     local cur name choice icon rasi sel=-1 i=0
     cur="$(cat "$HWE_THEME_CURRENT" 2>/dev/null || echo none)"
     rasi="$HWE_ROOT/config/rofi/theme.rasi"    # generated gallery (hwe theme apply)
@@ -251,7 +251,7 @@ theme_apply() {
     local name="${1:-}"
     [[ -z "$name" ]] && name="$(cat "$HWE_THEME_CURRENT" 2>/dev/null || true)"
     local t; t="$(_theme_toml "$name")" || { theme_list; return 1; }
-    need python3 "sudo pacman -S python-jinja" || return 1
+    need python3 python-jinja || return 1
 
     log "Applying theme '$name'"
     python3 "$HWE_THEME_RENDER" "$t" "$HWE_TEMPLATES" "$HWE_THEME_OUT" || return 1

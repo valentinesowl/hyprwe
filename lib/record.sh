@@ -28,7 +28,7 @@ record_main() {
         return 0
     fi
 
-    need wf-recorder "sudo pacman -S wf-recorder" || return 1
+    need wf-recorder wf-recorder || return 1
     local dir="$HOME/Videos"
     mkdir -p "$dir"
     local out
@@ -36,7 +36,7 @@ record_main() {
 
     local -a geo=()
     if [[ "${1:-}" == region ]]; then
-        need slurp "sudo pacman -S slurp" || return 1
+        need slurp slurp || return 1
         local g
         g="$(slurp)" || return 0 # cancelled selection: abort cleanly
         geo=(-g "$g")

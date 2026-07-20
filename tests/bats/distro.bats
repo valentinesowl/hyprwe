@@ -92,6 +92,25 @@ translate() {
     assert_output $'mako\npacman-contrib'
 }
 
+# ── need: distro-aware install hints ──────────────────────────────────────
+@test "a missing tool's install hint follows the running distro" {
+    # `need`'s second argument is an Arch package name; on apt it must become the
+    # apt command AND the translated name, not a pacman line for an Arch package.
+    HWE_DISTRO=arch   run distro_fn need __hwe_absent__ rofi-wayland
+    assert_failure
+    [[ "$output" == *"sudo pacman -S rofi-wayland"* ]]
+
+    HWE_DISTRO=debian run distro_fn need __hwe_absent__ rofi-wayland
+    assert_failure
+    [[ "$output" == *"sudo apt install rofi"* ]]
+}
+
+@test "a present tool needs nothing and succeeds silently" {
+    run distro_fn need bash bash
+    assert_success
+    assert_output ""
+}
+
 # ── the map as a document ─────────────────────────────────────────────────
 @test "every mapped name is one HWE actually asks for" {
     # A map entry for a package no list names is dead weight — and usually a typo

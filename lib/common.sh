@@ -28,12 +28,19 @@ confirm() {
     [[ "$reply" =~ ^[Yy]$ ]]
 }
 
-# Require a command to exist, else die with an install hint.
+# Require a command to exist, else fail with an install hint. The second argument
+# is the package's ARCH name; need translates it for the running distro and picks
+# the right install command, so a missing tool on Ubuntu no longer suggests a
+# pacman line for a package under its Arch name (see lib/distro.sh).
 need() {
-    local cmd="$1" hint="${2:-}"
+    local cmd="$1" pkg="${2:-}"
     command -v "$cmd" >/dev/null 2>&1 && return 0
     err "missing required command: ${C_BOLD}${cmd}${C_RESET}"
-    [[ -n "$hint" ]] && info "install: $hint"
+    if [[ -n "$pkg" ]]; then
+        local -a local_pkgs=()
+        mapfile -t local_pkgs < <(printf '%s\n' "$pkg" | _pm_translate)
+        [[ ${#local_pkgs[@]} -gt 0 ]] && info "install: $(_pm_install_hint "${local_pkgs[@]}")"
+    fi
     return 1
 }
 

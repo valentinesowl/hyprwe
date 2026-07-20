@@ -10,11 +10,11 @@
 clip_main() {
     case "${1:-show}" in
         show)
-            need cliphist "sudo pacman -S cliphist" || return 1
-            need wl-copy "sudo pacman -S wl-clipboard" || return 1
+            need cliphist cliphist || return 1
+            need wl-copy wl-clipboard || return 1
             # a second press closes an open picker
             if pgrep -x rofi >/dev/null 2>&1; then pkill -x rofi; return 0; fi
-            need rofi "sudo pacman -S rofi-wayland" || return 1
+            need rofi rofi-wayland || return 1
             local rasi="$HWE_ROOT/config/rofi/config.rasi"
             local -a args=(-dmenu -i -p "Clipboard")
             [[ -f "$rasi" ]] && args+=(-theme "$rasi")
@@ -28,7 +28,7 @@ clip_main() {
             printf '%s\n' "$pick" | cliphist decode | wl-copy
             ;;
         wipe)
-            need cliphist "sudo pacman -S cliphist" || return 1
+            need cliphist cliphist || return 1
             cliphist wipe && info "clipboard history cleared"
             ;;
         help|-h|--help)

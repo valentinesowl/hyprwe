@@ -46,7 +46,7 @@ EOF
         return
     fi
 
-    need git "sudo pacman -S git" || return 1
+    need git git || return 1
     [[ $EUID -eq 0 ]] && die "run 'hwe update' as a normal user (it uses sudo where needed)"
 
     _update_pull || return 1

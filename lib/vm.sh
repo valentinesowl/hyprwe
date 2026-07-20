@@ -161,13 +161,13 @@ vm_main() {
 vm_doctor() {
     log "Checking host prerequisites for the HWE VM..."
     local fail=0
-    need virt-install "sudo pacman -S virt-install"            || fail=1
-    need virsh        "sudo pacman -S libvirt"                 || fail=1
-    need qemu-img     "sudo pacman -S qemu-base"               || fail=1
-    need xorriso      "sudo pacman -S libisoburn"              || fail=1
-    need curl         "sudo pacman -S curl"                    || fail=1
-    need git          "sudo pacman -S git"                     || fail=1
-    need gpg          "sudo pacman -S gnupg"                   || fail=1
+    need virt-install virt-install            || fail=1
+    need virsh        libvirt                 || fail=1
+    need qemu-img     qemu-base               || fail=1
+    need xorriso      libisoburn              || fail=1
+    need curl         curl                    || fail=1
+    need git          git                     || fail=1
+    need gpg          gnupg                   || fail=1
 
     # dnsmasq is an optdepend of libvirt but is required for the default NAT
     # network's DHCP/DNS — without it `virsh net-start default` fails.
@@ -221,9 +221,9 @@ vm_doctor() {
 
 # Ensure libvirt is usable; auto-fix the cheap bits with consent.
 _vm_ensure_ready() {
-    need virt-install "sudo pacman -S virt-install" || return 1
+    need virt-install virt-install || return 1
     need qemu-img && need xorriso && need git && need curl || return 1
-    need gpg "sudo pacman -S gnupg" || return 1   # verify the base image signature
+    need gpg gnupg || return 1   # verify the base image signature
 
     if ! systemctl is-active --quiet libvirtd 2>/dev/null; then
         warn "libvirtd is not running."
