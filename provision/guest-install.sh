@@ -693,7 +693,22 @@ SUMMARY
     confirm "Proceed with HWE install?" || die "aborted"
 }
 
+_install_usage() {
+    cat >&2 <<'EOF'
+usage: hwe install
+  Provision THIS machine: packages (pkg/*.lst + your ~/.config/hwe layer),
+  configs, the default theme, login shell and services. Uses sudo where needed.
+  Prints a summary and asks before it starts (skip the prompt with HWE_ASSUME_YES=1).
+  Honours HWE_HYPR_SOURCE (repo|ppa) for where the compositor comes from.
+EOF
+}
+
 install_main() {
+    case "${1:-}" in
+        help|-h|--help) _install_usage; return 0 ;;
+        "") : ;;
+        *) err "hwe install takes no arguments (got '$1')"; _install_usage; return 1 ;;
+    esac
     _distro_supported || return 1
     [[ $EUID -eq 0 ]] && die "run 'hwe install' as a normal user (it uses sudo where needed)"
 
@@ -741,7 +756,23 @@ install_main() {
 # Reverse _deploy_configs + _setup_shell: remove our symlinks, restore the newest
 # backup, revert the shell, unlink the CLI. Leaves packages/services (removing
 # them could lock the user out) and the repo itself in place.
+_uninstall_usage() {
+    cat >&2 <<'EOF'
+usage: hwe uninstall
+  Revert HWE's config symlinks (restoring any *.hwe-bak backups) and the login
+  shell. Leaves installed packages and enabled services in place, and never
+  touches your ~/.config/hwe layer. Asks before it starts (skip with HWE_ASSUME_YES=1).
+EOF
+}
+
 uninstall_main() {
+    case "${1:-}" in
+        help|-h|--help) _uninstall_usage; return 0 ;;
+        "") : ;;
+        *) err "hwe uninstall takes no arguments (got '$1')"; _uninstall_usage; return 1 ;;
+    esac
+    confirm "Revert HWE's config symlinks and login shell on $(uname -n)?" \
+        || { info "uninstall cancelled — nothing changed"; return 0; }
     log "HWE uninstall — reverting config symlinks + login shell"
     local src name dst bak
     for src in "$HWE_ROOT"/config/*/; do

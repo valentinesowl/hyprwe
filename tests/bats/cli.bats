@@ -70,6 +70,30 @@ setup() {
     done
 }
 
+@test "install help shows usage and touches nothing" {
+    run --separate-stderr "$HWE_ROOT/bin/hwe" install help
+    assert_success
+    [[ "$stderr" == *"usage: hwe install"* ]]
+}
+
+@test "install rejects stray arguments instead of running" {
+    run --separate-stderr "$HWE_ROOT/bin/hwe" install --bogus
+    assert_failure
+    [[ "$stderr" == *"takes no arguments"* ]]
+}
+
+@test "uninstall help shows usage and touches nothing" {
+    run --separate-stderr "$HWE_ROOT/bin/hwe" uninstall --help
+    assert_success
+    [[ "$stderr" == *"usage: hwe uninstall"* ]]
+}
+
+@test "uninstall rejects stray arguments instead of running" {
+    run --separate-stderr "$HWE_ROOT/bin/hwe" uninstall bogus
+    assert_failure
+    [[ "$stderr" == *"takes no arguments"* ]]
+}
+
 @test "doctor help shows the doctor usage on stderr" {
     run --separate-stderr "$HWE_ROOT/bin/hwe" doctor help
     assert_success
