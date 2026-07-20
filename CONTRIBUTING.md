@@ -2,9 +2,9 @@
 
 **English** · [Русский](CONTRIBUTING.ru.md)
 
-Thanks for stopping by. HWE is a reproducible Wayland + Hyprland environment on Arch, built
-around two principles: **everything is automated** and **color lives in one place**. Stick to
-them and your patch will fall into place naturally.
+Thanks for stopping by. HWE is a reproducible Wayland + Hyprland environment on Arch (and, as
+of 1.3.0, Ubuntu), built around two principles: **everything is automated** and **color lives
+in one place**. Stick to them and your patch will fall into place naturally.
 
 ## Getting started
 
@@ -47,6 +47,11 @@ just lint-py     # ruff check over the whole repo (in practice scripts/ + tests/
 just lint-ci     # actionlint + yamllint over .github/
 just test        # = test-py (pytest) + test-sh (bats)
 ```
+
+On Arch every tool above is a package. On **Ubuntu** `ruff` and `actionlint` are not
+packaged, so `just lint-py` / `just fmt-py` and `lint-ci`'s actionlint step degrade there —
+install them yourself (`pipx install ruff`, or `uv tool install ruff`) if you want to run
+those gates locally. The bats suite is the one that runs in CI on both distros.
 
 **Formatting is not a gate — deliberately.** `just fmt` (shfmt) and `just fmt-py`
 (ruff format) exist, use them if you like. But CI does not require them, and no patch gets

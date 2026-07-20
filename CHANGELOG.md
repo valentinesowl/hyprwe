@@ -9,6 +9,57 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`hwe install` and `hwe uninstall` ignored their arguments**, so `hwe uninstall --help`
+  tore down the config symlinks on the spot and `HWE_ASSUME_YES=1 hwe install --help` ran a
+  full install. Both answer `help` now, reject stray arguments, and uninstall confirms first.
+
+- **A hostile theme could read a local file into a committed preview.** A theme's `name`/
+  `tagline` is drawn with `magick -annotate`, where a leading `@` makes ImageMagick read a
+  file and `%` is an escape; `tagline` was not validated at all. Both are now held to that
+  line before they reach an ImageMagick argument.
+
+- **The dev VM's seed ISO was world-readable** at a predictable path in the libvirt pool,
+  and it carries the guest's plaintext password — it is now written `0600`.
+
+- **`hwe install` could die silently on NVIDIA hardware.** Under `set -e`, the driver-
+  selection and initramfs fallbacks returned non-zero by design and aborted the whole
+  install before their handling ran; the status is now absorbed at each site.
+
+- **`hwe vm rebuild`** now confirms before deleting the disks (as `destroy` does) and names
+  the VM it will rebuild, so a forgotten `HWE_VM_DISTRO` no longer silently builds a second VM.
+
+- **`hwe clip show`** no longer wipes the clipboard when the picker is cancelled.
+
+- **Missing-tool hints follow the running distro** — a tool absent on Ubuntu suggested a
+  `pacman` command for the package under its Arch name; hints now translate the name and use
+  the right package manager.
+
+- **`hwe update`** now re-links the CLI and fetches newly-pinned fonts (so `doctor`'s
+  advertised fix is real), and `doctor` detects a missing pinned font. The shared
+  "is the font installed?" check no longer misreads a present font as absent (a `grep -q`
+  SIGPIPE under `pipefail`), which had made the installer re-download a packaged font.
+
+- **`hwe checkconfig` and `hwe doctor`** now share one "config is clean" predicate, so a
+  Hyprland build that prints "no errors" cannot raise a red login notification while doctor
+  calls the same config fine.
+
+- **`hwe doctor`** counts a non-zsh login shell as drift instead of warning and then
+  reporting "no drift", and reads the user via `id -un` so it survives an unset `$USER`.
+
+- **The font watchdog (`fontlock.py --verify`)** stops parsing an archive whose hash already
+  failed, and a run that could fetch nothing now fails with a distinct exit code instead of
+  reporting success.
+
+- **The theme renderer rejects non-finite numbers** (`inf`/`nan` are legal TOML and slipped
+  the bound checks), and no longer places the private `[palette]` into the render context.
+
+- **CLI polish:** `hwe power`, `hwe keys` and `hwe record` answer `help` instead of acting;
+  `hwe vm list` lists only HWE's own domains; several usage strings that over-promised were
+  corrected; and the post-install hint points at the sanctioned launch path (SDDM / `uwsm`),
+  not a bare `Hyprland`.
+
 ## [1.3.0] — 2026-07-20
 
 **HWE installs on Ubuntu 26.04, not only on Arch.** Both were brought up end to end

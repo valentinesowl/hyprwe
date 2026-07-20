@@ -55,7 +55,7 @@ deploys the configs and sets up the login screen. It does so **reversibly**, pre
 whatever is already on the machine.
 
 ```bash
-# 1. Clone the repository
+# 1. Clone the repository  (a minimal Arch has no git yet: sudo pacman -S git)
 git clone https://github.com/valentinesowl/hyprwe.git ~/hwe
 cd ~/hwe
 
@@ -88,8 +88,14 @@ Careful and predictable:
   the install works against the current package database.
 - **Opt-outs:** `HWE_NO_ZSH=1` (leave the shell alone), `HWE_NO_NM=1` (leave networking alone),
   `HWE_NO_NVIDIA=1` (leave the GPU alone), `HWE_FORCE=1` (run even from a graphical session — at your own risk).
-- **Rollback:** `hwe uninstall` removes the symlinks and restores the shell from `*.hwe-bak`;
-  packages and services stay in place — you cannot lock yourself out.
+- **Unattended:** `HWE_ASSUME_YES=1` answers yes to every confirmation (install preflight,
+  NVIDIA, package sync, VM teardown). It deliberately does **not** cover the PPA compositor
+  consent (`HWE_HYPR_SOURCE=ppa`) — a blanket yes should not hand a third party's key that reach.
+- **Rollback:** `hwe uninstall` restores your previous configs from `*.hwe-bak` and offers to
+  revert the login shell (it asks first); packages and services stay in place — you cannot
+  lock yourself out.
+- Minor knobs: `NO_COLOR=1` disables colour output; `HWE_DEFAULT_THEME=<name>` sets which
+  theme the install applies (default `mocha`).
 
 After the install `hwe` is linked into `/usr/local/bin/hwe` — from then on you just call
 `hwe …` (before the install — `./bin/hwe …`). The first login greets you and points at
@@ -290,9 +296,9 @@ Plus `hypridle.conf` (idle → lock/DPMS) and `hyprlock.conf` (generated). On ev
 ## Sandbox and development (VM)
 
 Want to try HWE on a separate, disposable machine — or to develop HWE itself? `hwe vm up`
-brings up a **disposable** Arch VM (visible in virt-manager) and deploys **your local git
-branch** into it, straight from your own repository. Inside, the very same `hwe install`
-runs as on bare metal, so it is an honest rehearsal of the installation.
+brings up a **disposable** Arch **or Ubuntu** VM (`HWE_VM_DISTRO`, visible in virt-manager)
+and deploys **your local git branch** into it, straight from your own repository. Inside, the
+very same `hwe install` runs as on bare metal, so it is an honest rehearsal of the installation.
 
 ```bash
 # 0. Check the host (libvirtd, groups, network, KVM)
@@ -330,8 +336,10 @@ Configs inside the VM are deployed as **symlinks** into the repository, so edits
 
 ### How it works
 
-1. `hwe vm up <branch>` downloads the Arch cloud image into `~/.cache/hwe/` (once) and
-   **verifies its GPG signature** against the pinned arch-boxes fingerprint.
+1. `hwe vm up <branch>` downloads the guest's cloud image into `~/.cache/hwe/` (once, a few
+   hundred MB) and **verifies its GPG signature** — against the pinned arch-boxes fingerprint
+   for Arch, or the Ubuntu cloud-image signing key (a signed `SHA256SUMS`) for Ubuntu. An image
+   HWE cannot authenticate is refused, never used.
 2. It makes a `git bundle` of the chosen branch — or, with `--uncommitted`, of a throwaway
    snapshot of your working tree — and puts it on a **NoCloud seed ISO** (`xorriso`).
 3. `virt-install --import` creates a **libvirt domain** (visible in virt-manager).
@@ -343,6 +351,7 @@ Configs inside the VM are deployed as **symlinks** into the repository, so edits
 | Variable | Default | Purpose |
 |---|---|---|
 | `HWE_VM_DISTRO` | `arch` | guest distribution: `arch` or `ubuntu` |
+| `HWE_VM_UBUNTU_RELEASE` | `26.04` | Ubuntu release to fetch (when `HWE_VM_DISTRO=ubuntu`) |
 | `HWE_HYPR_SOURCE` | `repo` | where the guest's Hyprland comes from: `repo` or `ppa` |
 | `HWE_VM_NAME` | per distro | libvirt domain name (`hwe-dev`, `hwe-dev-ubuntu`) |
 | `HWE_VM_MEMORY` | `4096` | RAM, MiB |
@@ -381,7 +390,7 @@ hyprwe/
 │   ├── sddm/hwe/           # the SDDM QML greeter (themed from the active palette)
 │   ├── hyprland-uwsm.desktop  # the Hyprland (uwsm) session for SDDM
 │   └── arch-boxes.asc      # pinned signing key of the cloud image
-├── pkg/                    # core.lst · dev.lst · vm.lst · aur.lst
+├── pkg/                    # core.lst · dev.lst · vm.lst · aur.lst · fonts.lock · map/
 ├── themes/<name>/          # theme.toml (palette + [sem]) + wallpaper.png + preview.png
 ├── templates/              # .j2 — every component's colours are rendered from [sem]
 ├── config/                 # XDG configs → symlinked into ~/.config
