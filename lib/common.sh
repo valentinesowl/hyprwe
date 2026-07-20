@@ -95,7 +95,7 @@ source "$HWE_ROOT/lib/distro.sh"
 # leaving the fresh clone's generated configs unbuilt.
 : "${HWE_THEME_CURRENT:=$HWE_USER_CONFIG/themes/.current}"
 
-# Read the applied theme's name (empty if none). Installs that predate 1.4
+# Read the applied theme's name (empty if none). Installs that predate 1.3.2
 # kept the marker inside the checkout ($HWE_THEMES/.current); the first read
 # migrates it — copy, not move: a read should not delete files, and the stale
 # original is inert once the new marker exists.

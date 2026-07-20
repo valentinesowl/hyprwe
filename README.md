@@ -6,7 +6,7 @@
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu_26.04-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
-[![Release](https://img.shields.io/badge/release-v1.3.1-blue)](../../releases/latest)
+[![Release](https://img.shields.io/badge/release-v1.3.2-blue)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 **A working environment on Arch and Ubuntu — Hyprland and everything around it: bar,
@@ -429,8 +429,11 @@ pipeline. How to contribute — [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Status
 
-`v1.3.1` — a correctness and safety pass over the surface 1.3.0 opened (no new features,
-no change to the `hwe` interface). 1.3.0 made HWE no longer Arch-only: it installs on
+`v1.3.2` — the 1.3.1 review debt paid, and the lifecycle made self-consistent: HWE's own
+state (the applied theme, each theme's wallpaper choice) now lives in `~/.config/hwe/`,
+so replacing the clone forgets nothing; `hwe update` hands itself over to the code it
+just pulled before reconciling; and the dev tooling works on Ubuntu (`ruff` through uv,
+pytest in CI). 1.3.0 made HWE no longer Arch-only: it installs on
 **Ubuntu 26.04**, and `hwe vm up` boots either distribution, each in its own VM so the two
 can be compared side by side. The environment did not fork to get there — one `config/hypr/`
 parses cleanly under both Hyprland versions involved. On top of the personal layer

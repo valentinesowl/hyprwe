@@ -70,7 +70,7 @@ hwe_wall() {
     [[ "$output" == *"wallpaper not found"* ]]
 }
 
-# --- the remembered choice's move out of the checkout (1.4) ----------------
+# --- the remembered choice's move out of the checkout (1.3.2) ----------------
 
 @test "a wallpaper choice from before the move migrates to the user layer" {
     printf '%s\n' "$THEME_DIR/wallpapers/dawn.png" > "$THEME_DIR/.current_wallpaper"

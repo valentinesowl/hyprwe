@@ -79,7 +79,7 @@ _wall_candidates() {
 # marker sits inside it the way it used to sit beside the photos.
 _wall_marker() { printf '%s/themes/%s/wallpapers/.current_wallpaper\n' "$HWE_USER_CONFIG" "$1"; }
 
-# Read the remembered wallpaper path (empty if none). Installs that predate 1.4
+# Read the remembered wallpaper path (empty if none). Installs that predate 1.3.2
 # kept it in the theme's own directory inside the checkout; the first read
 # migrates it — copy, not move, same reasoning as _theme_current's.
 _wall_remembered() {

@@ -9,6 +9,12 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+## [1.3.2] — 2026-07-20
+
+The debt left by the 1.3.1 review pass, paid — plus the lifecycle made self-consistent.
+No change to the public `hwe` interface; the one behavioural change is where HWE keeps
+its own state.
+
 ### Changed
 
 - **The applied-theme marker and each theme's wallpaper choice moved out of the checkout**
@@ -406,7 +412,8 @@ to it only ship in 2.0.0.
   that environment's uninstaller. If the login screen looks foreign after
   `hwe theme sddm`, look at what is in that directory.
 
-[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v1.3.1...HEAD
+[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v1.3.2...HEAD
+[1.3.2]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.3.2
 [1.3.1]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.3.1
 [1.3.0]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.3.0
 [1.2.0]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.2.0

@@ -318,7 +318,7 @@ EOF
     done
 }
 
-# --- the marker's move out of the checkout (1.4) ---------------------------
+# --- the marker's move out of the checkout (1.3.2) ---------------------------
 
 @test "a theme marker from before the move is migrated out of the checkout" {
     echo beta > "$HWE_THEMES/.current"

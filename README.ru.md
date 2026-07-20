@@ -6,7 +6,7 @@
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu_26.04-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
-[![Release](https://img.shields.io/badge/release-v1.3.1-blue)](../../releases/latest)
+[![Release](https://img.shields.io/badge/release-v1.3.2-blue)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 **Рабочее окружение на Arch и Ubuntu — Hyprland и всё вокруг него: бар, лаунчер,
@@ -426,8 +426,11 @@ just gallery    # пересобрать assets/themes.png из превью
 
 ## Статус
 
-`v1.3.1` — проход по корректности и безопасности поверх того, что открыла 1.3.0 (без новых
-фич, без изменения интерфейса `hwe`). В 1.3.0 HWE перестал быть только про Arch: он ставится
+`v1.3.2` — долг ревью 1.3.1 выплачен, а жизненный цикл стал согласован сам с собой:
+собственное состояние HWE (применённая тема, выбор обоев каждой темы) теперь живёт в
+`~/.config/hwe/`, так что замена клона ничего не забывает; `hwe update` перед
+реконсиляцией передаёт себя коду, который только что притянул; dev-инструменты работают
+на Ubuntu (`ruff` через uv, pytest в CI). В 1.3.0 HWE перестал быть только про Arch: он ставится
 на **Ubuntu 26.04**, а `hwe vm up` поднимает любой из двух дистрибутивов, каждый в своей
 виртуалке, чтобы их можно было сравнивать рядом. Окружение ради этого не разветвилось — один
 и тот же `config/hypr/` разбирается без ошибок обеими версиями Hyprland. Поверх личного слоя
