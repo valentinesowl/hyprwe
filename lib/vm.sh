@@ -113,7 +113,7 @@ ${C_BOLD}Actions:${C_RESET}
                   changes and new files included) instead of the branch's last commit
   ${C_CYAN}ssh${C_RESET} [cmd...]    SSH into the running VM (optionally run a command)
   ${C_CYAN}console${C_RESET}         Attach to the serial console (Ctrl+] to detach)
-  ${C_CYAN}status${C_RESET}          Show VM state, IP and cloud-init progress hint
+  ${C_CYAN}status${C_RESET}          Show VM state and IP (once the guest agent answers)
   ${C_CYAN}list${C_RESET}           List HWE VMs known to libvirt
   ${C_CYAN}down${C_RESET}            Gracefully shut the VM down
   ${C_CYAN}destroy${C_RESET}        Remove the VM and its disks (irreversible)
@@ -741,7 +741,17 @@ vm_status() {
     local ip; if ip="$(_vm_ip)"; then ok "IP: $ip"; else warn "no IP yet (booting / agent not ready)"; fi
 }
 
-vm_list() { _virsh list --all; }
+# Only HWE's own domains, not every domain on the host — the usage line promises
+# "HWE VMs". Names to stdout (scriptable), the empty-case hint to stderr.
+vm_list() {
+    local n any=0
+    for n in $HWE_VM_NAMES_ALL; do
+        _virsh dominfo "$n" >/dev/null 2>&1 || continue
+        printf '%s\t%s\n' "$n" "$(_virsh domstate "$n" 2>/dev/null || echo unknown)"
+        any=1
+    done
+    [[ $any -eq 1 ]] || info "no HWE VMs exist yet — create one with: ${C_BOLD}hwe vm up${C_RESET}"
+}
 
 vm_destroy() {
     # Resolution is safe here only because the confirmation below names the VM it

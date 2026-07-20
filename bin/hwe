@@ -45,7 +45,7 @@ ${C_BOLD}Commands:${C_RESET}
   ${C_CYAN}keys${C_RESET}      Keybind cheatsheet overlay (rofi; SUPER+/)
   ${C_CYAN}clip${C_RESET} <show|wipe>
               Clipboard-history picker (cliphist + rofi; SUPER+C)
-  ${C_CYAN}record${C_RESET} <toggle|region>
+  ${C_CYAN}record${C_RESET} <toggle|region|status>
               Toggle screen recording (wf-recorder -> ~/Videos)
   ${C_CYAN}checkconfig${C_RESET}  Report Hyprland config errors from the running compositor
   ${C_CYAN}doctor${C_RESET} [host|vm]

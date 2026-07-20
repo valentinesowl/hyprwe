@@ -233,3 +233,37 @@ dirty_the_tree() {
     [[ "$output" == *"UP"* ]]
     [[ "$stderr" == *"building it fresh"* ]]
 }
+
+@test "vm list shows only HWE domains, with a hint when there are none" {
+    # one HWE VM present
+    run --separate-stderr bash -c '
+        set -euo pipefail
+        HWE_ROOT="$HWE_REPO_ROOT"
+        source "$HWE_ROOT/lib/common.sh"
+        source "$HWE_ROOT/lib/vm.sh"
+        _virsh() {
+            case "$1 $2" in
+                "dominfo hwe-dev")        return 0 ;;
+                "dominfo hwe-dev-ubuntu") return 1 ;;
+                "domstate hwe-dev")       echo running ;;
+                *) return 1 ;;
+            esac
+        }
+        vm_list
+    '
+    assert_success
+    assert_output $'hwe-dev\trunning'
+
+    # nothing present
+    run --separate-stderr bash -c '
+        set -euo pipefail
+        HWE_ROOT="$HWE_REPO_ROOT"
+        source "$HWE_ROOT/lib/common.sh"
+        source "$HWE_ROOT/lib/vm.sh"
+        _virsh() { return 1; }
+        vm_list
+    '
+    assert_success
+    [[ -z "$output" ]]
+    [[ "$stderr" == *"no HWE VMs exist yet"* ]]
+}

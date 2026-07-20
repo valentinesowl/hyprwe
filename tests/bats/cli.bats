@@ -94,6 +94,20 @@ setup() {
     [[ "$stderr" == *"takes no arguments"* ]]
 }
 
+@test "power, keys and record answer help instead of acting" {
+    for cmd in power keys record; do
+        run --separate-stderr "$HWE_ROOT/bin/hwe" "$cmd" help
+        assert_success
+        [[ "$stderr" == *"usage: hwe $cmd"* ]]
+    done
+}
+
+@test "record names an unknown action rather than silently toggling" {
+    run --separate-stderr "$HWE_ROOT/bin/hwe" record frobnicate
+    assert_failure
+    [[ "$stderr" == *"unknown record action: frobnicate"* ]]
+}
+
 @test "doctor help shows the doctor usage on stderr" {
     run --separate-stderr "$HWE_ROOT/bin/hwe" doctor help
     assert_success

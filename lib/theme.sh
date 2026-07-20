@@ -24,7 +24,8 @@ ${C_BOLD}Usage:${C_RESET} hwe theme <action> [name]
 
 ${C_BOLD}Actions:${C_RESET}
   ${C_CYAN}list${C_RESET}              List available themes (current marked with *)
-  ${C_CYAN}apply${C_RESET} <name>      Render + deploy a theme, then reload running apps
+  ${C_CYAN}apply${C_RESET} [name]      Render + deploy a theme, then reload running apps
+                    (no name re-applies the current theme — used by ${C_BOLD}hwe update${C_RESET})
   ${C_CYAN}pick${C_RESET}              Pick a theme interactively via rofi (SUPER+SHIFT+T)
   ${C_CYAN}validate${C_RESET} <name>   Check a theme against the role contract (fail-loud)
   ${C_CYAN}current${C_RESET}           Print the currently applied theme

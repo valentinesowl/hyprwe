@@ -5,6 +5,11 @@
 # Sourced by bin/hwe; relies on lib/common.sh helpers.
 
 power_main() {
+    case "${1:-}" in
+        help|-h|--help)
+            printf 'usage: hwe power\n  Themed session menu (lock/logout/suspend/reboot/shutdown) via rofi.\n' >&2
+            return 0 ;;
+    esac
     # toggle: a second press closes the menu
     if pgrep -x rofi >/dev/null 2>&1; then pkill -x rofi; return 0; fi
     need rofi rofi-wayland || return 1

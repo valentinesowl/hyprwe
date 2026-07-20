@@ -18,7 +18,11 @@ record_main() {
             return 0
             ;;
         toggle | region) ;;
-        *) err "usage: hwe record [toggle|region|status]"; return 1 ;;
+        help | -h | --help)
+            printf 'usage: hwe record [toggle|region|status]\n  toggle  start/stop a full-screen capture (-> ~/Videos)\n  region  start a capture of a slurp-selected region\n  status  print recording|idle (for the waybar module)\n' >&2
+            return 0
+            ;;
+        *) err "unknown record action: ${1}"; printf 'usage: hwe record [toggle|region|status]\n' >&2; return 1 ;;
     esac
 
     # A running capture means "stop", regardless of the requested mode.
