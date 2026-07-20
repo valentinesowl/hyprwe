@@ -4,6 +4,8 @@
 # The counterpart to `hwe doctor host`: doctor DETECTS drift, update FIXES it.
 #   1. git pull --ff-only   (safe: aborts on a dirty tree or a non-ff history —
 #                            you drive real merges/rebases, update never guesses)
+#      — if the pull moved HEAD, re-exec the pulled bin/hwe once, so the steps
+#        below always run the code of the commit they are laying down
 #   2. re-link configs      (_deploy_configs — idempotent, repairs the symlinks)
 #   3. re-link the CLI      (_link_cli — so `doctor`'s advertised fix is real)
 #   4. re-apply the theme    (regenerate every component + live-reload)
@@ -51,7 +53,25 @@ EOF
     need git git || return 1
     [[ $EUID -eq 0 ]] && die "run 'hwe update' as a normal user (it uses sudo where needed)"
 
+    local head_before head_after
+    head_before="$(git -C "$HWE_ROOT" rev-parse HEAD 2>/dev/null || true)"
     _update_pull || return 1
+    head_after="$(git -C "$HWE_ROOT" rev-parse HEAD 2>/dev/null || true)"
+
+    # Everything sourced above — the deploy contract in guest-install.sh,
+    # common.sh, this very file — is still the PRE-pull code: bash keeps the
+    # definitions it loaded, not the files the pull just rewrote. Reconciling
+    # with them would lay down yesterday's contract over today's tree, and void
+    # the user-layer guarantee the comment below promises in exactly the release
+    # that adds a skeleton file. So when the pull moved HEAD, hand the rest of
+    # the run to the freshly pulled CLI and let the new commit reconcile itself.
+    # The guard stops a loop if upstream advances again between the two pulls;
+    # that rare race reconciles one commit behind and heals on the next update.
+    if [[ "$head_after" != "$head_before" && -z "${HWE_UPDATE_REEXECED:-}" ]]; then
+        log "Repo advanced — restarting with the updated code"
+        HWE_UPDATE_REEXECED=1 exec "$HWE_ROOT/bin/hwe" update
+    fi
+
     log "Reconciling this machine with the repo"
     # FIRST, before anything else: the pull may have just brought in a
     # hyprland.conf that sources a personal file this machine does not have yet,

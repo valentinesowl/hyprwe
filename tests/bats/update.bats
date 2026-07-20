@@ -157,3 +157,68 @@ advance_origin() {
     assert_failure
     [[ "$stderr" == *"not a git checkout"* ]]
 }
+
+# --- self-update staleness: the post-pull re-exec --------------------------
+# Everything update_main runs after the pull was sourced BEFORE it, so a pull
+# that moves HEAD must hand the rest of the run to the pulled bin/hwe. The
+# fake CLI below stands in for it: seeing its marker proves the hand-over,
+# and the stubbed reconcile steps prove the OLD process never reconciled.
+
+# Give the remote a bin/hwe that announces being exec'd, one commit ahead.
+add_cli_to_origin() {
+    mkdir -p "$SEED/bin"
+    printf '#!/usr/bin/env bash\necho "FAKE-HWE args=$* guard=${HWE_UPDATE_REEXECED:-unset}"\n' \
+        > "$SEED/bin/hwe"
+    chmod +x "$SEED/bin/hwe"
+    git -C "$SEED" add -A
+    git -C "$SEED" commit -qm cli
+    git -C "$SEED" push -q origin main
+}
+
+# update_main with every reconcile step stubbed to a marker — if the re-exec
+# is broken, the run must fail an assertion, not deploy into the runner's home.
+run_update_main() {
+    run bash -c '
+        set -euo pipefail
+        HWE_ROOT="$HWE_REPO_ROOT"
+        export HWE_USER_CONFIG="$BATS_TEST_TMPDIR/user-config"
+        source "$HWE_ROOT/lib/common.sh"
+        source "$HWE_ROOT/lib/update.sh"
+        HWE_ROOT="$REPO"
+        for step in _deploy_user_layer _deploy_configs _link_cli \
+                    _update_apply_theme _update_packages _install_fetched_fonts; do
+            eval "$step() { echo \"stub:$step\"; }"
+        done
+        update_main
+    '
+}
+
+@test "a pull that moves HEAD re-execs the pulled CLI before reconciling" {
+    clone_repo
+    add_cli_to_origin
+    run_update_main
+    assert_success
+    [[ "$output" == *"restarting with the updated code"* ]]
+    [[ "$output" == *"FAKE-HWE args=update guard=1"* ]]
+    [[ "$output" != *"stub:"* ]]
+}
+
+@test "an already-up-to-date pull reconciles in place, no restart" {
+    clone_repo
+    run_update_main
+    assert_success
+    [[ "$output" != *"restarting"* ]]
+    [[ "$output" != *"FAKE-HWE"* ]]
+    [[ "$output" == *"stub:_deploy_user_layer"* ]]
+    [[ "$output" == *"hwe update complete."* ]]
+}
+
+@test "the re-exec guard stops a second restart even if HEAD moved again" {
+    clone_repo
+    add_cli_to_origin
+    HWE_UPDATE_REEXECED=1 run_update_main
+    assert_success
+    [[ "$output" != *"FAKE-HWE"* ]]
+    [[ "$output" == *"stub:_deploy_user_layer"* ]]
+    [[ "$output" == *"hwe update complete."* ]]
+}

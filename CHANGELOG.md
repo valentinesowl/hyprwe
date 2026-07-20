@@ -31,6 +31,13 @@ the three sources cannot drift apart.
 
 ### Fixed
 
+- **`hwe update` reconciled the machine with pre-pull code.** Bash keeps the functions
+  it sourced, not the files the pull rewrites, so a release that changed the deploy
+  contract only took effect on the *next* update — and a release adding a user-layer
+  skeleton file could break the following Hyprland reload in between. When the pull
+  moves HEAD, update now re-execs the freshly pulled `bin/hwe` once (loop-guarded), so
+  the reconcile steps always run the code of the commit they are laying down.
+
 - **`hwe vm`'s missing-tool hints named Arch packages on Ubuntu hosts.** The VM-host
   tools live in no package list, so the map never learned their Debian names:
   `libvirt` → `libvirt-daemon-system libvirt-clients`, `qemu-base` →
