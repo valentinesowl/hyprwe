@@ -22,6 +22,20 @@ python-jinja	python3-jinja2
 qt5-wayland	qtwayland5
 kvantum	qt-style-kvantum
 
+# --- VM host tools (hwe vm; never installed by HWE, named only in `need` hints) ---
+# Arch ships daemon and clients in one `libvirt`; Debian splits them. The
+# -system flavour is what makes a working host (units, /etc/libvirt, the
+# default network); virsh itself lives in libvirt-clients.
+libvirt	libvirt-daemon-system libvirt-clients
+# Arch's headless-QEMU bundle. qemu-img lives in qemu-utils; the emulator
+# libvirt drives is qemu-system-x86.
+qemu-base	qemu-system-x86 qemu-utils
+# Arch names the package after the library that ships the tool; Debian's tool
+# package is named after the binary itself.
+libisoburn	xorriso
+# virt-install needs no entry: resolute packages the tool under that very name
+# (measured: the binary is in package `virt-install`), so it passes through.
+
 # --- desktop components ---
 # rofi 2.0.0 absorbed the rofi-wayland fork: it links libwayland-client and
 # carries the zwlr_layer_shell_v1 symbols, so the plain package is the Wayland one.
@@ -58,9 +72,10 @@ xz	xz-utils
 # Upstream ships a GitHub Action; the standalone binary is not packaged.
 actionlint	-
 # Not in the archive at all (the only search hit is python3-scruffy, by
-# substring). `just lint-py` / `just fmt-py` need it from pip or uv on this
-# distro — a dev-machine concern, not something an install should silently skip
-# without saying so.
+# substring) — and neither is uv, under any name (measured 2026-07-20). The
+# sanctioned chain on this distro is pipx (packaged) → `pipx install uv` →
+# `just lint-py` runs `uvx ruff`. Mapping ruff to pipx here would be the
+# nerd-font trap again: install reports success and the tool is still absent.
 ruff	-
 
 # --- fonts ---

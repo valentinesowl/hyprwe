@@ -16,6 +16,7 @@ setup() {
     # — and never see the themes of whoever is running them.
     export HWE_THEMES="$BATS_TEST_TMPDIR/themes"
     export HWE_THEMES_USER="$BATS_TEST_TMPDIR/user-themes"
+    export HWE_USER_CONFIG="$BATS_TEST_TMPDIR/user-config"
     export HWE_TEMPLATES="$HWE_ROOT/templates"
     mkdir -p "$HWE_THEMES" "$HWE_THEMES_USER"
 }
@@ -41,7 +42,7 @@ fixture_theme() {
     fixture_theme alpha
     fixture_theme beta
     run bash -c "
-        export HWE_ROOT='$HWE_ROOT' HWE_THEMES='$HWE_THEMES'
+        export HWE_ROOT='$HWE_ROOT' HWE_USER_CONFIG='$HWE_USER_CONFIG' HWE_THEMES='$HWE_THEMES'
         source '$HWE_ROOT/lib/common.sh'; source '$HWE_ROOT/lib/theme.sh'
         theme_names
     "
@@ -54,7 +55,7 @@ fixture_theme() {
     fixture_theme alpha
     mkdir -p "$HWE_THEMES/not-a-theme"
     run bash -c "
-        export HWE_ROOT='$HWE_ROOT' HWE_THEMES='$HWE_THEMES'
+        export HWE_ROOT='$HWE_ROOT' HWE_USER_CONFIG='$HWE_USER_CONFIG' HWE_THEMES='$HWE_THEMES'
         source '$HWE_ROOT/lib/common.sh'; source '$HWE_ROOT/lib/theme.sh'
         theme_names
     "
@@ -67,7 +68,7 @@ fixture_theme() {
     fixture_theme beta
     echo beta > "$HWE_THEMES/.current"
     run --separate-stderr bash -c "
-        export HWE_ROOT='$HWE_ROOT' HWE_THEMES='$HWE_THEMES' NO_COLOR=1
+        export HWE_ROOT='$HWE_ROOT' HWE_USER_CONFIG='$HWE_USER_CONFIG' HWE_THEMES='$HWE_THEMES' NO_COLOR=1
         source '$HWE_ROOT/lib/common.sh'; source '$HWE_ROOT/lib/theme.sh'
         theme_list
     "
@@ -217,7 +218,7 @@ fixture_theme() {
 @test "theme current prints the current theme" {
     echo mocha > "$HWE_THEMES/.current"
     run bash -c "
-        export HWE_ROOT='$HWE_ROOT' HWE_THEMES='$HWE_THEMES'
+        export HWE_ROOT='$HWE_ROOT' HWE_USER_CONFIG='$HWE_USER_CONFIG' HWE_THEMES='$HWE_THEMES'
         source '$HWE_ROOT/lib/common.sh'; source '$HWE_ROOT/lib/theme.sh'
         theme_main current
     "
@@ -227,7 +228,7 @@ fixture_theme() {
 
 @test "theme current reports none when nothing is applied" {
     run bash -c "
-        export HWE_ROOT='$HWE_ROOT' HWE_THEMES='$HWE_THEMES'
+        export HWE_ROOT='$HWE_ROOT' HWE_USER_CONFIG='$HWE_USER_CONFIG' HWE_THEMES='$HWE_THEMES'
         source '$HWE_ROOT/lib/common.sh'; source '$HWE_ROOT/lib/theme.sh'
         theme_main current
     "
@@ -243,7 +244,7 @@ fixture_theme() {
     for dir in "$HWE_ROOT"/themes/*/; do
         [ -f "$dir/theme.toml" ] || continue
         run env -u HWE_THEMES bash -c "
-            export HWE_ROOT='$HWE_ROOT'
+            export HWE_ROOT='$HWE_ROOT' HWE_USER_CONFIG='$HWE_USER_CONFIG'
             source '$HWE_ROOT/lib/common.sh'; source '$HWE_ROOT/lib/theme.sh'
             theme_main validate '$(basename "$dir")'
         "
@@ -259,7 +260,7 @@ name = "broken"
 bg_dark = "#000000"
 EOF
     run bash -c "
-        export HWE_ROOT='$HWE_ROOT' HWE_THEMES='$HWE_THEMES' HWE_TEMPLATES='$HWE_TEMPLATES'
+        export HWE_ROOT='$HWE_ROOT' HWE_USER_CONFIG='$HWE_USER_CONFIG' HWE_THEMES='$HWE_THEMES' HWE_TEMPLATES='$HWE_TEMPLATES'
         source '$HWE_ROOT/lib/common.sh'; source '$HWE_ROOT/lib/theme.sh'
         theme_main validate broken
     "
@@ -268,7 +269,7 @@ EOF
 
 @test "validate names an unknown theme rather than guessing" {
     run --separate-stderr bash -c "
-        export HWE_ROOT='$HWE_ROOT' HWE_THEMES='$HWE_THEMES'
+        export HWE_ROOT='$HWE_ROOT' HWE_USER_CONFIG='$HWE_USER_CONFIG' HWE_THEMES='$HWE_THEMES'
         source '$HWE_ROOT/lib/common.sh'; source '$HWE_ROOT/lib/theme.sh'
         theme_main validate no-such-theme
     "
@@ -278,7 +279,7 @@ EOF
 
 @test "validate without a name asks for one" {
     run --separate-stderr bash -c "
-        export HWE_ROOT='$HWE_ROOT' HWE_THEMES='$HWE_THEMES'
+        export HWE_ROOT='$HWE_ROOT' HWE_USER_CONFIG='$HWE_USER_CONFIG' HWE_THEMES='$HWE_THEMES'
         source '$HWE_ROOT/lib/common.sh'; source '$HWE_ROOT/lib/theme.sh'
         theme_main validate
     "
@@ -290,7 +291,7 @@ EOF
 
 @test "theme with no action shows usage" {
     run --separate-stderr bash -c "
-        export HWE_ROOT='$HWE_ROOT' HWE_THEMES='$HWE_THEMES'
+        export HWE_ROOT='$HWE_ROOT' HWE_USER_CONFIG='$HWE_USER_CONFIG' HWE_THEMES='$HWE_THEMES'
         source '$HWE_ROOT/lib/common.sh'; source '$HWE_ROOT/lib/theme.sh'
         theme_main
     "
@@ -300,7 +301,7 @@ EOF
 
 @test "an unknown theme action fails and says which" {
     run --separate-stderr bash -c "
-        export HWE_ROOT='$HWE_ROOT' HWE_THEMES='$HWE_THEMES'
+        export HWE_ROOT='$HWE_ROOT' HWE_USER_CONFIG='$HWE_USER_CONFIG' HWE_THEMES='$HWE_THEMES'
         source '$HWE_ROOT/lib/common.sh'; source '$HWE_ROOT/lib/theme.sh'
         theme_main frobnicate
     "
@@ -315,4 +316,34 @@ EOF
         run bash -c "grep -qE '^\s+${pair}\)' '$HWE_ROOT/lib/theme.sh'"
         assert_success
     done
+}
+
+# --- the marker's move out of the checkout (1.4) ---------------------------
+
+@test "a theme marker from before the move is migrated out of the checkout" {
+    echo beta > "$HWE_THEMES/.current"
+    run bash -c "
+        export HWE_ROOT='$HWE_ROOT' HWE_USER_CONFIG='$HWE_USER_CONFIG' HWE_THEMES='$HWE_THEMES'
+        source '$HWE_ROOT/lib/common.sh'; source '$HWE_ROOT/lib/theme.sh'
+        theme_main current
+    "
+    assert_success
+    assert_output "beta"
+    # the read left a copy in the user layer — replacing the clone no longer
+    # loses the choice
+    run cat "$HWE_USER_CONFIG/themes/.current"
+    assert_output "beta"
+}
+
+@test "the user-layer theme marker wins over a stale checkout one" {
+    mkdir -p "$HWE_USER_CONFIG/themes"
+    echo alpha > "$HWE_USER_CONFIG/themes/.current"
+    echo beta  > "$HWE_THEMES/.current"
+    run bash -c "
+        export HWE_ROOT='$HWE_ROOT' HWE_USER_CONFIG='$HWE_USER_CONFIG' HWE_THEMES='$HWE_THEMES'
+        source '$HWE_ROOT/lib/common.sh'; source '$HWE_ROOT/lib/theme.sh'
+        theme_main current
+    "
+    assert_success
+    assert_output "alpha"
 }

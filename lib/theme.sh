@@ -41,7 +41,7 @@ theme_main() {
         pick)           theme_pick ;;
         validate|check) theme_validate "${1:-}" ;;
         sddm|greeter)   theme_sddm_sync ;;
-        current)        cat "$HWE_THEME_CURRENT" 2>/dev/null || echo "(none)" ;;
+        current)        local cur; cur="$(_theme_current)"; printf '%s\n' "${cur:-(none)}" ;;
         ""|help|-h|--help) theme_usage ;;
         *) err "unknown theme action: $action"; theme_usage; return 1 ;;
     esac
@@ -70,7 +70,7 @@ theme_names() {
 
 theme_list() {
     local cur name dir mark origin
-    cur="$(cat "$HWE_THEME_CURRENT" 2>/dev/null || true)"
+    cur="$(_theme_current)"
     log "Available themes:"
     while IFS= read -r name; do
         dir="$(_theme_dir "$name")" || continue
@@ -97,7 +97,7 @@ theme_pick() {
     if pgrep -x rofi >/dev/null 2>&1; then pkill -x rofi; return 0; fi
     need rofi rofi-wayland || return 1
     local cur name choice icon rasi sel=-1 i=0
-    cur="$(cat "$HWE_THEME_CURRENT" 2>/dev/null || echo none)"
+    cur="$(_theme_current)"; cur="${cur:-none}"
     rasi="$HWE_ROOT/config/rofi/theme.rasi"    # generated gallery (hwe theme apply)
     # No -mesg: theme.rasi has no "message" child, so rofi dropped it silently — and
     # the current theme is already announced by -selected-row pre-highlighting its tile.
@@ -250,12 +250,13 @@ _theme_waybar_overrides() {
 
 theme_apply() {
     local name="${1:-}"
-    [[ -z "$name" ]] && name="$(cat "$HWE_THEME_CURRENT" 2>/dev/null || true)"
+    [[ -z "$name" ]] && name="$(_theme_current)"
     local t; t="$(_theme_toml "$name")" || { theme_list; return 1; }
     need python3 python-jinja || return 1
 
     log "Applying theme '$name'"
     python3 "$HWE_THEME_RENDER" "$t" "$HWE_TEMPLATES" "$HWE_THEME_OUT" || return 1
+    mkdir -p "$(dirname "$HWE_THEME_CURRENT")"
     printf '%s\n' "$name" > "$HWE_THEME_CURRENT"
     # Layer the user's Waybar composition over the generated config, if any.
     _theme_waybar_overrides || true
@@ -335,7 +336,8 @@ theme_sddm_sync() {
     # Ensure the palette conf exists — render the current theme if it doesn't yet.
     local gen="$HWE_THEME_OUT/sddm/theme.conf"
     if [[ ! -f "$gen" ]]; then
-        theme_apply "$(cat "$HWE_THEME_CURRENT" 2>/dev/null || echo mocha)" >/dev/null || true
+        local cur; cur="$(_theme_current)"
+        theme_apply "${cur:-mocha}" >/dev/null || true
     fi
     [[ -f "$gen" ]] || { err "no generated $gen — run 'hwe theme apply <name>' first"; return 1; }
 

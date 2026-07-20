@@ -53,9 +53,16 @@ check: lint lint-py lint-ci test
 lint:
     shellcheck -x bin/hwe lib/*.sh provision/*.sh scripts/*.sh
 
+# Ruff comes from the distro where it is packaged (Arch); Ubuntu's archive has
+# neither ruff nor uv, so there it runs through uv — `pipx install uv` once
+# (pipx IS packaged), and uvx fetches ruff on first use. Same tool, same
+# pyproject.toml config, two delivery channels. Measured 2026-07-20 against
+# the 26.04 archive: uv has no candidate under any name.
+ruff_cmd := `command -v ruff >/dev/null 2>&1 && echo ruff || echo "uvx ruff"`
+
 # Lint the Python tools + tests with ruff (config: pyproject.toml)
 lint-py:
-    ruff check .
+    {{ruff_cmd}} check .
 
 # Lint the CI workflows themselves — a typo'd `on:` silently never runs
 # -s: treat yamllint warnings as errors. They are all things we would fix anyway,
@@ -89,7 +96,7 @@ fmt-check:
 
 # Format Python with ruff
 fmt-py:
-    ruff format .
+    {{ruff_cmd}} format .
 
 # Review and pin the fonts HWE fetches itself (pkg/fonts.lock).
 # Reports only. Read what it prints before you pin: it compares the download

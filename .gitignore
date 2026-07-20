@@ -73,6 +73,8 @@ config/sddm/theme.conf
 config/starship.toml
 config/kdeglobals
 config/color-schemes/HWE.colors
+# Pre-1.4 marker locations — state now lives in ~/.config/hwe/themes/ and is
+# migrated on read; stale originals on older installs must stay invisible.
 themes/.current
 
 # Active-wallpaper pointer + per-theme remembered choice — machine-local runtime

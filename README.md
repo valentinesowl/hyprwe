@@ -139,9 +139,11 @@ Two smaller differences, so they do not surprise you:
   starts those from `config/hypr/autostart.conf`, the packaged units are stood down —
   otherwise you get two bars and two idle daemons.
 - **A few tools are not in the archive.** `satty` (screenshot annotation, two keybinds
-  degrade to a plain screenshot), `ruff` and `actionlint` — the last two are development
-  gates, so `just lint-py` and `just fmt-py` need them from `pip`/`uv` on this
-  distribution. `pkg/map/apt.map` records every such difference, and says why.
+  degrade to a plain screenshot), `ruff` and `actionlint`. For `ruff`, `just lint-py`
+  and `just fmt-py` fall back to running it through uv — `pipx install uv` once (pipx
+  is packaged; uv itself is not, either) and they work. `actionlint` (`just lint-ci`)
+  has no such door and stays missing. `pkg/map/apt.map` records every such difference,
+  and says why.
 
 ### Keeping a machine in sync
 
@@ -175,6 +177,7 @@ never rewritten afterwards.
 | `packages.lst` | extra packages for this machine (pacman) |
 | `packages-aur.lst` | the same, from the AUR |
 | `waybar.jsonc` | your bar's composition — merged over the generated config on every theme apply |
+| `themes/` | HWE's own notes per theme — which theme is applied, which wallpaper each one uses. Written by `hwe`, so replacing the checkout forgets nothing |
 
 ```bash
 $EDITOR ~/.config/hwe/hypr.conf    # your monitors go here, not in config/hypr/monitors.conf

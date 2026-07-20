@@ -6,7 +6,8 @@
 # themes/<name>/wallpaper.png (always present). The active wallpaper is a symlink
 # config/hypr/assets/current.wall that hyprpaper and hyprlock read; retarget it +
 # a hyprctl IPC and it swaps live, no restart. Per-theme choice remembered in
-# themes/<name>/.current_wallpaper.
+# the user layer, ~/.config/hwe/themes/<name>/wallpapers — user state does not
+# live in the checkout (installs that predate the move are migrated on read).
 #
 # Sourced by bin/hwe and lib/theme.sh; relies on lib/common.sh helpers.
 
@@ -55,7 +56,7 @@ wall_main() {
 # else mocha (the shipped default).
 _wall_theme() {
     local n="${1:-}"
-    [[ -z "$n" ]] && n="$(cat "$HWE_THEME_CURRENT" 2>/dev/null || true)"
+    [[ -z "$n" ]] && n="$(_theme_current)"
     [[ -z "$n" ]] && n="mocha"
     printf '%s\n' "$n"
 }
@@ -72,15 +73,34 @@ _wall_candidates() {
     [[ -f "$grad" ]] && printf '%s\n' "$grad"
 }
 
+# Where a theme's wallpaper choice is remembered: the theme's slot in the user
+# layer. ~/.config/hwe/themes/<name>/ has room for any future per-theme state,
+# and its wallpapers/ subdir mirrors the theme-dir anatomy on purpose — the
+# marker sits inside it the way it used to sit beside the photos.
+_wall_marker() { printf '%s/themes/%s/wallpapers/.current_wallpaper\n' "$HWE_USER_CONFIG" "$1"; }
+
+# Read the remembered wallpaper path (empty if none). Installs that predate 1.4
+# kept it in the theme's own directory inside the checkout; the first read
+# migrates it — copy, not move, same reasoning as _theme_current's.
+_wall_remembered() {
+    local name="$1" marker legacy dir
+    marker="$(_wall_marker "$name")"
+    if [[ ! -f "$marker" ]] && dir="$(_theme_dir "$name")"; then
+        legacy="$dir/.current_wallpaper"
+        if [[ -f "$legacy" ]]; then
+            mkdir -p "$(dirname "$marker")" 2>/dev/null || true
+            cp "$legacy" "$marker" 2>/dev/null || true
+        fi
+    fi
+    cat "$marker" 2>/dev/null || true
+}
+
 # The wallpaper a fresh `theme apply` should use: the remembered choice if it
 # still exists, otherwise the generated wallpaper (always present, always ours).
 _wall_default() {
     local dir; dir="$(_theme_dir "$1")" || return 1
-    local rem="$dir/.current_wallpaper" p
-    if [[ -f "$rem" ]]; then
-        p="$(cat "$rem" 2>/dev/null || true)"
-        [[ -n "$p" && -f "$p" ]] && { printf '%s\n' "$p"; return 0; }
-    fi
+    local p; p="$(_wall_remembered "$1")"
+    [[ -n "$p" && -f "$p" ]] && { printf '%s\n' "$p"; return 0; }
     printf '%s\n' "$dir/wallpaper.png"
 }
 
@@ -95,12 +115,13 @@ _wall_label() {
 }
 
 # Remember a theme's wallpaper choice, so `theme apply` comes back to it. Lives
-# in the theme's own directory, which is writable in either root. Best-effort:
-# the wallpaper is already set by the time we get here, and failing to write a
-# preference must not report the swap itself as failed.
+# in the theme's user-layer slot, so it survives the checkout being replaced.
+# Best-effort: the wallpaper is already set by the time we get here, and failing
+# to write a preference must not report the swap itself as failed.
 _wall_remember() {
-    local dir; dir="$(_theme_dir "$1")" || return 0
-    printf '%s\n' "$(readlink -f "$2")" > "$dir/.current_wallpaper" 2>/dev/null || true
+    local marker; marker="$(_wall_marker "$1")"
+    mkdir -p "$(dirname "$marker")" 2>/dev/null || true
+    printf '%s\n' "$(readlink -f "$2")" > "$marker" 2>/dev/null || true
 }
 
 # Point current.wall at $1 and swap it live if hyprpaper is reachable.
@@ -196,15 +217,23 @@ wall_set() {
     if [[ -f "$arg" ]]; then
         path="$arg"
     else
-        # match against this theme's candidates by label or basename
-        local p
+        # match against this theme's candidates by label or basename; a name
+        # two files answer to (sunset.jpg beside sunset.png) is refused with
+        # both spelled out, not resolved to whichever sorts first
+        local p matches=()
         while IFS= read -r p; do
             [[ -z "$p" ]] && continue
             if [[ "$(_wall_label "$p")" == "$arg" || "$(basename "$p")" == "$arg" \
                   || "$(basename "${p%.*}")" == "$arg" ]]; then
-                path="$p"; break
+                matches+=("$p")
             fi
         done < <(_wall_candidates "$theme")
+        if [[ ${#matches[@]} -gt 1 ]]; then
+            err "'$arg' is ambiguous — say which one:"
+            printf '  %s\n' "${matches[@]##*/}" >&2
+            return 1
+        fi
+        [[ ${#matches[@]} -eq 1 ]] && path="${matches[0]}"
     fi
     [[ -n "$path" && -f "$path" ]] || { err "wallpaper not found: $arg"; return 1; }
     _wall_activate "$path" || return 1
@@ -239,12 +268,24 @@ wall_pick() {
     command -v convert >/dev/null 2>&1 && have_convert=1
 
     local files=() labels=() displays=() thumbs=() p label thumb marker
+    # First pass: count labels. `sunset.jpg` and `sunset.png` share the stem
+    # "sunset" — two identical rows, and the picker resolves whichever comes
+    # first. Where the stem is ambiguous, the row shows the full filename.
+    local -A stem_count=()
     while IFS= read -r p; do
         [[ -z "$p" ]] && continue
         files+=("$p")
         label="$(_wall_label "$p")"
+        stem_count["$label"]=$(( ${stem_count["$label"]:-0} + 1 ))
+    done < <(_wall_candidates "$theme")
+
+    for p in "${files[@]}"; do
+        label="$(_wall_label "$p")"
+        [[ "${stem_count[$label]}" -gt 1 ]] && label="$(basename "$p")"
         labels+=("$label")
-        thumb="$cache/$(basename "${p%.*}").thumb.png"
+        # The path checksum keeps same-stem files (and a photo that happens to
+        # share the generated wallpaper's name) from sharing one cache slot.
+        thumb="$cache/$(basename "${p%.*}").$(printf '%s' "$p" | cksum | cut -d' ' -f1).thumb.png"
         if [[ "$have_convert" == 1 ]]; then
             if [[ ! -f "$thumb" || "$p" -nt "$thumb" ]]; then
                 convert "$p" -resize 400x225^ -gravity center -extent 400x225 \
@@ -257,7 +298,7 @@ wall_pick() {
         marker=""
         [[ "$(readlink -f "$p")" == "$active" ]] && marker="● "
         displays+=("${marker}${label}")
-    done < <(_wall_candidates "$theme")
+    done
 
     [[ ${#files[@]} -gt 0 ]] || { warn "no wallpapers for '$theme'"; return 0; }
 

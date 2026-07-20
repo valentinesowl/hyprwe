@@ -602,7 +602,13 @@ vm_up() {
                 branch="$arg" ;;
         esac
     done
-    [[ -z "$branch" ]] && branch="$(git -C "$HWE_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo master)"
+    if [[ -z "$branch" ]]; then
+        # symbolic-ref, not `rev-parse --abbrev-ref`: the latter prints the
+        # literal string "HEAD" when detached, which then dies much later as
+        # "local branch 'HEAD' not found". Same refusal as _update_pull's.
+        branch="$(git -C "$HWE_ROOT" symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
+        [[ -n "$branch" ]] || { err "HEAD is detached — name the branch to deploy: hwe vm up <branch>"; return 1; }
+    fi
     _vm_branch_ok "$branch" \
         || die "refusing branch name '$branch' — letters, digits and . _ / - only (it is interpolated into the guest's cloud-init)"
 

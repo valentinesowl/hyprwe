@@ -9,6 +9,52 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+### Changed
+
+- **The applied-theme marker and each theme's wallpaper choice moved out of the checkout**
+  into the user layer (`~/.config/hwe/themes/`). They lived inside the clone, so replacing
+  it — advertised as safe for your state — forgot the applied theme, and the next
+  `hwe update` skipped its re-apply, leaving the fresh clone's generated configs unbuilt.
+  Existing installs migrate on first read; nothing to do by hand.
+
+### Added
+
+- **`just lint-py` / `just fmt-py` now work on Ubuntu.** The 26.04 archive packages
+  neither `ruff` nor `uv` (measured, under any name), so where native ruff is absent the
+  recipes run it through uv: `pipx install uv` once — pipx is packaged — and uvx fetches
+  ruff on first use. Same tool, same `pyproject.toml`, two delivery channels; `actionlint`
+  (`just lint-ci`) has no such door and remains an honest gap.
+
+- **CI runs the Python suite on Ubuntu too** (`pytest (Ubuntu)`, `ubuntu:26.04`
+  container). The archive's ImageMagick is version 7 with the `magick` binary, so all
+  461 tests run there — including the end-to-end preview render, no skips.
+
+### Fixed
+
+- **`hwe vm`'s missing-tool hints named Arch packages on Ubuntu hosts.** The VM-host
+  tools live in no package list, so the map never learned their Debian names:
+  `libvirt` → `libvirt-daemon-system libvirt-clients`, `qemu-base` →
+  `qemu-system-x86 qemu-utils`, `libisoburn` → `xorriso` — each measured against the
+  real 26.04 archive, binary-to-package (`virt-install` passes through unchanged; the
+  archive packages it under that very name). The apt.map watchdog now resolves every
+  right-hand side the map asserts, not just what the lists reach, so these hint-only
+  entries are watched for drift like the rest.
+
+- **`hwe vm up` on a detached HEAD died late and cryptically** ("local branch 'HEAD'
+  not found") — `rev-parse --abbrev-ref` prints the literal `HEAD` there. It now refuses
+  up front with the same message `hwe update` uses, naming the fix.
+
+- **A wallpaper stem two files answer to no longer resolves silently.** `sunset.jpg`
+  beside `sunset.png` drew two identical picker rows sharing one thumbnail cache slot,
+  and `hwe wall set sunset` took whichever sorted first. The picker now shows the full
+  filename where the stem is ambiguous (thumbnails get path-unique cache names), and
+  `wall set` refuses an ambiguous name, spelling out the candidates.
+
+- **The package map's drop marker is now held to its exact shape** — a map line reading
+  `satty<TAB>- ` (trailing whitespace) would have sailed past the exact `-` match and
+  emitted a literal `-` as a package name. A test now pins every map line to
+  `name TAB value`, the same way fonts.lock's format is pinned.
+
 ## [1.3.1] — 2026-07-20
 
 A correctness and safety pass over the surface 1.3.0 opened. No new features and no

@@ -267,3 +267,12 @@ dirty_the_tree() {
     [[ -z "$output" ]]
     [[ "$stderr" == *"no HWE VMs exist yet"* ]]
 }
+
+@test "vm up on a detached HEAD refuses up front, not as 'branch HEAD not found'" {
+    # `rev-parse --abbrev-ref HEAD` prints the literal "HEAD" when detached, and
+    # that used to sail on until bundle creation died on a branch named HEAD.
+    git -C "$REPO" checkout -q --detach
+    run hwe_vm vm_up
+    assert_failure
+    [[ "$output" == *"HEAD is detached"* ]]
+}

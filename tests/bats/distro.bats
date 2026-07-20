@@ -114,14 +114,43 @@ translate() {
 # ── the map as a document ─────────────────────────────────────────────────
 @test "every mapped name is one HWE actually asks for" {
     # A map entry for a package no list names is dead weight — and usually a typo
-    # in the Arch name, which would silently do nothing.
+    # in the Arch name, which would silently do nothing. Two places ask for a
+    # package by its Arch name: the pkg/*.lst lists, and `need <cmd> <pkg>` hints
+    # (the VM-host tools live only in the latter — HWE never installs them).
     local lists; lists="$(cat "$HWE_ROOT"/pkg/*.lst)"
+    local hints; hints="$(sed 's/#.*//' "$HWE_ROOT"/lib/*.sh "$HWE_ROOT/bin/hwe" \
+        | grep -oE '\bneed[[:space:]]+[^[:space:]]+[[:space:]]+[a-z0-9@._+-]+' \
+        | awk '{print $3}')"
     local from
     while IFS=$'\t' read -r from _; do
         [[ -z "$from" || "$from" == \#* ]] && continue
         grep -qE "^[[:space:]]*${from}([[:space:]]|#|$)" <<<"$lists" \
-            || fail "apt.map maps '$from', which no pkg/*.lst names"
+            || grep -qxF "$from" <<<"$hints" \
+            || fail "apt.map maps '$from', which no pkg/*.lst or need-hint names"
     done < <(sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$HWE_ROOT/pkg/map/apt.map")
+}
+
+@test "map lines hold to the shape the parsers assume" {
+    # _pm_translate's drop-marker match is exact: a line reading `satty<TAB>- `
+    # (trailing space) would sail past `== "-"` and emit a literal `-` as a
+    # package name. Same guard fonts.lock gets from its tab-tab test: hold the
+    # FILE to the convention so every exact-match parser stays honest.
+    local map from to tok
+    for map in "$HWE_ROOT"/pkg/map/*.map; do
+        while IFS=$'\t' read -r from to || [[ -n "$from" ]]; do
+            [[ -z "$from" || "$from" == \#* ]] && continue
+            [[ "$from" =~ ^[a-z0-9@._+-]+$ ]] \
+                || fail "$(basename "$map"): left side '$from' is not a bare package name"
+            [[ "$to" =~ ^(-|[a-z0-9@._+-]+(\ [a-z0-9@._+-]+)*)$ ]] \
+                || fail "$(basename "$map"): right side '$to' of '$from' is not '-' or space-separated names (trailing whitespace? inline comment? double tab?)"
+            if [[ "$to" != "-" ]]; then
+                for tok in $to; do
+                    [[ "$tok" == "-" ]] \
+                        && fail "$(basename "$map"): '$from' mixes the drop marker into a name list"
+                done
+            fi
+        done < "$map"
+    done
 }
 
 @test "the map has no duplicate left-hand sides" {

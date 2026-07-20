@@ -59,8 +59,15 @@ fail=0
 _lst() { sed -e 's/#.*//' -e '/^[[:space:]]*$/d' -e 's/[[:space:]]//g' "$@"; }
 
 mapfile -t pkgs < <(
-    _lst "$HWE_ROOT/pkg/core.lst" "$HWE_ROOT/pkg/dev.lst" "$HWE_ROOT/pkg/vm.lst" \
-        | _pm_translate | sort -u
+    {
+        _lst "$HWE_ROOT/pkg/core.lst" "$HWE_ROOT/pkg/dev.lst" "$HWE_ROOT/pkg/vm.lst" \
+            | _pm_translate
+        # Some map entries exist only for `need` hints (the VM-host tools) and
+        # are in no list, so the translation above never reaches them. Watch
+        # every right-hand side the map asserts, not just what the lists name.
+        sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$HWE_ROOT/pkg/map/apt.map" \
+            | cut -f2- | tr ' ' '\n' | grep -vE '^(-)?$'
+    } | sort -u
 )
 [[ ${#pkgs[@]} -gt 0 ]] || die "translated to an empty package list — the lists or the map are unreadable"
 info "${#pkgs[@]} translated package names to resolve"

@@ -116,7 +116,7 @@ _update_pull() {
 # Re-apply the currently-selected theme (regenerate every component and live
 # reload). No-op-safe if nothing is selected yet.
 _update_apply_theme() {
-    local cur; cur="$(cat "$HWE_THEME_CURRENT" 2>/dev/null || true)"
+    local cur; cur="$(_theme_current)"
     [[ -n "$cur" ]] || { info "no theme selected yet — skipping theme apply"; return 0; }
     log "Re-applying theme '$cur'"
     # shellcheck source=lib/theme.sh

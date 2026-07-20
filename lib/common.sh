@@ -89,7 +89,23 @@ source "$HWE_ROOT/lib/distro.sh"
 : "${HWE_THEMES:=$HWE_ROOT/themes}"
 : "${HWE_THEMES_USER:=${XDG_DATA_HOME:-$HOME/.local/share}/hwe/themes}"
 # The applied theme is remembered by NAME, so it resolves through either root.
-: "${HWE_THEME_CURRENT:=$HWE_THEMES/.current}"
+# The marker lives in the user layer (~/.config/hwe/themes/ holds per-theme user
+# state), NOT in the checkout: replacing the clone is advertised as safe for
+# your settings, and losing the marker made `hwe update` skip its re-apply,
+# leaving the fresh clone's generated configs unbuilt.
+: "${HWE_THEME_CURRENT:=$HWE_USER_CONFIG/themes/.current}"
+
+# Read the applied theme's name (empty if none). Installs that predate 1.4
+# kept the marker inside the checkout ($HWE_THEMES/.current); the first read
+# migrates it — copy, not move: a read should not delete files, and the stale
+# original is inert once the new marker exists.
+_theme_current() {
+    if [[ ! -f "$HWE_THEME_CURRENT" && -f "$HWE_THEMES/.current" ]]; then
+        mkdir -p "$(dirname "$HWE_THEME_CURRENT")" 2>/dev/null || true
+        cp "$HWE_THEMES/.current" "$HWE_THEME_CURRENT" 2>/dev/null || true
+    fi
+    cat "$HWE_THEME_CURRENT" 2>/dev/null || true
+}
 
 # Theme roots, in precedence order: yours first, so a theme of your own shadows a
 # shipped one of the same name (that is how you retune `frost` without editing
