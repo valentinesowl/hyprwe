@@ -1,0 +1,19 @@
+# provision/userlayer.sums — sha256 of EVERY skeleton version ever shipped.
+#
+# This is what lets `hwe update` tell "untouched default" from "the user's
+# file": a layer file whose hash appears here was never edited, so a newer
+# shipped default may quietly replace it. A file matching NO line is the
+# user's and is never rewritten (only `hwe update --reset-defaults` may,
+# and it backs up first).
+#
+# APPEND-ONLY. When a skeleton changes, add the NEW hash — never remove the
+# old one (installs in the field still carry the old bytes, and forgetting
+# the old hash silently freezes their defaults). A test pins every current
+# skeleton to this list; `just skel-sums` appends what is missing.
+f64bb3d0f9a08a0d04d7b519684cd49926b281d1dd2a2fc494776381963c9b61  hypr.conf
+f586be8b3a593c6fe09afe4ebb46c5fdae39621ab40048474daf15b80ae7a206  hyprsunset.conf
+2720784e8643e05919ca89f0cb06e87065f6ba8f64a764ed015a78bb90b6f652  packages-aur.lst
+baeba1540830b99c4cc9875882e94ca5d0318dacb65dfe1c9aa209c3810c7f4f  packages.lst
+545dcef6feb5b2ad6e495129bf304d1c76cf99434b395859769277086491dd77  waybar.jsonc
+# pre-1.4 hypr.conf (header promised "never rewrite"; superseded by the wording above)
+804e37bdd4f119a043af4e37916d6ad7e7b44491eecc4bc6cbe1e5a91b46f66f  hypr.conf

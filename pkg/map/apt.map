@@ -52,6 +52,10 @@ bluez-utils	bluez
 # --- absent, with no equivalent in the archive ---
 # Screenshot annotation. Two keybinds use it; they degrade to a plain screenshot.
 satty	-
+# Night light. Not in the archive; the PPA (HWE_HYPR_SOURCE=ppa) carries it and
+# the hypr* pin already admits it. Without the binary the bar module hides and
+# `hwe sunset` says why — nothing breaks.
+hyprsunset	-
 # Arch-only by definition (paccache, checkupdates…). Nothing to install.
 pacman-contrib	-
 

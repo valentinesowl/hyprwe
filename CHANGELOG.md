@@ -11,6 +11,19 @@ the three sources cannot drift apart.
 
 ### Added
 
+- **Night light: `hwe sunset` + a bar toggle.** hyprsunset joins the stack (4000 K from
+  21:00, back at 07:00 by default); the moon at the bar's right edge shows its state —
+  accent while tinting, dim while off — and a click toggles it. The toggle is start/stop
+  by design: stopping drops the tint instantly, starting re-reads the schedule and applies
+  what belongs *now*. The schedule is yours, in `~/.config/hwe/hyprsunset.conf`, bridged
+  to the only path hyprsunset reads by a gitignored symlink. On Ubuntu the archive does
+  not carry hyprsunset (the PPA does): the module hides, nothing breaks.
+- **Shipped defaults in the personal layer can finally evolve.** `provision/userlayer.sums`
+  is an append-only history of every skeleton version ever shipped; a layer file still
+  matching it was never edited and silently follows new defaults, while an edited file
+  stays untouched — same promise as before. New: `hwe update --reset-defaults` restores
+  the shipped defaults deliberately, backing your versions up as `*.hwe-bak`.
+
 - **Issue forms** (`.github/ISSUE_TEMPLATE/`): a bug report that asks for `hwe version`,
   the platform and `hwe doctor` output, and a one-field idea form. The bar is kept low on
   purpose — blank issues stay enabled, and both languages of the project are welcome.

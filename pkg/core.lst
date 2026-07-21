@@ -6,6 +6,7 @@ hyprland                     # the Wayland compositor
 hyprpaper                    # wallpaper daemon
 hypridle                     # idle management
 hyprlock                     # screen locker
+hyprsunset                   # night light (hwe sunset; schedule in ~/.config/hwe)
 hyprpolkitagent              # polkit auth agent
 xdg-desktop-portal-hyprland  # screenshare / file pickers
 uwsm                         # universal wayland session manager (growth path)

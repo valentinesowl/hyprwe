@@ -217,7 +217,18 @@ _install_fetched_fonts() {
 # settings go, rather than documenting a path you have to create by hand.
 # The skeleton directory IS the definition of the layer: lib/doctor.sh reads the
 # same list, so the check cannot drift from what the install lays down.
-HWE_USER_SKEL="$HWE_ROOT/provision/userlayer"
+# Overridable for the tests (like HWE_USER_CONFIG in common.sh): the refresh
+# logic needs a scratch skeleton + hash history to simulate a default evolving.
+HWE_USER_SKEL="${HWE_USER_SKEL:-$HWE_ROOT/provision/userlayer}"
+HWE_USER_SUMS="${HWE_USER_SUMS:-$HWE_ROOT/provision/userlayer.sums}"
+# The hyprsunset bridge: hyprsunset reads ONLY ~/.config/hypr/hyprsunset.conf
+# and has no include directive — but ~/.config/hypr IS the repo symlink, so a
+# real file there would be user state inside the clone. Instead the repo
+# carries a GITIGNORED symlink out to the personal layer: the file (and any
+# edits) lives in ~/.config/hwe and survives replacing the checkout, while the
+# link is a generated artifact, recreated on every deploy. The absolute target
+# is fine precisely because the link is never committed.
+HWE_SUNSET_BRIDGE="${HWE_SUNSET_BRIDGE:-$HWE_ROOT/config/hypr/hyprsunset.conf}"
 
 _user_layer_files() {
     local f
@@ -227,18 +238,45 @@ _user_layer_files() {
     return 0
 }
 
+# True when the deployed layer file is an unedited shipped default: its hash
+# appears in userlayer.sums, the append-only history of every skeleton version
+# ever shipped. Pristine files may track new defaults; anything else is the
+# user's, full stop.
+_user_file_is_pristine() {
+    local name="$1" h
+    h="$(sha256sum "$HWE_USER_CONFIG/$name" 2>/dev/null | cut -d' ' -f1)"
+    [[ -n "$h" ]] && grep -q "^$h  $name\$" "$HWE_USER_SUMS" 2>/dev/null
+}
+
+# Copy-once with two carve-outs, both in the user's favour:
+#  - a file still byte-identical to ANY shipped skeleton was never edited, so
+#    it silently tracks the current defaults (that is what "default" promises);
+#  - HWE_RESET_DEFAULTS=1 (hwe update --reset-defaults) restores the shipped
+#    defaults over an edited file — keeping the edit as a .hwe-bak backup.
 _deploy_user_layer() {
     local name dst created=0
     mkdir -p "$HWE_USER_CONFIG"
     while IFS= read -r name; do
         [[ -n "$name" ]] || continue
         dst="$HWE_USER_CONFIG/$name"
-        [[ -e "$dst" ]] && continue      # yours — never overwritten
+        if [[ -e "$dst" ]]; then
+            cmp -s "$dst" "$HWE_USER_SKEL/$name" && continue   # already current
+            if _user_file_is_pristine "$name"; then
+                cp "$HWE_USER_SKEL/$name" "$dst"
+                info "refreshed ~/.config/hwe/$name (untouched default -> current default)"
+            elif [[ "${HWE_RESET_DEFAULTS:-0}" == 1 ]]; then
+                cp "$dst" "$dst.hwe-bak.$$"
+                cp "$HWE_USER_SKEL/$name" "$dst"
+                warn "reset ~/.config/hwe/$name to the shipped default (yours: $(basename "$dst.hwe-bak.$$"))"
+            fi
+            continue                                            # yours — kept
+        fi
         cp "$HWE_USER_SKEL/$name" "$dst"
         info "created ~/.config/hwe/$name"
         created=1
     done < <(_user_layer_files)
     [[ $created -eq 1 ]] && log "Personal layer ready in $HWE_USER_CONFIG — yours to edit, HWE won't touch it again"
+    ln -sfn "$HWE_USER_CONFIG/hyprsunset.conf" "$HWE_SUNSET_BRIDGE"   # see HWE_SUNSET_BRIDGE above
     return 0
 }
 
@@ -302,7 +340,7 @@ _install_vm_packages() {
 # `--global` edits /etc/systemd/user/*.wants, which is where these symlinks
 # actually live, and needs no running user session — this runs from cloud-init,
 # where there is none.
-HWE_DUPLICATE_USER_UNITS="waybar.service hypridle.service mako.service hyprpaper.service"
+HWE_DUPLICATE_USER_UNITS="waybar.service hypridle.service mako.service hyprpaper.service hyprsunset.service"
 
 _disable_duplicate_user_units() {
     [[ "$(_distro_family)" == apt ]] || return 0

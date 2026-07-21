@@ -113,12 +113,23 @@ _doctor_user_layer() {
         if [[ " ${missing[*]} " == *" hypr.conf "* ]]; then
             info "hyprland.conf sources hypr.conf — until it exists, every login logs a config error"
         fi
-        info "recreate the missing file(s): ${C_BOLD}hwe update${C_RESET} (it never overwrites an existing one)"
+        info "recreate the missing file(s): ${C_BOLD}hwe update${C_RESET} (it never overwrites an edited one)"
         rc=1
     elif [[ $customised -gt 0 ]]; then
         ok "personal layer in ~/.config/hwe ($customised file(s) of your own)"
     else
         ok "personal layer in ~/.config/hwe (untouched defaults)"
+    fi
+
+    # The hyprsunset bridge: a gitignored symlink in the repo is what lets the
+    # daemon (which reads only ~/.config/hypr) see the layer file above. It is
+    # deploy output, so a wrong or missing link is drift, not customisation.
+    if [[ "$(readlink "$HWE_SUNSET_BRIDGE" 2>/dev/null)" == "$HWE_USER_CONFIG/hyprsunset.conf" ]]; then
+        ok "hyprsunset bridge (config/hypr/hyprsunset.conf -> personal layer)"
+    else
+        warn "hyprsunset bridge missing: config/hypr/hyprsunset.conf should be a symlink into ~/.config/hwe"
+        info "fix: ${C_BOLD}hwe update${C_RESET}"
+        rc=1
     fi
     return $rc
 }

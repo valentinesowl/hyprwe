@@ -101,6 +101,16 @@ window#waybar {
     font-weight: 600;
 }
 
+/* Night light: state is the colour — accent while tinting, dim once off. Not
+   @fg_normal for "off": an inert toggle should recede, not sit as bright as
+   the live indicators beside it. */
+#custom-sunset {
+    padding: 0 8px;
+    transition: color 0.4s ease;
+}
+#custom-sunset.on  { color: @accent; }
+#custom-sunset.off { color: @fg_dim; }
+
 /* Colour is reserved for things that actually need attention. */
 #battery.warning      { color: @orange; }
 #battery.critical     { color: @urgent; }

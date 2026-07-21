@@ -23,7 +23,7 @@
 
     "modules-left": ["hyprland/workspaces"],
     "modules-center": ["clock"],
-    "modules-right": ["custom/cpu", "custom/memory", "custom/temp", "custom/record", "tray", "pulseaudio", "backlight", "battery"],
+    "modules-right": ["custom/cpu", "custom/memory", "custom/temp", "custom/record", "tray", "pulseaudio", "backlight", "battery", "custom/sunset"],
 
     "hyprland/workspaces": {
         "format": "{name}",
@@ -132,6 +132,18 @@
         "exec": "pgrep -x wf-recorder >/dev/null && echo '●  REC' || echo ''",
         "on-click": "hwe record",
         "tooltip": false
+    },
+
+    // Night light (hyprsunset): the moon at the bar's right edge — accent while
+    // active, dim while off; a click toggles (and re-runs exec, so the icon
+    // answers immediately). Hidden entirely where hyprsunset is not installed:
+    // empty exec output hides a custom module (Ubuntu's archive lacks it).
+    "custom/sunset": {
+        "format": "{}",
+        "return-type": "json",
+        "interval": 10,
+        "exec": "hwe sunset status --waybar",
+        "on-click": "hwe sunset"
     },
 
     "tray": {

@@ -128,6 +128,13 @@ previews:
 
 # Rebuild the README theme gallery (assets/themes.png) from every preview.png.
 # 5 columns, alphabetical (the glob's order); 480px cards in 536px cells on #0d0d12.
+# Append any missing current-skeleton hashes to provision/userlayer.sums (the
+# append-only history that lets `hwe update` recognise untouched defaults).
+# Run after editing anything in provision/userlayer/; a test pins this.
+skel-sums:
+    cd provision/userlayer && sha256sum * | while read -r h f; do grep -q "^$h  $f" ../userlayer.sums || printf '%s  %s\n' "$h" "$f" >> ../userlayer.sums; done
+    tail -n5 provision/userlayer.sums
+
 gallery:
     montage themes/*/preview.png -tile 5x -geometry 480x480+28+28 -background '#0d0d12' -depth 8 assets/themes.png
     # 2:1 variant for GitHub's social preview (it crops anything else; ≤1MB)

@@ -47,6 +47,8 @@ ${C_BOLD}Commands:${C_RESET}
               Clipboard-history picker (cliphist + rofi; SUPER+C)
   ${C_CYAN}record${C_RESET} <toggle|region|status>
               Toggle screen recording (wf-recorder -> ~/Videos)
+  ${C_CYAN}sunset${C_RESET} <toggle|on|off|status>
+              Toggle the night light (hyprsunset; schedule in ~/.config/hwe)
   ${C_CYAN}checkconfig${C_RESET}  Report Hyprland config errors from the running compositor
   ${C_CYAN}doctor${C_RESET} [host|vm]
               Health-check this machine (host, default) or VM prerequisites (vm)
@@ -118,6 +120,11 @@ case "$cmd" in
         # shellcheck source=lib/record.sh
         source "$HWE_ROOT/lib/record.sh"
         record_main "$@"
+        ;;
+    sunset)
+        # shellcheck source=lib/sunset.sh
+        source "$HWE_ROOT/lib/sunset.sh"
+        sunset_main "$@"
         ;;
     welcome)
         # shellcheck source=lib/welcome.sh

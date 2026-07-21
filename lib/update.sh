@@ -13,9 +13,12 @@
 #                             confirm before it acts)
 #   6. fetch newly-pinned fonts (idempotent: skips what a package already provides)
 #
-# Nothing here touches your personal layer (~/.config/hwe) — which is exactly why
-# step 1 can afford to be strict about a dirty tree: your settings are not in the
-# tree. Step 2 only recreates a file of the layer that is missing entirely.
+# Your personal layer (~/.config/hwe) is safe here — which is exactly why step 1
+# can afford to be strict about a dirty tree: your settings are not in the tree.
+# Step 2 recreates missing layer files, and refreshes the ones still byte-equal
+# to a shipped default (userlayer.sums knows every version ever shipped). A file
+# you edited is never rewritten — unless you pass --reset-defaults, which backs
+# it up as .hwe-bak first.
 #
 # `hwe update --check` runs the read-only drift report (== hwe doctor host) and
 # changes nothing. You run this yourself, so the live reload in step 3 is your
@@ -29,14 +32,20 @@ update_main() {
     local check=0
     case "${1:-}" in
         --check|-n) check=1 ;;
+        # Exported, not local: the flag must survive the re-exec below — the
+        # pulled CLI inherits the environment, not this shell's locals.
+        --reset-defaults) export HWE_RESET_DEFAULTS=1 ;;
         help|-h|--help)
             cat >&2 <<EOF
 ${C_BOLD}hwe update${C_RESET} — pull the repo and reconcile this machine
 
-${C_BOLD}Usage:${C_RESET} hwe update [--check]
+${C_BOLD}Usage:${C_RESET} hwe update [--check|--reset-defaults]
 
   (no args)   ff-only pull, re-link configs + CLI, re-apply theme, install missing pkgs + fonts
   ${C_CYAN}--check${C_RESET}     read-only drift report only (same as ${C_BOLD}hwe doctor host${C_RESET})
+  ${C_CYAN}--reset-defaults${C_RESET}
+              also reset edited ~/.config/hwe files to the shipped defaults
+              (your versions are kept beside them as .hwe-bak backups)
 EOF
             return 0 ;;
         "") ;;

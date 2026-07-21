@@ -143,7 +143,9 @@ Two smaller differences, so they do not surprise you:
   starts those from `config/hypr/autostart.conf`, the packaged units are stood down —
   otherwise you get two bars and two idle daemons.
 - **A few tools are not in the archive.** `satty` (screenshot annotation, two keybinds
-  degrade to a plain screenshot), `ruff` and `actionlint`. For `ruff`, `just lint-py`
+  degrade to a plain screenshot), `hyprsunset` (night light — the bar's moon hides and
+  `hwe sunset` says why; the PPA carries it, so on that path one `apt install hyprsunset`
+  brings it back), `ruff` and `actionlint`. For `ruff`, `just lint-py`
   and `just fmt-py` fall back to running it through uv — `pipx install uv` once (pipx
   is packaged; uv itself is not, either) and they work. `actionlint` (`just lint-ci`)
   has no such door and stays missing. `pkg/map/apt.map` records every such difference,
@@ -181,6 +183,7 @@ never rewritten afterwards.
 | `packages.lst` | extra packages for this machine (the distribution's own) |
 | `packages-aur.lst` | the same, from the AUR (Arch; skipped on Ubuntu) |
 | `waybar.jsonc` | your bar's composition — merged over the generated config on every theme apply |
+| `hyprsunset.conf` | your night-light schedule (when and how warm) — `hwe sunset` toggles it |
 | `themes/` | HWE's own notes per theme — which theme is applied, which wallpaper each one uses. Written by `hwe`, so replacing the checkout forgets nothing |
 
 ```bash
@@ -198,8 +201,11 @@ The same rule holds one level up: a theme of your own goes in
 `~/.local/share/hwe/themes/<name>/`, where it shadows a shipped theme of the same name.
 
 `hwe doctor` states what you have made your own and never calls it drift. The one thing it
-does report is a **missing** file — `hwe update` puts it back, and never touches one that
-is already there.
+does report is a **missing** file — `hwe update` puts it back. A file you have edited is
+never rewritten; one you have *not* quietly keeps up with the shipped defaults (HWE knows
+every default it ever shipped, so it can tell the two apart). And if you want the defaults
+back after all: `hwe update --reset-defaults` restores them, keeping your versions beside
+them as `*.hwe-bak`.
 
 ---
 
@@ -216,6 +222,7 @@ is already there.
 | `hwe keys` | keybinding cheatsheet (rofi, generated from the binds; `SUPER+/`) |
 | `hwe clip <show\|wipe>` | clipboard history (cliphist, rofi; `SUPER+C`) |
 | `hwe record <toggle\|region>` | screen recording (wf-recorder → `~/Videos`; bar indicator) |
+| `hwe sunset <toggle\|on\|off\|status>` | night light (hyprsunset; the moon at the bar's right edge) |
 | `hwe checkconfig [--notify]` | show config errors from the running Hyprland |
 | `hwe vm <up\|ssh\|console\|status\|list\|down\|destroy\|rebuild>` | the local dev VM (libvirt + cloud-init) |
 | `hwe doctor [host\|vm]` | health-check this machine (host, the default) or the VM prerequisites |
@@ -388,6 +395,7 @@ hyprwe/
 │   ├── keys.sh             # hwe keys — bind cheatsheet (rofi)
 │   ├── clip.sh             # hwe clip — clipboard history (cliphist)
 │   ├── record.sh           # hwe record — screen recording (wf-recorder)
+│   ├── sunset.sh           # hwe sunset — night light (hyprsunset)
 │   ├── checkconfig.sh      # hwe checkconfig — Hyprland config errors
 │   └── welcome.sh          # hwe welcome — greeting on the first login
 ├── provision/

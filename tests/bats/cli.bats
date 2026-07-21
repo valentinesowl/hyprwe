@@ -64,7 +64,7 @@ setup() {
 
 @test "every command in the usage text dispatches" {
     # Catches a command documented but never wired into the case statement.
-    for cmd in vm install update uninstall doctor theme wall power keys clip record checkconfig version; do
+    for cmd in vm install update uninstall doctor theme wall power keys clip record sunset checkconfig version; do
         run bash -c "grep -qE '^\s+$cmd[)|]' '$HWE_ROOT/bin/hwe' || grep -qE '^\s+$cmd\|' '$HWE_ROOT/bin/hwe'"
         assert_success
     done
@@ -94,8 +94,8 @@ setup() {
     [[ "$stderr" == *"takes no arguments"* ]]
 }
 
-@test "power, keys and record answer help instead of acting" {
-    for cmd in power keys record; do
+@test "power, keys, record and sunset answer help instead of acting" {
+    for cmd in power keys record sunset; do
         run --separate-stderr "$HWE_ROOT/bin/hwe" "$cmd" help
         assert_success
         [[ "$stderr" == *"usage: hwe $cmd"* ]]

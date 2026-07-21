@@ -16,6 +16,9 @@ setup() {
     export HWE_REPO_ROOT="$HWE_ROOT"
     export USER_CONFIG="$BATS_TEST_TMPDIR/userconfig"
     export SKEL="$HWE_ROOT/provision/userlayer"
+    # The bridge is deploy output written next to HWE_ROOT — scratch it, so a
+    # test run never plants a symlink in the real checkout.
+    export HWE_SUNSET_BRIDGE="$BATS_TEST_TMPDIR/bridge.conf"
 }
 
 # Call an install/doctor function against the scratch layer, in a subshell: both
@@ -144,6 +147,80 @@ hwe_fn() {
     run hwe_fn _doctor_user_layer
     assert_failure
     assert_output --partial "hwe update"
+}
+
+# ── defaults that can still evolve (userlayer.sums) ───────────────────────
+# A scratch skeleton + hash history simulates a default changing between
+# releases; HWE_USER_SKEL/HWE_USER_SUMS are overridable for exactly this.
+
+_scratch_skel() {
+    export HWE_USER_SKEL="$BATS_TEST_TMPDIR/skel"
+    export HWE_USER_SUMS="$BATS_TEST_TMPDIR/skel.sums"
+    mkdir -p "$HWE_USER_SKEL"
+    printf '# default v1\n' > "$HWE_USER_SKEL/thing.conf"
+    sha256sum "$HWE_USER_SKEL/thing.conf" | sed "s|$HWE_USER_SKEL/||" > "$HWE_USER_SUMS"
+}
+
+_scratch_skel_evolve() {
+    printf '# default v2\n' > "$HWE_USER_SKEL/thing.conf"
+    sha256sum "$HWE_USER_SKEL/thing.conf" | sed "s|$HWE_USER_SKEL/||" >> "$HWE_USER_SUMS"
+}
+
+@test "an untouched default follows a new shipped default" {
+    _scratch_skel
+    hwe_fn _deploy_user_layer
+    _scratch_skel_evolve
+    run hwe_fn _deploy_user_layer
+    assert_success
+    assert_output --partial "refreshed"
+    run cat "$USER_CONFIG/thing.conf"
+    assert_output --partial "v2"
+}
+
+@test "an edited file stays yours even when the default moves on" {
+    _scratch_skel
+    hwe_fn _deploy_user_layer
+    printf '# mine\n' > "$USER_CONFIG/thing.conf"
+    _scratch_skel_evolve
+    run hwe_fn _deploy_user_layer
+    assert_success
+    refute_output --partial "refreshed"
+    run cat "$USER_CONFIG/thing.conf"
+    assert_output --partial "mine"
+}
+
+@test "--reset-defaults restores the shipped file and keeps yours as a backup" {
+    _scratch_skel
+    hwe_fn _deploy_user_layer
+    printf '# mine\n' > "$USER_CONFIG/thing.conf"
+    HWE_RESET_DEFAULTS=1 run hwe_fn _deploy_user_layer
+    assert_success
+    assert_output --partial "reset"
+    run cat "$USER_CONFIG/thing.conf"
+    assert_output --partial "v1"
+    run cat "$USER_CONFIG"/thing.conf.hwe-bak.*
+    assert_output --partial "mine"
+}
+
+@test "--reset-defaults leaves an untouched layer alone — no backup spam" {
+    _scratch_skel
+    hwe_fn _deploy_user_layer
+    HWE_RESET_DEFAULTS=1 run hwe_fn _deploy_user_layer
+    assert_success
+    refute_output --partial "reset"
+    run bash -c "ls \"$USER_CONFIG\"/*.hwe-bak.* 2>/dev/null | wc -l"
+    assert_output "0"
+}
+
+@test "every current skeleton is in the shipped hash history" {
+    # The refresh mechanism dies silently if a skeleton edit forgets its hash:
+    # that file's fresh installs would read as "edited by the user" forever.
+    # `just skel-sums` appends what this test says is missing.
+    local h f
+    while read -r h f; do
+        grep -q "^$h  $f\$" "$HWE_ROOT/provision/userlayer.sums" \
+            || fail "provision/userlayer.sums lacks the current $f — run: just skel-sums"
+    done < <(cd "$HWE_ROOT/provision/userlayer" && sha256sum -- *)
 }
 
 # ── the contract with the rest of the repo ────────────────────────────────
