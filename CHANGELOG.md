@@ -9,10 +9,13 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+## [1.4.1] — 2026-07-21
+
 ### Fixed
 
 Findings of a fresh-eyes audit: a clean-room VM, the README followed verbatim, every
-rough edge written down.
+rough edge written down. (The same session gave the README its hero shot — a live
+desktop minutes after that very install.)
 
 - **The install no longer quizzes the newcomer mid-transaction.** pacman used to ask
   which `jack` and which qt6-multimedia backend to take — questions whose answers the
@@ -480,7 +483,8 @@ to it only ship in 2.0.0.
   that environment's uninstaller. If the login screen looks foreign after
   `hwe theme sddm`, look at what is in that directory.
 
-[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v1.4.1...HEAD
+[1.4.1]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.4.1
 [1.4.0]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.4.0
 [1.3.2]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.3.2
 [1.3.1]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.3.1
