@@ -9,6 +9,12 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+### Added
+
+- **Issue forms** (`.github/ISSUE_TEMPLATE/`): a bug report that asks for `hwe version`,
+  the platform and `hwe doctor` output, and a one-field idea form. The bar is kept low on
+  purpose — blank issues stay enabled, and both languages of the project are welcome.
+
 ### Fixed
 
 - **The theme picker's selection is legible again.** The selected tile was marked by an

@@ -1,0 +1,16 @@
+# Feature/idea form. One field on purpose: the situation matters more than the
+# proposal, and a single box invites both.
+---
+name: Idea
+description: A feature you miss, a workflow HWE should cover, a rough edge
+labels: [enhancement]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: The idea
+      description: >
+        What you want, and the situation where you missed it — the second part
+        is the valuable one. English or Russian.
+    validations:
+      required: true

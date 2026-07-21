@@ -1,0 +1,56 @@
+# Bug report form. The bar to clear is deliberately low: version + where + what
+# happened. Everything else is optional — a vague report we can ask about beats
+# the report that was never filed.
+---
+name: Bug report
+description: Something broke — an install, an update, a theme, a picker…
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time — a broken install we hear about is one that
+        gets fixed. English or Russian, whichever is easier for you.
+  - type: input
+    id: version
+    attributes:
+      label: HWE version
+      description: "`hwe version` — or the commit, if you run from a checkout."
+      placeholder: v1.3.2
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Where is it running?
+      options:
+        - Arch, bare metal
+        - Ubuntu 26.04, bare metal
+        - Arch VM (hwe vm up)
+        - Ubuntu VM (hwe vm up)
+        - Something else (say what, below)
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: >
+        What you did, what you expected, what you got instead. Exact commands
+        and their output help the most.
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: hwe doctor output
+      description: >
+        Optional but golden — it is read-only, changes nothing, and usually
+        points straight at the cause.
+      render: text
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: >
+        Screenshots, logs, `hwe checkconfig`, the theme in use if it matters.

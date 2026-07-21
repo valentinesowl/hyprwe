@@ -1,0 +1,8 @@
+# Issue chooser config. Blank issues stay enabled — the forms lower the bar,
+# they must not become one.
+---
+blank_issues_enabled: true
+contact_links:
+  - name: Questions and discussion
+    url: https://github.com/valentinesowl/hyprwe/discussions
+    about: Not a bug, not a feature — just ask. English or Russian.
