@@ -17,3 +17,4 @@ baeba1540830b99c4cc9875882e94ca5d0318dacb65dfe1c9aa209c3810c7f4f  packages.lst
 545dcef6feb5b2ad6e495129bf304d1c76cf99434b395859769277086491dd77  waybar.jsonc
 # pre-1.4 hypr.conf (header promised "never rewrite"; superseded by the wording above)
 804e37bdd4f119a043af4e37916d6ad7e7b44491eecc4bc6cbe1e5a91b46f66f  hypr.conf
+faf330ae3e0c22b7ea6915d594d2d5868e296ca59266f37aa59595a869db7cf1  kanshi.conf

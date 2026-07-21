@@ -184,12 +184,19 @@ never rewritten afterwards.
 | `packages-aur.lst` | the same, from the AUR (Arch; skipped on Ubuntu) |
 | `waybar.jsonc` | your bar's composition — merged over the generated config on every theme apply |
 | `hyprsunset.conf` | your night-light schedule (when and how warm) — `hwe sunset` toggles it |
+| `kanshi.conf` | your monitor profiles — dock and the layout follows, undock and it snaps back |
 | `themes/` | HWE's own notes per theme — which theme is applied, which wallpaper each one uses. Written by `hwe`, so replacing the checkout forgets nothing |
 
 ```bash
 $EDITOR ~/.config/hwe/hypr.conf    # your monitors go here, not in config/hypr/monitors.conf
 hyprctl reload                     # SUPER+SHIFT+R
 ```
+
+For a laptop that meets a dock, `kanshi.conf` is the better home for the monitors: a
+profile applies the moment its outputs are all connected, so plugging in rearranges the
+layout by itself and unplugging restores it. One owner per output though — a display
+managed by a kanshi profile should not also have a `monitor =` line in `hypr.conf`, or
+every reload restarts their argument.
 
 The location is the whole point. `config/` is deployed as symlinks into the repository, so
 tuning something in place would be an edit to a **tracked file** — and `hwe update` refuses
@@ -410,6 +417,7 @@ hyprwe/
 ├── templates/              # .j2 — every component's colours are rendered from [sem]
 ├── config/                 # XDG configs → symlinked into ~/.config
 │   ├── hypr/               # the modular Hyprland (see hyprland.conf)
+│   ├── kanshi/             # monitor hotplug profiles (the profiles themselves: ~/.config/hwe)
 │   ├── waybar/ rofi/ mako/ kitty/ gtk-3.0/ gtk-4.0/ zsh/
 │   └── starship.toml
 ├── scripts/                # render-theme.py · genwall.py · genpreview.py · wbstat.py

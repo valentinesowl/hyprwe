@@ -231,6 +231,13 @@ _scratch_skel_evolve() {
     assert_success
 }
 
+@test "the tracked kanshi config includes the personal profiles" {
+    # kanshi errors out with NO config file at all — the tracked one exists to
+    # guarantee that, and must hand everything else to the layer.
+    run grep -qF 'include ~/.config/hwe/kanshi.conf' "$HWE_ROOT/config/kanshi/config"
+    assert_success
+}
+
 @test "no tracked config file tells the user to edit the repo for their monitors" {
     # monitors.conf is a symlink into the checkout: editing it dirties the tree
     # and blocks the ff-only pull. It must point at the personal layer instead.

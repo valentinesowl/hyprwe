@@ -11,6 +11,11 @@ the three sources cannot drift apart.
 
 ### Added
 
+- **Monitor profiles on hotplug (kanshi).** Dock and the layout follows; undock and it
+  snaps back. The profiles are yours in `~/.config/hwe/kanshi.conf` (kanshi's `include`
+  reaches the personal layer directly — no bridge needed); the tracked config exists
+  because kanshi refuses to start without one, and an empty profile list idles harmlessly.
+  Same package name and version on Arch and Ubuntu.
 - **Night light: `hwe sunset` + a bar toggle.** hyprsunset joins the stack (4000 K from
   21:00, back at 07:00 by default); the moon at the bar's right edge shows its state —
   accent while tinting, dim while off — and a click toggles it. The toggle is start/stop

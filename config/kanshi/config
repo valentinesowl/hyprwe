@@ -1,0 +1,5 @@
+# kanshi — dynamic output profiles (dock/undock and the layout follows).
+# This file is HWE's and stays boring on purpose: your profiles live in
+# ~/.config/hwe/kanshi.conf (the include below; wordexp expands the ~).
+# kanshi refuses to start without a config file — this one guarantees it.
+include ~/.config/hwe/kanshi.conf
