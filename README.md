@@ -55,7 +55,8 @@ deploys the configs and sets up the login screen. It does so **reversibly**, pre
 whatever is already on the machine.
 
 ```bash
-# 1. Clone the repository  (a minimal Arch has no git yet: sudo pacman -S git)
+# 1. Clone the repository  (a minimal system has no git yet:
+#    sudo pacman -S git  /  sudo apt install git)
 git clone https://github.com/valentinesowl/hyprwe.git ~/hwe
 cd ~/hwe
 
@@ -67,15 +68,17 @@ cd ~/hwe
 
 What `hwe install` does:
 
-- installs `pkg/core.lst` + `pkg/dev.lst` (official repos); `paru` is bootstrapped only if
-  `pkg/aur.lst` is non-empty;
+- installs `pkg/core.lst` + `pkg/dev.lst` from the distribution's repositories (on Ubuntu
+  the names go through `pkg/map/apt.map`); on Arch, `paru` is bootstrapped if `pkg/aur.lst`
+  is non-empty — AUR entries are skipped on Ubuntu, with a notice;
 - symlinks `config/*` into `~/.config`, **keeping** your previous configs beside them as `*.hwe-bak`;
 - generates and applies the default theme (`mocha`);
 - makes `zsh` the login shell and enables NetworkManager + SDDM (the login screen).
 
 **GPU.** Intel/AMD work out of the box — mesa comes along with Hyprland, the drivers are
 in-tree, there is nothing to configure. **NVIDIA** is detected by the installer via `lspci`
-and set up for you: driver (open modules for Turing+, proprietary for older cards),
+and set up for you — on Arch only; on Ubuntu it says so and leaves the GPU alone. The setup:
+driver (open modules for Turing+, proprietary for older cards),
 DRM modesetting, initramfs modules and a pacman rebuild hook. That touches boot, so it asks
 for confirmation — and, honestly: **this path has not yet been tried on live NVIDIA hardware**
 (development happened on Intel). `HWE_NO_NVIDIA=1` skips it entirely; `HWE_NVIDIA_DRIVER=<package>`
@@ -84,8 +87,9 @@ that layer back (initramfs/modules).
 
 Careful and predictable:
 
-- **A system upgrade is opt-in.** `pacman -Su` runs only with `HWE_FULL_UPGRADE=1`; otherwise
-  the install works against the current package database.
+- **A system upgrade is opt-in.** The full upgrade (`pacman -Su` / `apt-get upgrade`) runs
+  only with `HWE_FULL_UPGRADE=1`; otherwise the install works against the current package
+  database (on Ubuntu the package lists are still refreshed — apt needs that before any install).
 - **Opt-outs:** `HWE_NO_ZSH=1` (leave the shell alone), `HWE_NO_NM=1` (leave networking alone),
   `HWE_NO_NVIDIA=1` (leave the GPU alone), `HWE_FORCE=1` (run even from a graphical session — at your own risk).
 - **Unattended:** `HWE_ASSUME_YES=1` answers yes to every confirmation (install preflight,
@@ -174,8 +178,8 @@ never rewritten afterwards.
 | File | What it holds |
 |---|---|
 | `hypr.conf` | displays, input, keybinds — sourced **last**, so it overrides what HWE ships |
-| `packages.lst` | extra packages for this machine (pacman) |
-| `packages-aur.lst` | the same, from the AUR |
+| `packages.lst` | extra packages for this machine (the distribution's own) |
+| `packages-aur.lst` | the same, from the AUR (Arch; skipped on Ubuntu) |
 | `waybar.jsonc` | your bar's composition — merged over the generated config on every theme apply |
 | `themes/` | HWE's own notes per theme — which theme is applied, which wallpaper each one uses. Written by `hwe`, so replacing the checkout forgets nothing |
 
@@ -392,7 +396,7 @@ hyprwe/
 │   ├── userlayer/          # skeletons of ~/.config/hwe — copied once, never overwritten
 │   ├── sddm/hwe/           # the SDDM QML greeter (themed from the active palette)
 │   ├── hyprland-uwsm.desktop  # the Hyprland (uwsm) session for SDDM
-│   └── arch-boxes.asc      # pinned signing key of the cloud image
+│   └── *.asc               # pinned signing keys of the cloud images (arch-boxes, Ubuntu)
 ├── pkg/                    # core.lst · dev.lst · vm.lst · aur.lst · fonts.lock · map/
 ├── themes/<name>/          # theme.toml (palette + [sem]) + wallpaper.png + preview.png
 ├── templates/              # .j2 — every component's colours are rendered from [sem]
