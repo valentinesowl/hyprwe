@@ -104,7 +104,14 @@ _pm_retry() {
     while true; do
         if "$@"; then return 0; fi
         tries=$((tries + 1))
-        [[ $tries -ge $max ]] && { err "package transaction failed after $max attempts"; return 1; }
+        [[ $tries -ge $max ]] && {
+            err "package transaction failed after $max attempts"
+            # The refresh between attempts updates the DB but not the system —
+            # if mirrors have moved past this machine, only a real upgrade helps.
+            [[ "$(_distro_family)" == pacman ]] \
+                && info "a stale system is the usual cause — run ${C_BOLD}sudo pacman -Syu${C_RESET}, then re-run"
+            return 1
+        }
         warn "package transaction failed — refreshing and retrying ($tries/$max)"
         case "$(_distro_family)" in
             pacman) sudo pacman -Syy --noconfirm --disable-download-timeout >/dev/null 2>&1 || true ;;

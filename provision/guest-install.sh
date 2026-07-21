@@ -807,11 +807,14 @@ install_main() {
     echo
     ok "HWE install complete."
     info "Hyprland config is health-checked at each login (hwe checkconfig)"
-    if [[ "${HWE_UNATTENDED:-0}" == 1 ]]; then
-        info "reboot into the Hyprland session:  sudo reboot"
+    # Match the path _setup_login just configured — same condition it branched
+    # on. A manual install in a VM got tty1 autologin, and pointing that user at
+    # an SDDM greeter describes a login screen they will never see.
+    if [[ "${HWE_UNATTENDED:-0}" == 1 ]] || systemd-detect-virt --quiet 2>/dev/null; then
+        info "reboot, and tty1 logs you straight into the Hyprland session:  sudo reboot"
     else
-        # Match the sanctioned path _setup_login just configured: SDDM's greeter,
-        # or the uwsm session entry from a TTY — not a bare 'Hyprland', which warns.
+        # SDDM's greeter, or the uwsm session entry from a TTY — not a bare
+        # 'Hyprland', which warns.
         info "reboot to reach the SDDM greeter, or start now from a TTY:  uwsm start hyprland.desktop"
     fi
 }

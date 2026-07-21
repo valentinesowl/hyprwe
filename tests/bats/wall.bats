@@ -104,3 +104,46 @@ hwe_wall() {
     assert_output "$THEME_DIR/wallpapers/dawn.png"
     [[ ! -e "$THEME_DIR/.current_wallpaper" ]]
 }
+
+# ── restore actually restores ─────────────────────────────────────────────
+@test "restore retries the apply until hyprpaper answers, then stops" {
+    # The old code waited for the SOCKET FILE — which a dead daemon's corpse
+    # satisfies while the connection is refused. The contract now is: retry the
+    # apply itself until it lands. Simulated: two refusals, then success.
+    printf 'img\n' > "$BATS_TEST_TMPDIR/w.png"
+    ln -s "$BATS_TEST_TMPDIR/w.png" "$BATS_TEST_TMPDIR/current.wall"
+    run bash -c '
+        set -euo pipefail
+        HWE_ROOT="$HWE_REPO_ROOT"
+        source "$HWE_ROOT/lib/common.sh"
+        source "$HWE_ROOT/lib/wall.sh"
+        HWE_WALL_LINK="$BATS_TEST_TMPDIR/current.wall"
+        XDG_CACHE_HOME="$BATS_TEST_TMPDIR/cache"
+        hyprpaper() { :; }              # the daemon itself is out of scope here
+        n=0
+        _wall_apply() { n=$((n+1)); echo "attempt $n"; [[ $n -ge 3 ]]; }
+        wall_restore
+    '
+    assert_success
+    assert_output --partial "attempt 3"
+    refute_output --partial "attempt 4"
+}
+
+@test "restore gives up loudly and points at the hyprpaper log" {
+    printf 'img\n' > "$BATS_TEST_TMPDIR/w.png"
+    ln -s "$BATS_TEST_TMPDIR/w.png" "$BATS_TEST_TMPDIR/current.wall"
+    run --separate-stderr bash -c '
+        set -euo pipefail
+        HWE_ROOT="$HWE_REPO_ROOT"
+        source "$HWE_ROOT/lib/common.sh"
+        source "$HWE_ROOT/lib/wall.sh"
+        HWE_WALL_LINK="$BATS_TEST_TMPDIR/current.wall"
+        XDG_CACHE_HOME="$BATS_TEST_TMPDIR/cache"
+        hyprpaper() { :; }
+        _wall_apply() { sleep 0; return 1; }
+        sleep() { :; }                   # 50 refusals should not cost 10 real seconds
+        wall_restore
+    '
+    assert_failure
+    [[ "$stderr" == *"hyprpaper.log"* ]]
+}

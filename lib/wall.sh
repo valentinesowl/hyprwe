@@ -134,10 +134,13 @@ _wall_activate() {
     _wall_reload "$path"
 }
 
-# Best-effort live swap. Locates the Hyprland instance itself so it works from a
-# keybind/ssh/terminal. Must NEVER fail the caller (theme apply runs under
-# set -euo pipefail at install time).
-_wall_reload() {
+# The raw live swap, and it tells the truth. Locates the Hyprland instance
+# itself so it works from a keybind/ssh/terminal. Returns 0 when the apply
+# landed OR there is nothing to talk to (no hyprctl / no compositor — a
+# legitimate no-op at install time); returns 1 when hyprpaper was asked and
+# refused. That rc is the ONLY readiness signal worth trusting: a stale socket
+# file from a dead daemon exists on disk and still refuses the connection.
+_wall_apply() {
     local path="$1"
     command -v hyprctl >/dev/null 2>&1 || return 0
     export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
@@ -155,9 +158,14 @@ _wall_reload() {
     hyprctl hyprpaper preload "$path" >/dev/null 2>&1 || true
     if hyprctl hyprpaper wallpaper ",$path" >/dev/null 2>&1; then
         info "wallpaper set (hyprpaper)"
+        return 0
     fi
-    return 0
+    return 1
 }
+
+# Best-effort wrapper around the swap — must NEVER fail the caller (theme apply
+# runs under set -euo pipefail at install time).
+_wall_reload() { _wall_apply "$1" || true; }
 
 wall_current() {
     if [[ -L "$HWE_WALL_LINK" ]]; then
@@ -173,21 +181,28 @@ wall_current() {
 # hyprpaper, wait for its IPC socket, then set a RESOLVED absolute path.
 wall_restore() {
     export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-    pgrep -x hyprpaper >/dev/null 2>&1 || { hyprpaper >/dev/null 2>&1 & disown; }
-
-    # Wait (≤5s) for the hyprpaper IPC socket to appear before talking to it.
-    local sig sock i
-    for i in $(seq 1 50); do
-        # shellcheck disable=SC2012  # instance signatures (hex), not user filenames
-        sig="${HYPRLAND_INSTANCE_SIGNATURE:-$(ls "$XDG_RUNTIME_DIR/hypr" 2>/dev/null | head -n1)}"
-        sock="$XDG_RUNTIME_DIR/hypr/$sig/.hyprpaper.sock"
-        [[ -n "$sig" && -S "$sock" ]] && break
-        sleep 0.1
-    done
+    # Keep hyprpaper's own words: when the desktop is black, its EGL/GBM errors
+    # are the whole diagnosis, and >/dev/null was how they went missing.
+    local paperlog="${XDG_CACHE_HOME:-$HOME/.cache}/hwe/hyprpaper.log"
+    if ! pgrep -x hyprpaper >/dev/null 2>&1; then
+        mkdir -p "$(dirname "$paperlog")" 2>/dev/null || true
+        hyprpaper > "$paperlog" 2>&1 &
+        disown
+    fi
 
     local target; target="$(readlink -f "$HWE_WALL_LINK" 2>/dev/null || true)"
     [[ -f "$target" ]] || { warn "no active wallpaper to restore ($HWE_WALL_LINK)"; return 0; }
-    _wall_reload "$target"
+
+    # Retry the APPLY, not a socket-file wait: the file may be a previous
+    # daemon's corpse, and a slow (software-rendering) hyprpaper takes seconds
+    # before its IPC answers. _wall_apply asks the only real question.
+    local i
+    for i in $(seq 1 50); do
+        if _wall_apply "$target"; then return 0; fi
+        sleep 0.2
+    done
+    warn "hyprpaper did not take the wallpaper after 10s — its log: $paperlog"
+    return 1
 }
 
 wall_list() {

@@ -9,6 +9,26 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+### Fixed
+
+Findings of a fresh-eyes audit: a clean-room VM, the README followed verbatim, every
+rough edge written down.
+
+- **The install no longer quizzes the newcomer mid-transaction.** pacman used to ask
+  which `jack` and which qt6-multimedia backend to take — questions whose answers the
+  project already knows. `pipewire-jack` and `qt6-multimedia-ffmpeg` are now named in
+  `pkg/core.lst` (on Ubuntu the backend ships inside `libqt6multimedia6`; the map says so).
+- **The post-install hint follows the configured login path.** A manual install inside a
+  VM sets up tty1 autologin — and then pointed the user at "the SDDM greeter", a login
+  screen that machine will never show.
+- **`hwe wall restore` now asks the real question.** It used to wait for hyprpaper's
+  socket *file* — which a dead daemon's leftover satisfies while the connection is
+  refused — and then applied the wallpaper exactly once. Now it retries the apply itself
+  (slow software-rendering starts included), and hyprpaper's own output goes to
+  `~/.cache/hwe/hyprpaper.log` instead of `/dev/null`, so a black desktop leaves evidence.
+- When a package transaction dies even after retries, the error now names the usual cure
+  on Arch: `sudo pacman -Syu`, then re-run.
+
 ## [1.4.0] — 2026-07-21
 
 The daily-driver release: the environment starts caring for the day itself — warm light

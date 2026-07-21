@@ -41,6 +41,8 @@ firefox                      # web browser (SUPER+B)
 pipewire
 pipewire-pulse
 pipewire-alsa
+pipewire-jack                # the JACK provider, pinned — else pacman asks, and its default (jack2) fights the pipewire stack above
+qt6-multimedia-ffmpeg        # the qt6-multimedia backend, pinned — else pacman asks a newcomer to pick one mid-install
 wireplumber
 
 # --- Networking ---

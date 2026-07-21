@@ -56,6 +56,10 @@ satty	-
 # the hypr* pin already admits it. Without the binary the bar module hides and
 # `hwe sunset` says why — nothing breaks.
 hyprsunset	-
+# An Arch-ism: it exists only to answer pacman's interactive provider prompt.
+# Debian builds the ffmpeg backend into libqt6multimedia6 itself, which arrives
+# by dependency — there is nothing to name.
+qt6-multimedia-ffmpeg	-
 # Arch-only by definition (paccache, checkupdates…). Nothing to install.
 pacman-contrib	-
 
