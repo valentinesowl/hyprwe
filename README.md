@@ -14,6 +14,12 @@ launcher, notifications, themes, login screen.** It installs with one command an
 the same way on bare metal (`hwe install`) and on a disposable VM (`hwe vm up`), from one
 source.
 
+<p align="center">
+  <img src="assets/hero.png" alt="HWE desktop: theme picker over the amethyst theme, htop, Dolphin and the repository itself" width="100%">
+  <br>
+  <em>A stock install, minutes old — the <code>amethyst</code> theme colouring every component at once: bar, terminal, Qt file manager, and the theme picker choosing what comes next.</em>
+</p>
+
 The environment is described in full inside the repository and reproduces on any machine
 from that description. Colours, geometry and fonts of every component are rendered from a
 single palette file (`themes/<name>/theme.toml`) — the same mechanism that gives you
