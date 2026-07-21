@@ -130,3 +130,5 @@ previews:
 # 5 columns, alphabetical (the glob's order); 480px cards in 536px cells on #0d0d12.
 gallery:
     montage themes/*/preview.png -tile 5x -geometry 480x480+28+28 -background '#0d0d12' -depth 8 assets/themes.png
+    # 2:1 variant for GitHub's social preview (it crops anything else; ≤1MB)
+    magick assets/themes.png -background '#0d0d12' -gravity center -extent 2680x1340 -depth 8 assets/social-preview.png
