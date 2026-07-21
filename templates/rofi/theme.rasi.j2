@@ -71,20 +71,25 @@ listview {
     dynamic:          true;
 }
 
-/* Each element is JUST the tile; the padding is the mat the selection fills. */
+/* Each element is JUST the tile; the padding is the mat the selection fills.
+   4px padding + 2px border below = the old 6px box, so the 940px grid holds. */
 element {
-    padding:          6px;
+    padding:          4px;
+    border:           2px;
+    border-color:     @transparent;
     border-radius:    14px;
     background-color: @transparent;
     cursor:           pointer;
     children:         [ "element-icon" ];
 }
 
-/* Selection = a soft accent mat hugging the tile. Every tile already carries its
-   OWN theme's accent border, so a hard ring in the CURRENT theme's accent would
-   fight it; a wash sits behind the card instead of arguing with it. */
+/* Selection = an accent mat plus a ring around it. The mat alone at low alpha
+   drowned in bright wallpapers under the blur; the ring keeps the selection
+   legible regardless of what is behind the window. The mat separates the
+   ring from the tile's OWN accent border, so the two do not read as one frame. */
 element selected.normal {
-    background-color: {{ sem.accent | hexa(0.20) }};
+    background-color: {{ sem.accent | hexa(0.40) }};
+    border-color:     @accent;
 }
 
 element-icon {

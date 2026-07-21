@@ -9,6 +9,22 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The theme picker's selection is legible again.** The selected tile was marked by an
+  accent wash at 0.20 alpha, which drowned in bright wallpapers under the blur. The wash
+  is now twice as strong and carries a 2px accent ring, separated from the tile's own
+  border by the mat — visible regardless of what is behind the window. The grid geometry
+  is unchanged (the ring is paid for out of the mat's padding).
+
+### Changed
+
+- **README: the last Arch-only leftovers now speak both languages of the project.** The
+  clone step, the install summary, the system-upgrade note, the NVIDIA paragraph, the
+  personal-layer package lists and the repository layout all state what happens on Ubuntu
+  (apt.map translation, AUR skipped with a notice, NVIDIA automation being Arch-only,
+  both pinned cloud-image keys).
+
 ## [1.3.2] — 2026-07-20
 
 The debt left by the 1.3.1 review pass, paid — plus the lifecycle made self-consistent.
