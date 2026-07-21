@@ -45,13 +45,36 @@ _sunset_on() {
     # setsid: detach from this shell so a keybind/bar click returns at once and
     # the daemon survives the caller.
     (setsid hyprsunset >/dev/null 2>&1 &)
+    _sunset_bar_refresh
     ok "night light on (schedule: ~/.config/hwe/hyprsunset.conf)"
 }
 
 _sunset_off() {
     _sunset_running || { info "night light is already off"; return 0; }
-    pkill -x hyprsunset
+    # Undo the tint by IPC before the kill: whether the compositor resets the
+    # colour matrix when its client dies varies across versions, and a dead
+    # daemon can otherwise leave the screen warm with nothing left to ask.
+    if command -v hyprctl >/dev/null 2>&1; then
+        hyprctl hyprsunset identity >/dev/null 2>&1 || true
+    fi
+    pkill -x hyprsunset || true
+    # Now WAIT for it to die: waybar re-runs the status exec the moment the
+    # click handler returns, and a still-dying process reads as "on" — the
+    # icon then lies for a full poll interval.
+    local _i
+    for _i in $(seq 1 40); do
+        _sunset_running || break
+        sleep 0.05
+    done
+    _sunset_running && { err "hyprsunset did not stop"; return 1; }
+    _sunset_bar_refresh
     ok "night light off"
+}
+
+# Nudge the bar to re-read the module now rather than on the next poll. Both
+# best-effort: no bar (a bare TTY, a test) is not an error.
+_sunset_bar_refresh() {
+    pkill -RTMIN+8 -x waybar 2>/dev/null || true
 }
 
 # `status --waybar`: JSON for the custom/sunset module. No hyprsunset binary →
