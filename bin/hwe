@@ -14,7 +14,7 @@ set -euo pipefail
 # The single source of truth for the version. The release workflow refuses to
 # publish a tag that disagrees with it, and tests/test_release.py pins it to the
 # newest CHANGELOG entry — so these three can never drift apart.
-HWE_VERSION="1.3.2"
+HWE_VERSION="1.4.0"
 
 # Resolve the repo root from this script's location (bin/hwe -> repo root).
 _self="$(readlink -f "${BASH_SOURCE[0]}")"

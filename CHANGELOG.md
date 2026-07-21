@@ -9,6 +9,12 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+## [1.4.0] — 2026-07-21
+
+The daily-driver release: the environment starts caring for the day itself — warm light
+after sunset, displays that follow the dock — and the personal layer learns to ship
+better defaults without ever touching what is yours.
+
 ### Added
 
 - **Monitor profiles on hotplug (kanshi).** Dock and the layout follows; undock and it
@@ -454,7 +460,8 @@ to it only ship in 2.0.0.
   that environment's uninstaller. If the login screen looks foreign after
   `hwe theme sddm`, look at what is in that directory.
 
-[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v1.3.2...HEAD
+[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.4.0
 [1.3.2]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.3.2
 [1.3.1]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.3.1
 [1.3.0]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.3.0

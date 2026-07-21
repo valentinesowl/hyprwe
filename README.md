@@ -6,7 +6,7 @@
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu_26.04-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
-[![Release](https://img.shields.io/badge/release-v1.3.2-blue)](../../releases/latest)
+[![Release](https://img.shields.io/badge/release-v1.4.0-blue)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 **A working environment on Arch and Ubuntu — Hyprland and everything around it: bar,
@@ -449,17 +449,14 @@ pipeline. How to contribute — [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Status
 
-`v1.3.2` — the 1.3.1 review debt paid, and the lifecycle made self-consistent: HWE's own
-state (the applied theme, each theme's wallpaper choice) now lives in `~/.config/hwe/`,
-so replacing the clone forgets nothing; `hwe update` hands itself over to the code it
-just pulled before reconciling; and the dev tooling works on Ubuntu (`ruff` through uv,
-pytest in CI). 1.3.0 made HWE no longer Arch-only: it installs on
-**Ubuntu 26.04**, and `hwe vm up` boots either distribution, each in its own VM so the two
-can be compared side by side. The environment did not fork to get there — one `config/hypr/`
-parses cleanly under both Hyprland versions involved. On top of the personal layer
-(`~/.config/hwe/`), the lifecycle commands (`hwe update`, `hwe doctor host`,
-`hwe vm up --uncommitted`) and the stable 1.0.0 base — the installer, the theme engine with
-10 themes, the SDDM greeter, zsh.
+`v1.4.0` — the daily-driver release. A night light on a schedule of your own (`hwe sunset`,
+with its moon at the bar's right edge), monitor profiles that follow the dock (kanshi),
+and a personal layer whose shipped defaults can finally evolve: an untouched file quietly
+keeps up with HWE, an edited one is never rewritten, and `hwe update --reset-defaults`
+restores the defaults deliberately, backups kept. Underneath, the 1.3 line stands: HWE
+installs on **Ubuntu 26.04** next to Arch from one unforked source, `hwe update`
+reconciles a machine and `hwe doctor` reports its drift, and the theme engine renders
+ten themes — every component from a single palette file.
 
 Tried and used daily on Arch; Ubuntu is verified end to end in a VM, not yet on bare
 metal. Next: more bar components, more workflows, polish.
