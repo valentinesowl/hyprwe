@@ -9,6 +9,17 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+### Added
+
+- **`hwe doctor` checks the screen-sharing stack** — the chain Zoom/Discord/OBS stand
+  on: pipewire (socket-activation aware), wireplumber, the xdg-desktop-portal pair, and
+  the classic silent killer — a systemd user environment without `WAYLAND_DISPLAY`,
+  which starts every portal blind and leaves the picker empty. Bus-activated portals
+  that merely haven't been asked yet are not called drift; a failed unit is.
+- **`hwe doctor --report`** — the same host check as one colour-free fenced block with
+  a machine header (version, commit, distro, kernel, session, Hyprland, GPU), ready to
+  paste into an issue: `hwe doctor --report | wl-copy`.
+
 ## [1.4.1] — 2026-07-21
 
 ### Fixed

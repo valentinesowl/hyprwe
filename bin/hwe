@@ -50,8 +50,9 @@ ${C_BOLD}Commands:${C_RESET}
   ${C_CYAN}sunset${C_RESET} <toggle|on|off|status>
               Toggle the night light (hyprsunset; schedule in ~/.config/hwe)
   ${C_CYAN}checkconfig${C_RESET}  Report Hyprland config errors from the running compositor
-  ${C_CYAN}doctor${C_RESET} [host|vm]
-              Health-check this machine (host, default) or VM prerequisites (vm)
+  ${C_CYAN}doctor${C_RESET} [host|vm|--report]
+              Health-check this machine (host, default) or VM prerequisites (vm);
+              --report emits it as one paste-ready block for an issue
   ${C_CYAN}version${C_RESET}   Print version
 
 ${C_BOLD}Examples:${C_RESET}

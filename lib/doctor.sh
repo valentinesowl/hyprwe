@@ -6,7 +6,8 @@
 #                     packages and running compositor still match the repo?
 #   hwe doctor vm     prerequisites for the dev-VM workflow (delegates to vm.sh).
 # Bare `hwe doctor` == `hwe doctor host` (the common case: "is my box still as
-# described"). All checks are READ-ONLY — nothing here mutates the live session,
+# described"). `hwe doctor --report` wraps the host check into one paste-ready
+# block for an issue. All checks are READ-ONLY — nothing here mutates the live session,
 # so it is safe to run on the host at any time (`hwe update` is the fix action).
 #
 # Sourced by bin/hwe; relies on lib/common.sh helpers. Package/config primitives
@@ -24,6 +25,7 @@ doctor_main() {
     local sub="${1:-host}"; shift || true
     case "$sub" in
         host)       doctor_host ;;
+        --report)   doctor_report ;;
         vm)
             # shellcheck source=lib/vm.sh
             source "$HWE_ROOT/lib/vm.sh"
@@ -33,11 +35,14 @@ doctor_main() {
             cat >&2 <<EOF
 ${C_BOLD}hwe doctor${C_RESET} — health checks
 
-${C_BOLD}Usage:${C_RESET} hwe doctor [host|vm]
+${C_BOLD}Usage:${C_RESET} hwe doctor [host|vm|--report]
 
   ${C_CYAN}host${C_RESET}   Drift-check this installed machine (symlinks, packages,
          personal layer, Hyprland config, shell). Read-only. This is the default.
   ${C_CYAN}vm${C_RESET}     Host prerequisites for the dev VM (libvirt, KVM, network).
+  ${C_CYAN}--report${C_RESET}
+         The host check as one colour-free fenced block with a machine header —
+         ready to paste into an issue (${C_BOLD}hwe doctor --report | wl-copy${C_RESET}).
 
 Fix drift with ${C_BOLD}hwe update${C_RESET}.
 EOF
@@ -72,6 +77,32 @@ _doctor_shell_verdict() {
     [[ -z "$sh" ]] && { echo unknown; return; }
     [[ "$(basename "$sh")" == zsh ]] && { echo ok; return; }
     echo drift
+}
+
+# One systemd user unit's verdict from its ActiveState: ok (running) | lazy
+# (inactive — bus/socket activation will start it on first use, which is not
+# drift on its own) | down (failed, or a state we cannot call healthy). Pure,
+# so the drift rule is pinned without a live session.
+_doctor_unit_verdict() {
+    case "$1" in
+        active|activating|reloading) echo ok ;;
+        inactive)                    echo lazy ;;
+        *)                           echo down ;;
+    esac
+}
+
+# Whether the systemd user environment (stdin = `systemctl --user
+# show-environment` output) carries WAYLAND_DISPLAY: ok | missing. A portal
+# activated without it starts blind to the compositor — the classic
+# "screen sharing offers an empty picker" cause.
+_doctor_wayland_env_verdict() {
+    grep -q '^WAYLAND_DISPLAY=' && echo ok || echo missing
+}
+
+# A live Hyprland session to interrogate? (hyprctl existing proves only the
+# package; the signature/runtime dir prove a compositor.)
+_doctor_hypr_session() {
+    [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" || -d "${XDG_RUNTIME_DIR:-/run/user/$UID}/hypr" ]]
 }
 
 # The set of ~/.config entries `_deploy_configs` links: every config/*/ subdir,
@@ -233,8 +264,7 @@ doctor_host() {
     esac
 
     # --- Hyprland config errors ------------------------------------------
-    if command -v hyprctl >/dev/null 2>&1 && \
-       [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" || -d "${XDG_RUNTIME_DIR:-/run/user/$UID}/hypr" ]]; then
+    if command -v hyprctl >/dev/null 2>&1 && _doctor_hypr_session; then
         local errs
         errs="$(hyprctl configerrors 2>/dev/null | sed '/^[[:space:]]*$/d' || true)"
         if _hypr_config_clean "$errs"; then
@@ -248,6 +278,47 @@ doctor_host() {
         info "no running Hyprland session — skipping config-error check"
     fi
 
+    # --- screen sharing ---------------------------------------------------
+    # The chain Zoom/Discord/OBS stand on: pipewire carries the video,
+    # wireplumber runs the graph, xdg-desktop-portal(-hyprland) hands windows
+    # to the app. The graph must be up; the portals are bus-activated, so an
+    # `inactive` portal has merely not been asked yet — only a failed unit
+    # (or a WAYLAND_DISPLAY-less user environment, which starts every portal
+    # blind) is a finding.
+    if command -v systemctl >/dev/null 2>&1 && _doctor_hypr_session; then
+        local unit state ss_fail=0
+        for unit in pipewire wireplumber xdg-desktop-portal xdg-desktop-portal-hyprland; do
+            state="$(systemctl --user is-active "$unit.service" 2>/dev/null || true)"
+            # pipewire is socket-activated: a listening socket with an idle
+            # service starts on the first client, which is healthy.
+            [[ "$unit" == pipewire && "$state" == inactive ]] && \
+                state="$(systemctl --user is-active pipewire.socket 2>/dev/null || true)"
+            case "$unit:$(_doctor_unit_verdict "$state")" in
+                *:ok) ;;
+                pipewire:*|wireplumber:*)
+                    warn "screen sharing: $unit is ${state:-unknown}"
+                    ss_fail=1 ;;
+                *:lazy) ;;
+                *:down)
+                    warn "screen sharing: $unit.service is ${state:-unknown}"
+                    ss_fail=1 ;;
+            esac
+        done
+        if [[ "$(systemctl --user show-environment 2>/dev/null | _doctor_wayland_env_verdict)" == missing ]]; then
+            warn "screen sharing: WAYLAND_DISPLAY is not in the systemd user environment"
+            info "portals activated there cannot see the compositor — sharing offers an empty picker"
+            ss_fail=1
+        fi
+        if [[ $ss_fail -eq 0 ]]; then
+            ok "screen-sharing stack (pipewire, wireplumber, portals)"
+        else
+            info "after fixing: ${C_BOLD}systemctl --user restart xdg-desktop-portal-hyprland xdg-desktop-portal${C_RESET}"
+            fail=1
+        fi
+    else
+        info "no running Hyprland session — skipping the screen-sharing check"
+    fi
+
     echo
     if [[ $fail -eq 0 ]]; then
         ok "no drift — this machine matches the repo"
@@ -255,4 +326,37 @@ doctor_host() {
         warn "drift detected — run ${C_BOLD}hwe update${C_RESET} to reconcile"
         return 1
     fi
+}
+
+# `hwe doctor --report` — the host check as one paste-ready block for an issue:
+# a machine header, then the same checks everyone runs. The block goes to
+# stdout (it is the product, not a log), so `hwe doctor --report | wl-copy` is
+# the whole journey. The check itself runs as a fresh `hwe` under NO_COLOR:
+# colours are decided when common.sh loads, so re-executing is what makes the
+# capture clean without repainting this process. Exit status is the check's own,
+# so a drifting machine still reports drift to scripts.
+doctor_report() {
+    local commit dirty="" distro hypr gpu rc=0
+    commit="$(git -C "$HWE_ROOT" rev-parse --short HEAD 2>/dev/null || echo '?')"
+    [[ -n "$(git -C "$HWE_ROOT" status --porcelain 2>/dev/null)" ]] && dirty=" (dirty)"
+    # grep, not `.`: sourcing an unfollowed file inside $() makes shellcheck
+    # assume every variable in every file that sources us was clobbered (SC2031)
+    distro="$(grep -m1 '^PRETTY_NAME=' /etc/os-release 2>/dev/null | cut -d= -f2- | tr -d '"' || true)"
+    hypr="$(hyprctl version 2>/dev/null | head -n1 || true)"
+    # Match the PCI class field, not the whole line — a "SanDisk Ultra 3D" SSD
+    # must not read as a display adapter.
+    gpu="$(lspci 2>/dev/null | grep -Ei '(vga|3d|display)[^:]*controller[^:]*:' \
+           | sed 's/^[0-9a-f:.]* [^:]*: //' | paste -sd ';' - | sed 's/;/; /g' || true)"
+
+    printf '```\n'
+    printf 'hwe      : %s @ %s%s\n' "$HWE_VERSION" "$commit" "$dirty"
+    printf 'distro   : %s\n'        "${distro:-?}"
+    printf 'kernel   : %s\n'        "$(uname -r)"
+    printf 'session  : %s\n'        "${XDG_SESSION_TYPE:-?}"
+    printf 'hyprland : %s\n'        "${hypr:-not running}"
+    printf 'gpu      : %s\n'        "${gpu:-?}"
+    printf '\n'
+    NO_COLOR=1 "$HWE_ROOT/bin/hwe" doctor host 2>&1 || rc=$?
+    printf '```\n'
+    return $rc
 }

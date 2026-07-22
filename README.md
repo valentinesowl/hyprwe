@@ -164,13 +164,15 @@ hwe update            # pull the repo and reconcile this machine
 hwe update --check    # read-only: report drift, change nothing
 hwe doctor            # same read-only check (bare doctor = doctor host)
 hwe doctor vm         # host prerequisites for the VM workflow instead
+hwe doctor --report   # the same check as one paste-ready block for an issue
 ```
 
 `hwe update` pulls with `--ff-only` and stops if the tree is dirty or the history has
 diverged — it will never silently merge or stash your work. Then it relinks the configs,
 re-applies the current theme and offers to install packages that are missing from the
 lists. `hwe doctor` reports the same drift without touching anything: config symlinks,
-packages, the personal layer, login shell, Hyprland config errors. Detection and repair
+packages, the personal layer, login shell, Hyprland config errors, the screen-sharing
+stack (pipewire, wireplumber, the portals). Detection and repair
 share the install primitives, so a check cannot drift from what the installer actually
 lays down.
 
@@ -238,7 +240,7 @@ them as `*.hwe-bak`.
 | `hwe sunset <toggle\|on\|off\|status>` | night light (hyprsunset; the moon at the bar's right edge) |
 | `hwe checkconfig [--notify]` | show config errors from the running Hyprland |
 | `hwe vm <up\|ssh\|console\|status\|list\|down\|destroy\|rebuild>` | the local dev VM (libvirt + cloud-init) |
-| `hwe doctor [host\|vm]` | health-check this machine (host, the default) or the VM prerequisites |
+| `hwe doctor [host\|vm\|--report]` | health-check this machine (host, the default) or the VM prerequisites; `--report` = issue-ready block |
 | `hwe version` | print the version (from `bin/hwe`) |
 
 ---
