@@ -6,7 +6,7 @@
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu_26.04-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
-[![Release](https://img.shields.io/badge/release-v1.4.1-blue)](../../releases/latest)
+[![Release](https://img.shields.io/badge/release-v1.4.2-blue)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 **A working environment on Arch and Ubuntu — Hyprland and everything around it: bar,
@@ -457,9 +457,10 @@ pipeline. How to contribute — [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Status
 
-`v1.4.1` — the daily-driver release, plus the polish a fresh-eyes audit demanded: a
-clean-room VM install following the README word for word, and every rough edge it
-surfaced fixed the same day. A night light on a schedule of your own (`hwe sunset`,
+`v1.4.2` — the daily-driver release, plus a doctor that answers the questions people
+actually bring: will screen sharing work (the pipewire → portal chain, checked), and
+"what machine is this" (`hwe doctor --report` — one paste-ready block for an issue).
+A night light on a schedule of your own (`hwe sunset`,
 with its moon at the bar's right edge), monitor profiles that follow the dock (kanshi),
 and a personal layer whose shipped defaults can finally evolve: an untouched file quietly
 keeps up with HWE, an edited one is never rewritten, and `hwe update --reset-defaults`

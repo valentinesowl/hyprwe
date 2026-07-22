@@ -6,7 +6,7 @@
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu_26.04-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
-[![Release](https://img.shields.io/badge/release-v1.4.1-blue)](../../releases/latest)
+[![Release](https://img.shields.io/badge/release-v1.4.2-blue)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 **Рабочее окружение на Arch и Ubuntu — Hyprland и всё вокруг него: бар, лаунчер,
@@ -453,9 +453,10 @@ just gallery    # пересобрать assets/themes.png из превью
 
 ## Статус
 
-`v1.4.1` — релиз для каждого дня, плюс полировка по итогам аудита свежим взглядом:
-чистая установка в VM строго по README, слово в слово, — и каждая найденная шероховатость
-починена в тот же день. Ночной свет по твоему расписанию (`hwe sunset`, луна в
+`v1.4.2` — релиз для каждого дня, плюс doctor, отвечающий на вопросы, с которыми люди
+реально приходят: заработает ли screen sharing (цепочка pipewire → порталы — проверяется)
+и «что это за машина» (`hwe doctor --report` — готовый блок для вставки в issue).
+Ночной свет по твоему расписанию (`hwe sunset`, луна в
 правом краю бара), профили мониторов, следующие за доком (kanshi), и личный слой, чьи
 поставляемые дефолты наконец умеют развиваться: нетронутый файл тихо идёт за HWE,
 правленый не переписывается никогда, а `hwe update --reset-defaults` осознанно возвращает

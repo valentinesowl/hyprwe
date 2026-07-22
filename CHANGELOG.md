@@ -9,6 +9,8 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+## [1.4.2] — 2026-07-22
+
 ### Added
 
 - **`hwe doctor` checks the screen-sharing stack** — the chain Zoom/Discord/OBS stand
@@ -494,7 +496,8 @@ to it only ship in 2.0.0.
   that environment's uninstaller. If the login screen looks foreign after
   `hwe theme sddm`, look at what is in that directory.
 
-[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v1.4.1...HEAD
+[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v1.4.2...HEAD
+[1.4.2]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.4.2
 [1.4.1]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.4.1
 [1.4.0]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.4.0
 [1.3.2]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.3.2
