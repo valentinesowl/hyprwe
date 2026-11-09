@@ -27,10 +27,11 @@ hypr_fn() {
     assert_failure
 }
 
-@test "installed version is parsed from hyprctl" {
+@test "installed version is parsed from hyprctl when the binary is unavailable" {
     local fakebin="$BATS_TEST_TMPDIR/bin"; mkdir -p "$fakebin"
     printf '#!/usr/bin/env bash\nprintf "Hyprland 0.57.1 built from branch main\\n"\n' > "$fakebin/hyprctl"
-    chmod +x "$fakebin/hyprctl"
+    printf '#!/usr/bin/env bash\nexit 1\n' > "$fakebin/Hyprland"
+    chmod +x "$fakebin/hyprctl" "$fakebin/Hyprland"
     PATH="$fakebin:$PATH" run hypr_fn _hypr_installed_version
     assert_output "0.57.1"
 }
@@ -38,7 +39,8 @@ hypr_fn() {
 @test "an old installed compositor is refused before reconciliation" {
     local fakebin="$BATS_TEST_TMPDIR/bin"; mkdir -p "$fakebin"
     printf '#!/usr/bin/env bash\nprintf "Hyprland 0.53.3 built from branch stable\\n"\n' > "$fakebin/hyprctl"
-    chmod +x "$fakebin/hyprctl"
+    printf '#!/usr/bin/env bash\nprintf "Hyprland 0.53.3 built from branch stable\\n"\n' > "$fakebin/Hyprland"
+    chmod +x "$fakebin/hyprctl" "$fakebin/Hyprland"
     PATH="$fakebin:$PATH" run hypr_fn _hypr_require_installed
     assert_failure
     assert_output --partial "0.53.3"
@@ -74,7 +76,8 @@ hypr_fn() {
     local fakebin="$BATS_TEST_TMPDIR/bin" runtime="$BATS_TEST_TMPDIR/runtime"
     mkdir -p "$fakebin" "$runtime/hypr/test-sig"
     printf '#!/usr/bin/env bash\n[[ "${HYPRLAND_INSTANCE_SIGNATURE:-}" == test-sig ]] || exit 1\nprintf "Hyprland 0.57.1 built from branch main\\n"\n' > "$fakebin/hyprctl"
-    chmod +x "$fakebin/hyprctl"
+    printf '#!/usr/bin/env bash\nexit 1\n' > "$fakebin/Hyprland"
+    chmod +x "$fakebin/hyprctl" "$fakebin/Hyprland"
     PATH="$fakebin:$PATH" HYPRLAND_INSTANCE_SIGNATURE= XDG_RUNTIME_DIR="$runtime" \
         run hypr_fn _hypr_installed_version
     assert_success
@@ -90,6 +93,22 @@ hypr_fn() {
         run hypr_fn _hypr_installed_version
     assert_success
     assert_output "0.57.1"
+}
+
+@test "an upgraded binary is not masked by the old running session" {
+    local fakebin="$BATS_TEST_TMPDIR/bin" runtime="$BATS_TEST_TMPDIR/runtime"
+    mkdir -p "$fakebin" "$runtime/hypr/test-sig"
+    printf '#!/usr/bin/env bash\n[[ "${HYPRLAND_INSTANCE_SIGNATURE:-}" == test-sig ]] || exit 1\nprintf "Hyprland 0.56.2 built from branch stable\\n"\n' > "$fakebin/hyprctl"
+    printf '#!/usr/bin/env bash\nprintf "Hyprland 0.57.2 built from branch stable\\n"\n' > "$fakebin/Hyprland"
+    chmod +x "$fakebin/hyprctl" "$fakebin/Hyprland"
+    PATH="$fakebin:$PATH" HYPRLAND_INSTANCE_SIGNATURE= XDG_RUNTIME_DIR="$runtime" \
+        run hypr_fn _hypr_installed_version
+    assert_success
+    assert_output "0.57.2"
+    PATH="$fakebin:$PATH" HYPRLAND_INSTANCE_SIGNATURE= XDG_RUNTIME_DIR="$runtime" \
+        run hypr_fn _hypr_running_version
+    assert_success
+    assert_output "0.56.2"
 }
 
 @test "config verifier accepts a clean Lua config without leaking debug output" {
@@ -116,7 +135,7 @@ dispatch_fn() {
         set -euo pipefail
         HWE_ROOT="$HWE_REPO_ROOT"
         source "$HWE_ROOT/lib/common.sh"
-        _hypr_installed_version() { printf "%s\n" "$HYPR_VERSION"; }
+        _hypr_running_version() { printf "%s\n" "$HYPR_VERSION"; }
         fn="$1"; shift
         "$fn" "$@"
     ' _ "$@"

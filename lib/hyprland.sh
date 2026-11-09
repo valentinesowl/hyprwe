@@ -39,24 +39,34 @@ _hyprctl() {
     hyprctl "$@"
 }
 
-_hypr_installed_version() {
+_hypr_running_version() {
     local output=""
     if command -v hyprctl >/dev/null 2>&1; then
         output="$(_hyprctl version 2>/dev/null | head -n1 || true)"
     fi
-    # hyprctl can be installed while no compositor is running. In that case the
-    # binary still knows its version; do not mistake the missing session for a
-    # missing or unsupported package.
-    if [[ -z "$output" ]] && command -v Hyprland >/dev/null 2>&1; then
+    _hypr_version_number "$output"
+}
+
+_hypr_installed_version() {
+    local output=""
+    # Gates ask about the package on disk. Immediately after an upgrade the old
+    # compositor may still be running, so IPC must not make the new package look old.
+    if command -v Hyprland >/dev/null 2>&1; then
         output="$(Hyprland --version 2>/dev/null | head -n1 || true)"
+    fi
+    if [[ -z "$output" ]] && command -v hyprctl >/dev/null 2>&1; then
+        output="$(_hyprctl version 2>/dev/null | head -n1 || true)"
     fi
     _hypr_version_number "$output"
 }
 
 # During the migration a live 0.56 session can share the checkout with 0.57.
-# Select the IPC grammar by the actual compositor, not by the config files present.
+# Select the IPC grammar by the process that will receive it, not the newer binary
+# that may already have replaced it on disk.
 _hypr_has_lua_dispatch() {
-    _hypr_version_at_least "$(_hypr_installed_version)"
+    local version; version="$(_hypr_running_version || true)"
+    [[ -n "$version" ]] || version="$(_hypr_installed_version || true)"
+    _hypr_version_at_least "$version"
 }
 
 _hypr_exec_cmd() {
