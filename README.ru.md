@@ -6,7 +6,7 @@
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu_27.04_experimental-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
-[![Release](https://img.shields.io/badge/release-v2.0.0-blue)](../../releases/latest)
+[![Release](https://img.shields.io/badge/release-v2.0.1-blue)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 **Рабочее окружение на Arch и Ubuntu — Hyprland и всё вокруг него: бар, лаунчер,
@@ -299,7 +299,7 @@ hwe wall set <path|name>      # конкретный файл или имя из
 `hwe checkconfig --notify` показывает на экране ошибки синтаксиса, если Hyprland поменял грамматику.
 
 **Основные бинды:**
-`SUPER+T` терминал · `SUPER+N` файлы · `SUPER+B` браузер · `SUPER+R` лаунчер (rofi) ·
+`SUPER+T` плавающий терминал · `SUPER+N` файлы · `SUPER+B` браузер · `SUPER+R` лаунчер (rofi) ·
 `SUPER+Q` закрыть · `SUPER+V` плавающее · `SUPER+F` фуллскрин · `SUPER+←↑↓→` фокус ·
 `SUPER+SHIFT+←↑↓→` двигать окно · `SUPER+1..0` воркспейсы · `SUPER+S` scratchpad ·
 `SUPER+L` / `SUPER+Escape` лок · `SUPER+Space` раскладка us↔ru ·
@@ -447,7 +447,7 @@ just gallery    # пересобрать assets/themes.png из превью
 
 ## Статус
 
-`v2.0.0` — текущий релиз. HWE работает только на Lua-конфиге Hyprland 0.57+ и больше не
+`v2.0.1` — текущий релиз. HWE работает только на Lua-конфиге Hyprland 0.57+ и больше не
 содержит legacy-конфиги композитора. Эталонная проверенная цель — Arch с Hyprland 0.57.2;
 Ubuntu 27.04 остаётся экспериментальной и не прошла полную релизную VM-матрицу.
 Настройка NVIDIA по-прежнему не проверена на реальном оборудовании.

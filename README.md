@@ -6,7 +6,7 @@
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu_27.04_experimental-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
-[![Release](https://img.shields.io/badge/release-v2.0.0-blue)](../../releases/latest)
+[![Release](https://img.shields.io/badge/release-v2.0.1-blue)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 **A working environment on Arch and Ubuntu — Hyprland and everything around it: bar,
@@ -303,7 +303,7 @@ Plus `hypridle.conf` (idle → lock/DPMS) and `hyprlock.conf` (generated). On ev
 `hwe checkconfig --notify` puts syntax errors on screen, should Hyprland change its grammar.
 
 **The main binds:**
-`SUPER+T` terminal · `SUPER+N` files · `SUPER+B` browser · `SUPER+R` launcher (rofi) ·
+`SUPER+T` floating terminal · `SUPER+N` files · `SUPER+B` browser · `SUPER+R` launcher (rofi) ·
 `SUPER+Q` close · `SUPER+V` floating · `SUPER+F` fullscreen · `SUPER+←↑↓→` focus ·
 `SUPER+SHIFT+←↑↓→` move the window · `SUPER+1..0` workspaces · `SUPER+S` scratchpad ·
 `SUPER+L` / `SUPER+Escape` lock · `SUPER+Space` us↔ru layout ·
@@ -451,7 +451,7 @@ pipeline. How to contribute — [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Status
 
-`v2.0.0` is the current release. HWE is Lua-only on Hyprland 0.57+ and no longer ships
+`v2.0.1` is the current release. HWE is Lua-only on Hyprland 0.57+ and no longer ships
 legacy compositor configs. Arch with Hyprland 0.57.2 is the verified reference target;
 Ubuntu 27.04 remains experimental and has not passed the full release VM matrix.
 NVIDIA setup is still unverified on real hardware.

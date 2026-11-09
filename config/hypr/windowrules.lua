@@ -1,4 +1,5 @@
 -- Inspect windows with `hyprctl clients`. Effects are applied in order.
+hl.window_rule({ match = { class = "^(kitty)$" }, float = true })
 hl.window_rule({
     match = { class = "^(org.pulseaudio.pavucontrol|pavucontrol|nm-connection-editor|blueman-manager)$" },
     float = true,

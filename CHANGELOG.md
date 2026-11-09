@@ -9,6 +9,14 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+## [2.0.1] — 2026-11-09
+
+### Fixed
+
+- New Kitty terminal windows open floating above the tiling layout again. An explicit
+  class-scoped Lua window rule restores the behaviour lost after a Hyprland update;
+  other applications keep their normal BSP layout, and `SUPER+V` still toggles floating.
+
 ## [2.0.0] — 2026-11-09
 
 ### Changed
@@ -532,7 +540,8 @@ to it only ship in 2.0.0.
   that environment's uninstaller. If the login screen looks foreign after
   `hwe theme sddm`, look at what is in that directory.
 
-[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/valentinesowl/hyprwe/releases/tag/v2.0.1
 [2.0.0]: https://github.com/valentinesowl/hyprwe/releases/tag/v2.0.0
 [1.4.2]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.4.2
 [1.4.1]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.4.1
