@@ -1,17 +1,6 @@
 -- Inspect windows with `hyprctl clients`. Effects are applied in order.
-hl.window_rule({ match = { class = "^(kitty)$" }, float = true })
-hl.window_rule({
-    match = { class = "^(org.pulseaudio.pavucontrol|pavucontrol|nm-connection-editor|blueman-manager)$" },
-    float = true,
-})
-hl.window_rule({ match = { title = "^(Open File|Save File|Choose Files)$" }, float = true })
-hl.window_rule({ match = { class = "^(xdg-desktop-portal-gtk)$" }, float = true })
-hl.window_rule({
-    match = { title = "^(Picture-in-Picture)$" },
-    float = true,
-    pin = true,
-    keep_aspect_ratio = true,
-})
+hl.window_rule({ match = { class = ".*" }, tile = true })
+hl.window_rule({ match = { class = "^(kitty)$" }, suppress_event = "maximize" })
 hl.window_rule({ match = { class = "^(xdg-desktop-portal-gtk)$" }, no_initial_focus = true })
 hl.window_rule({
     match = { class = "^(firefox|librewolf|zen|chromium|google-chrome|brave-browser|vivaldi-stable|mpv|vlc|Celluloid|io.github.celluloid)$" },

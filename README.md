@@ -303,7 +303,7 @@ Plus `hypridle.conf` (idle → lock/DPMS) and `hyprlock.conf` (generated). On ev
 `hwe checkconfig --notify` puts syntax errors on screen, should Hyprland change its grammar.
 
 **The main binds:**
-`SUPER+T` floating terminal · `SUPER+N` files · `SUPER+B` browser · `SUPER+R` launcher (rofi) ·
+`SUPER+T` terminal · `SUPER+N` files · `SUPER+B` browser · `SUPER+R` launcher (rofi) ·
 `SUPER+Q` close · `SUPER+V` floating · `SUPER+F` fullscreen · `SUPER+←↑↓→` focus ·
 `SUPER+SHIFT+←↑↓→` move the window · `SUPER+1..0` workspaces · `SUPER+S` scratchpad ·
 `SUPER+L` / `SUPER+Escape` lock · `SUPER+Space` us↔ru layout ·

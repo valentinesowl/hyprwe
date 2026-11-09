@@ -13,9 +13,9 @@ the three sources cannot drift apart.
 
 ### Fixed
 
-- New Kitty terminal windows open floating above the tiling layout again. An explicit
-  class-scoped Lua window rule restores the behaviour lost after a Hyprland update;
-  other applications keep their normal BSP layout, and `SUPER+V` still toggles floating.
+- All application windows open in the BSP layout: automatic floating rules are removed.
+  Kitty's client maximize requests are suppressed too, so a new terminal stays tiled
+  instead of expanding over the desktop. Manual floating and fullscreen controls remain available.
 
 ## [2.0.0] — 2026-11-09
 

@@ -19,9 +19,11 @@ def test_system_modules_have_no_legacy_hyprlang(repo, module):
         assert directive not in text
 
 
-def test_new_kitty_windows_float_above_the_tiling_layout(repo):
+def test_windows_open_tiled_and_kitty_does_not_maximize(repo):
     rules = (repo / "config/hypr/windowrules.lua").read_text()
-    assert 'hl.window_rule({ match = { class = "^(kitty)$" }, float = true })' in rules
+    assert 'hl.window_rule({ match = { class = ".*" }, tile = true })' in rules
+    assert 'hl.window_rule({ match = { class = "^(kitty)$" }, suppress_event = "maximize" })' in rules
+    assert "float = true" not in rules
 
 
 def test_autostart_runs_only_from_the_start_event(repo):

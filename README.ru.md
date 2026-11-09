@@ -299,7 +299,7 @@ hwe wall set <path|name>      # конкретный файл или имя из
 `hwe checkconfig --notify` показывает на экране ошибки синтаксиса, если Hyprland поменял грамматику.
 
 **Основные бинды:**
-`SUPER+T` плавающий терминал · `SUPER+N` файлы · `SUPER+B` браузер · `SUPER+R` лаунчер (rofi) ·
+`SUPER+T` терминал · `SUPER+N` файлы · `SUPER+B` браузер · `SUPER+R` лаунчер (rofi) ·
 `SUPER+Q` закрыть · `SUPER+V` плавающее · `SUPER+F` фуллскрин · `SUPER+←↑↓→` фокус ·
 `SUPER+SHIFT+←↑↓→` двигать окно · `SUPER+1..0` воркспейсы · `SUPER+S` scratchpad ·
 `SUPER+L` / `SUPER+Escape` лок · `SUPER+Space` раскладка us↔ru ·
