@@ -26,22 +26,14 @@ def test_autostart_runs_only_from_the_start_event(repo):
     assert "hl.exec_cmd" in text
 
 
-def test_live_ipc_has_0_57_dispatchers_and_legacy_transition_fallback(repo):
-    callers = (repo / "lib/theme.sh").read_text() + (repo / "lib/power.sh").read_text()
-    callers += (repo / "config/hypr/hypridle.conf").read_text()
+def test_live_ipc_uses_only_lua_dispatchers(repo):
+    text = (repo / "lib/theme.sh").read_text() + (repo / "lib/power.sh").read_text()
+    text += (repo / "config/hypr/hypridle.conf").read_text()
     for old in ("dispatch exec ", "dispatch exit", "dispatch dpms "):
-        assert old not in callers
-    assert "_hypr_exec_cmd waybar" in callers
-    assert "_hypr_exit" in callers
-    assert callers.count("hwe hypr dpms") == 3
-
-    compat = (repo / "lib/hyprland.sh").read_text()
-    assert "hl.dsp.exec_cmd" in compat
-    assert "hl.dsp.dpms" in compat
-    assert "hl.dsp.exit()" in compat
-    assert "hyprctl dispatch exec" in compat
-    assert "hyprctl dispatch dpms" in compat
-    assert "hyprctl dispatch exit" in compat
+        assert old not in text
+    assert 'hl.dsp.exec_cmd("waybar")' in text
+    assert "hl.dsp.exit()" in text
+    assert text.count("hl.dsp.dpms") == 3
 
 
 def test_animations_use_the_0_57_bezier_key(repo):
@@ -53,8 +45,10 @@ def test_animations_use_the_0_57_bezier_key(repo):
         assert 'bezier = "default"' in text
 
 
-def test_legacy_files_remain_available_during_verification(repo):
-    """Live 0.56 machines and rollback need these until the Lua migration is released."""
-    for name in ("hyprland.conf", "keybindings.conf", "autostart.conf"):
-        assert (repo / f"config/hypr/{name}").is_file()
-    assert (repo / "provision/userlayer/hypr.conf").is_file()
+def test_legacy_compositor_configs_are_not_shipped(repo):
+    for name in ("appearance", "autostart", "environment", "hyprland", "input",
+                 "keybindings", "monitors", "windowrules"):
+        assert not (repo / f"config/hypr/{name}.conf").exists()
+    for name in ("colors.conf", "theme.conf"):
+        assert not (repo / f"templates/hypr/{name}.j2").exists()
+    assert not (repo / "provision/userlayer/hypr.conf").exists()

@@ -570,6 +570,9 @@ def render_all(theme: dict, templates_dir: Path, out_dir: Path, *, lenient: bool
             dest = out_dir / rel
             _atomic_write(dest, rendered)
             written.append(dest)
+        # Only a complete successful render may remove pre-Lua generated output.
+        for legacy in ("colors.conf", "theme.conf"):
+            (out_dir / "hypr" / legacy).unlink(missing_ok=True)
         return written
     finally:
         shutil.rmtree(staging)

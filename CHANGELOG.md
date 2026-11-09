@@ -9,15 +9,18 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+## [2.0.0] — 2026-11-09
+
 ### Changed
 
 - **BREAKING: Hyprland configuration moves to Lua for Hyprland 0.57+.** `hyprland.lua`
   requires separate environment, monitor, appearance, theme, input, keybinding, rule and
   autostart modules. Binds carry descriptions, autostart uses `hyprland.start`, and IPC
-  uses the new Lua dispatcher syntax. Other Hypr* tools keep their `.conf` format.
+  uses the Lua dispatcher syntax. Other Hypr* tools keep their `.conf` format.
 - **Themes generate one atomic `theme.lua`.** Lua values are explicitly serialized, the
   complete template set is staged before deployment, and a failed render leaves live
-  configuration unchanged.
+  configuration unchanged. Legacy hyprlang modules and theme templates are removed;
+  stale generated `colors.conf` and `theme.conf` are deleted only after a successful render.
 - **`hwe keys` reads registered binds from `hyprctl binds -j`**, including personal ones,
   instead of parsing the static keybinding file.
 - **Install and update require Hyprland >= 0.57.0 before deployment.** Ubuntu 27.04 is an
@@ -30,18 +33,17 @@ the three sources cannot drift apart.
   and uninstall; backups are retained. `HWE_NO_ZSH=1` is remembered without sourcing state.
 - A customised legacy `~/.config/hwe/hypr.conf` stops update before deployment until the
   user creates `hypr.lua`; the old file is never converted, executed or deleted silently.
-- Hyprland animation declarations use the 0.57.1 `bezier` key, and Mako uses its current
+- Hyprland animation declarations use the `bezier` key, and Mako uses its current
   `icon-border-radius` option. Config checks now catch nested Lua errors with
   `Hyprland --verify-config` and discover the compositor instance from SSH.
-- Legacy compositor modules and hyprlang theme generation remain available during
-  migration verification so live 0.56 installations and rollback are not broken.
-  Session reload, DPMS and logout select Lua or legacy dispatchers by the actual
-  compositor version instead of failing silently on 0.56.
+- Version gates read the installed binary rather than an older compositor that is still
+  running after a package upgrade, so installing 0.57 no longer looks like 0.56.
 
-### Verification status
+### Verification
 
-- The Lua implementation is being checked on a live Hyprland 0.56.2 installation.
-  Release version badges remain unchanged until the release VM matrix is complete.
+- Clean Arch VM and live installation verified with Hyprland 0.57.2; the complete
+  `just check` suite passes. Ubuntu 27.04 remains experimental, and NVIDIA setup
+  remains unverified on real hardware.
 
 ## [1.4.2] — 2026-07-22
 
@@ -530,7 +532,8 @@ to it only ship in 2.0.0.
   that environment's uninstaller. If the login screen looks foreign after
   `hwe theme sddm`, look at what is in that directory.
 
-[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v1.4.2...HEAD
+[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/valentinesowl/hyprwe/releases/tag/v2.0.0
 [1.4.2]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.4.2
 [1.4.1]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.4.1
 [1.4.0]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.4.0

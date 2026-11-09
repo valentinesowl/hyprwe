@@ -6,7 +6,7 @@
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu_27.04_experimental-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
-[![Release](https://img.shields.io/badge/release-v1.4.2-blue)](../../releases/latest)
+[![Release](https://img.shields.io/badge/release-v2.0.0-blue)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 **Рабочее окружение на Arch и Ubuntu — Hyprland и всё вокруг него: бар, лаунчер,
@@ -115,8 +115,8 @@ initramfs и pacman-хук пересборки. Это трогает загр�
 
 ### На Ubuntu
 
-Lua-only ветка HWE 2.0 нацелена на **Ubuntu 27.04 в экспериментальном режиме** и требует
-**Hyprland 0.57.0 или новее** (рекомендуется 0.57.1). Эта цель ещё не прошла релизную
+Lua-only HWE 2.0 нацелена на **Ubuntu 27.04 в экспериментальном режиме** и требует
+**Hyprland 0.57.0 или новее** (рекомендуется 0.57.2). Эта цель ещё не прошла релизную
 VM-матрицу. **Ubuntu 26.04 не поддерживается HWE 2.0**: кандидат в её архиве — 0.53.3,
 поэтому установка остановится до изменения пакетов, конфигов, shell и сервисов.
 Для Hyprland 0.53–0.56 используй линию HWE 1.4.x `legacy-conf`.
@@ -231,7 +231,6 @@ hyprctl reload                     # SUPER+SHIFT+R
 | `hwe record <toggle\|region>` | запись экрана (wf-recorder → `~/Videos`; индикатор в баре) |
 | `hwe sunset <toggle\|on\|off\|status>` | ночной свет (hyprsunset; луна в правом краю бара) |
 | `hwe checkconfig [--notify]` | проверить Lua-конфиг и ошибки запущенного Hyprland |
-| `hwe hypr dpms <on\|off>` | совместимый с 0.56/0.57 DPMS-dispatcher для hypridle |
 | `hwe vm <up\|ssh\|console\|status\|list\|down\|destroy\|rebuild>` | локальная dev-VM (libvirt + cloud-init) |
 | `hwe doctor [host\|vm\|--report]` | проверить эту машину (host, по умолчанию) или пред-условия для VM; `--report` = готовый блок для issue |
 | `hwe version` | показать версию (из `bin/hwe`) |
@@ -448,11 +447,10 @@ just gallery    # пересобрать assets/themes.png из превью
 
 ## Статус
 
-`v1.4.2` — текущий релиз. В рабочем дереве находится **миграция HWE 2.0 на Lua, ещё на
-проверке**: требуется Hyprland 0.57+, старые файлы на время тестов сохраняются, а готовым
-релизом 2.0 это состояние не объявляется. Эталонная цель — Arch с Hyprland 0.57.1;
-Ubuntu 27.04 — экспериментальная. NVIDIA и полная VM-матрица остаются обязательными
-релизными проверками.
+`v2.0.0` — текущий релиз. HWE работает только на Lua-конфиге Hyprland 0.57+ и больше не
+содержит legacy-конфиги композитора. Эталонная проверенная цель — Arch с Hyprland 0.57.2;
+Ubuntu 27.04 остаётся экспериментальной и не прошла полную релизную VM-матрицу.
+Настройка NVIDIA по-прежнему не проверена на реальном оборудовании.
 
 ## Благодарности
 

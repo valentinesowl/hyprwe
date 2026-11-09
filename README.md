@@ -6,7 +6,7 @@
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu_27.04_experimental-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
-[![Release](https://img.shields.io/badge/release-v1.4.2-blue)](../../releases/latest)
+[![Release](https://img.shields.io/badge/release-v2.0.0-blue)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 **A working environment on Arch and Ubuntu — Hyprland and everything around it: bar,
@@ -117,8 +117,8 @@ After the install `hwe` is linked into `/usr/local/bin/hwe` — from then on you
 
 ### On Ubuntu
 
-The Lua-only HWE 2.0 development branch targets **Ubuntu 27.04 experimentally** and requires
-**Hyprland 0.57.0 or newer** (0.57.1 is recommended). This target has not yet passed the
+Lua-only HWE 2.0 targets **Ubuntu 27.04 experimentally** and requires
+**Hyprland 0.57.0 or newer** (0.57.2 is recommended). This target has not yet passed the
 release VM matrix. **Ubuntu 26.04 is not supported by HWE 2.0**: its archive candidate is
 0.53.3, so installation stops before packages, configs, shell or services are changed.
 For Hyprland 0.53–0.56, use the HWE 1.4.x `legacy-conf` line instead.
@@ -234,7 +234,6 @@ them as `*.hwe-bak`.
 | `hwe record <toggle\|region>` | screen recording (wf-recorder → `~/Videos`; bar indicator) |
 | `hwe sunset <toggle\|on\|off\|status>` | night light (hyprsunset; the moon at the bar's right edge) |
 | `hwe checkconfig [--notify]` | verify the Lua config and running Hyprland errors |
-| `hwe hypr dpms <on\|off>` | version-compatible DPMS dispatcher used by hypridle |
 | `hwe vm <up\|ssh\|console\|status\|list\|down\|destroy\|rebuild>` | the local dev VM (libvirt + cloud-init) |
 | `hwe doctor [host\|vm\|--report]` | health-check this machine (host, the default) or the VM prerequisites; `--report` = issue-ready block |
 | `hwe version` | print the version (from `bin/hwe`) |
@@ -452,11 +451,10 @@ pipeline. How to contribute — [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Status
 
-`v1.4.2` is the current release. This working tree contains the **HWE 2.0 Lua migration
-under verification**: it requires Hyprland 0.57+, preserves the legacy files during the
-test phase and does not yet claim a validated 2.0 release. Arch with Hyprland 0.57.1 is
-the reference target; Ubuntu 27.04 is experimental. NVIDIA and the full VM matrix still
-require their explicit release checks.
+`v2.0.0` is the current release. HWE is Lua-only on Hyprland 0.57+ and no longer ships
+legacy compositor configs. Arch with Hyprland 0.57.2 is the verified reference target;
+Ubuntu 27.04 remains experimental and has not passed the full release VM matrix.
+NVIDIA setup is still unverified on real hardware.
 
 ## Acknowledgements
 

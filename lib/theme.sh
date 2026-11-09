@@ -302,7 +302,7 @@ _theme_reload() {
             sleep 0.2
         done
         pkill -9 -x waybar 2>/dev/null   # anything still lingering: force the field clear
-        _hypr_exec_cmd waybar >/dev/null 2>&1 && info "waybar (re)started"
+        hyprctl dispatch 'hl.dsp.exec_cmd("waybar")' >/dev/null 2>&1 && info "waybar (re)started"
     else
         # No compositor reachable (e.g. install time): best-effort signal only.
         pgrep -x waybar >/dev/null 2>&1 && { pkill -SIGUSR2 waybar 2>/dev/null; info "waybar reloaded"; }

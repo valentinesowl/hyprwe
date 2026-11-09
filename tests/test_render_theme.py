@@ -650,8 +650,20 @@ def test_hyprland_theme_is_a_single_lua_module(render_theme, minimal_theme, temp
     assert 'opacity = "0.94 0.9 1.0"' in lua
     assert 'bezier = "wind"' in lua
     assert ", curve =" not in lua
-    assert (out / "hypr" / "colors.conf").exists()
-    assert (out / "hypr" / "theme.conf").exists()
+    assert not (out / "hypr" / "colors.conf").exists()
+    assert not (out / "hypr" / "theme.conf").exists()
+
+
+def test_successful_render_removes_legacy_hyprlang_outputs(
+    render_theme, minimal_theme, templates_dir, tmp_path
+):
+    out = tmp_path / "out"
+    (out / "hypr").mkdir(parents=True)
+    for name in ("colors.conf", "theme.conf"):
+        (out / "hypr" / name).write_text("legacy generated output\n")
+    render_theme.render_all(minimal_theme, templates_dir, out, lenient=False)
+    assert not (out / "hypr" / "colors.conf").exists()
+    assert not (out / "hypr" / "theme.conf").exists()
 
 
 def test_mako_uses_the_current_icon_radius_option(render_theme, minimal_theme, templates_dir, tmp_path):

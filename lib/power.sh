@@ -37,6 +37,6 @@ _power_logout() {
     if command -v uwsm >/dev/null 2>&1 && uwsm check is-active >/dev/null 2>&1; then
         uwsm stop
     else
-        _hypr_exit
+        hyprctl dispatch 'hl.dsp.exit()'
     fi
 }

@@ -105,10 +105,6 @@ hypr_fn() {
         run hypr_fn _hypr_installed_version
     assert_success
     assert_output "0.57.2"
-    PATH="$fakebin:$PATH" HYPRLAND_INSTANCE_SIGNATURE= XDG_RUNTIME_DIR="$runtime" \
-        run hypr_fn _hypr_running_version
-    assert_success
-    assert_output "0.56.2"
 }
 
 @test "config verifier accepts a clean Lua config without leaking debug output" {
@@ -128,50 +124,4 @@ hypr_fn() {
     assert_failure
     assert_output "/home/hwe/.config/hypr/theme.lua:33: bezier or spring is required"
     refute_output --partial "DEBUG"
-}
-
-dispatch_fn() {
-    bash -c '
-        set -euo pipefail
-        HWE_ROOT="$HWE_REPO_ROOT"
-        source "$HWE_ROOT/lib/common.sh"
-        _hypr_running_version() { printf "%s\n" "$HYPR_VERSION"; }
-        fn="$1"; shift
-        "$fn" "$@"
-    ' _ "$@"
-}
-
-fake_hyprctl() {
-    local fakebin="$BATS_TEST_TMPDIR/bin"; mkdir -p "$fakebin"
-    printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*"\n' > "$fakebin/hyprctl"
-    chmod +x "$fakebin/hyprctl"
-    printf '%s\n' "$fakebin"
-}
-
-@test "exec dispatcher uses the legacy grammar on a live 0.56 session" {
-    local fakebin; fakebin="$(fake_hyprctl)"
-    PATH="$fakebin:$PATH" HYPR_VERSION=0.56.2 run dispatch_fn _hypr_exec_cmd waybar
-    assert_success
-    assert_output "dispatch exec waybar"
-}
-
-@test "exec dispatcher uses the Lua grammar on 0.57" {
-    local fakebin; fakebin="$(fake_hyprctl)"
-    PATH="$fakebin:$PATH" HYPR_VERSION=0.57.1 run dispatch_fn _hypr_exec_cmd waybar
-    assert_success
-    assert_output 'dispatch hl.dsp.exec_cmd("waybar")'
-}
-
-@test "DPMS dispatcher preserves the legacy 0.56 action" {
-    local fakebin; fakebin="$(fake_hyprctl)"
-    PATH="$fakebin:$PATH" HYPR_VERSION=0.56.2 run dispatch_fn _hypr_dpms off
-    assert_success
-    assert_output "dispatch dpms off"
-}
-
-@test "DPMS dispatcher uses the Lua 0.57 action" {
-    local fakebin; fakebin="$(fake_hyprctl)"
-    PATH="$fakebin:$PATH" HYPR_VERSION=0.57.1 run dispatch_fn _hypr_dpms on
-    assert_success
-    assert_output 'dispatch hl.dsp.dpms({ action = "on" })'
 }

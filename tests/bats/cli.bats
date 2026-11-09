@@ -64,7 +64,7 @@ setup() {
 
 @test "every command in the usage text dispatches" {
     # Catches a command documented but never wired into the case statement.
-    for cmd in vm install update uninstall doctor theme wall power keys clip record sunset checkconfig hypr version; do
+    for cmd in vm install update uninstall doctor theme wall power keys clip record sunset checkconfig version; do
         run bash -c "grep -qE '^\s+$cmd[)|]' '$HWE_ROOT/bin/hwe' || grep -qE '^\s+$cmd\|' '$HWE_ROOT/bin/hwe'"
         assert_success
     done

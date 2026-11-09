@@ -39,14 +39,6 @@ _hyprctl() {
     hyprctl "$@"
 }
 
-_hypr_running_version() {
-    local output=""
-    if command -v hyprctl >/dev/null 2>&1; then
-        output="$(_hyprctl version 2>/dev/null | head -n1 || true)"
-    fi
-    _hypr_version_number "$output"
-}
-
 _hypr_installed_version() {
     local output=""
     # Gates ask about the package on disk. Immediately after an upgrade the old
@@ -58,55 +50,6 @@ _hypr_installed_version() {
         output="$(_hyprctl version 2>/dev/null | head -n1 || true)"
     fi
     _hypr_version_number "$output"
-}
-
-# During the migration a live 0.56 session can share the checkout with 0.57.
-# Select the IPC grammar by the process that will receive it, not the newer binary
-# that may already have replaced it on disk.
-_hypr_has_lua_dispatch() {
-    local version; version="$(_hypr_running_version || true)"
-    [[ -n "$version" ]] || version="$(_hypr_installed_version || true)"
-    _hypr_version_at_least "$version"
-}
-
-_hypr_exec_cmd() {
-    local command="$1"
-    if _hypr_has_lua_dispatch; then
-        hyprctl dispatch "hl.dsp.exec_cmd(\"$command\")"
-    else
-        hyprctl dispatch exec "$command"
-    fi
-}
-
-_hypr_dpms() {
-    local action="$1"
-    [[ "$action" == on || "$action" == off ]] || return 1
-    if _hypr_has_lua_dispatch; then
-        hyprctl dispatch "hl.dsp.dpms({ action = \"$action\" })"
-    else
-        hyprctl dispatch dpms "$action"
-    fi
-}
-
-_hypr_exit() {
-    if _hypr_has_lua_dispatch; then
-        hyprctl dispatch 'hl.dsp.exit()'
-    else
-        hyprctl dispatch exit
-    fi
-}
-
-hypr_main() {
-    case "${1:-}" in
-        dpms)
-            [[ $# -eq 2 ]] || { err "usage: hwe hypr dpms <on|off>"; return 1; }
-            _hypr_dpms "$2" || { err "could not set DPMS state to '$2'"; return 1; }
-            ;;
-        ""|help|-h|--help)
-            printf 'usage: hwe hypr dpms <on|off>\n  Compatibility dispatcher for hypridle (0.56 and 0.57+).\n' >&2
-            ;;
-        *) err "unknown hypr action: $1"; hypr_main help; return 1 ;;
-    esac
 }
 
 # Hyprland 0.57.1 can report Lua errors here while `hyprctl configerrors` stays
