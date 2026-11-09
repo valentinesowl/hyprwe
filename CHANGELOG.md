@@ -9,6 +9,40 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING: Hyprland configuration moves to Lua for Hyprland 0.57+.** `hyprland.lua`
+  requires separate environment, monitor, appearance, theme, input, keybinding, rule and
+  autostart modules. Binds carry descriptions, autostart uses `hyprland.start`, and IPC
+  uses the new Lua dispatcher syntax. Other Hypr* tools keep their `.conf` format.
+- **Themes generate one atomic `theme.lua`.** Lua values are explicitly serialized, the
+  complete template set is staged before deployment, and a failed render leaves live
+  configuration unchanged.
+- **`hwe keys` reads registered binds from `hyprctl binds -j`**, including personal ones,
+  instead of parsing the static keybinding file.
+- **Install and update require Hyprland >= 0.57.0 before deployment.** Ubuntu 27.04 is an
+  experimental target; Ubuntu 26.04 and other unverified distributions get an early,
+  explanatory refusal. HWE 1.4.x `legacy-conf` remains the path for Hyprland 0.53–0.56.
+
+### Fixed
+
+- Existing `~/.zshenv` content is preserved through managed-block install, repeat updates
+  and uninstall; backups are retained. `HWE_NO_ZSH=1` is remembered without sourcing state.
+- A customised legacy `~/.config/hwe/hypr.conf` stops update before deployment until the
+  user creates `hypr.lua`; the old file is never converted, executed or deleted silently.
+- Hyprland animation declarations use the 0.57.1 `bezier` key, and Mako uses its current
+  `icon-border-radius` option. Config checks now catch nested Lua errors with
+  `Hyprland --verify-config` and discover the compositor instance from SSH.
+- Legacy compositor modules and hyprlang theme generation remain available during
+  migration verification so live 0.56 installations and rollback are not broken.
+  Session reload, DPMS and logout select Lua or legacy dispatchers by the actual
+  compositor version instead of failing silently on 0.56.
+
+### Verification status
+
+- The Lua implementation is being checked on a live Hyprland 0.56.2 installation.
+  Release version badges remain unchanged until the release VM matrix is complete.
+
 ## [1.4.2] — 2026-07-22
 
 ### Added

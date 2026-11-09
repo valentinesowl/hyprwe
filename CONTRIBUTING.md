@@ -95,8 +95,9 @@ not in the tests.
 
 No config hardcodes a color. The single source of truth is the theme palette
 `themes/<name>/theme.toml`, section `[sem]` (~19 semantic roles). `render-theme.py` turns
-the roles in `templates/<app>/*.j2` into generated `config/<app>/colors.*` (which are in
-`.gitignore`), and the configs `source`/`@import`/`include` them.
+the roles in `templates/<app>/*.j2` into generated config files (which are in `.gitignore`).
+Hyprland gets a single `theme.lua`, serialized as Lua and replaced atomically after every
+template renders successfully; the other applications keep their native formats.
 
 Hence the rule: **if you change the look, change the template or the theme, not the
 generated file.** Files like `config/waybar/config.jsonc`, `config/*/colors.*`,
@@ -112,7 +113,7 @@ generated file.** Files like `config/waybar/config.jsonc`, `config/*/colors.*`,
   there is no way around it; mark anything optional with a comment). Anything that
   generates files in `~/.config` goes into `.gitignore` and into the deploy
   (`_deploy_configs`) as well.
-- **Add a keybind** → `config/hypr/keybindings.conf`. The rule: arrows are for focus and
+- **Add a keybind** → `config/hypr/keybindings.lua`. The rule: arrows are for focus and
   window movement, and no key is bound twice. Afterwards, update the keybind table in the
   README.
 

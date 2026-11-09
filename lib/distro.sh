@@ -17,24 +17,32 @@
 # Sourced by lib/common.sh, so HWE_DISTRO is available to every module.
 
 # --- which distro is this -------------------------------------------------
-# Reads /etc/os-release, the interface every systemd distro provides. ID_LIKE
-# catches derivatives (Linux Mint says ID=linuxmint, ID_LIKE="ubuntu debian"),
-# so a derivative gets its parent's behaviour instead of an unhelpful refusal.
-# Override with HWE_DISTRO to test a backend on the wrong machine.
+# Keep the actual ID and release: ID_LIKE describes package compatibility, not a
+# configuration or compositor version HWE has verified.
 _distro_detect() {
-    [[ -n "${HWE_DISTRO:-}" ]] && return 0
-    local id="" like=""
+    local id="" like="" version="" codename=""
     if [[ -r /etc/os-release ]]; then
         # shellcheck disable=SC1091  # a machine-generated file, not ours to lint
         id="$(. /etc/os-release 2>/dev/null && printf '%s' "${ID:-}")"
+        # shellcheck disable=SC1091
         like="$(. /etc/os-release 2>/dev/null && printf '%s' "${ID_LIKE:-}")"
+        # shellcheck disable=SC1091
+        version="$(. /etc/os-release 2>/dev/null && printf '%s' "${VERSION_ID:-}")"
+        # shellcheck disable=SC1091
+        codename="$(. /etc/os-release 2>/dev/null && printf '%s' "${VERSION_CODENAME:-}")"
     fi
-    case " $id $like " in
-        *" arch "*)              HWE_DISTRO=arch ;;
-        *" ubuntu "*|*" debian "*) HWE_DISTRO=debian ;;
-        *)                       HWE_DISTRO="${id:-unknown}" ;;
-    esac
-    export HWE_DISTRO
+    HWE_DISTRO_ID="${HWE_DISTRO_ID:-$id}"
+    HWE_DISTRO_ID_LIKE="${HWE_DISTRO_ID_LIKE:-$like}"
+    HWE_DISTRO_VERSION_ID="${HWE_DISTRO_VERSION_ID:-$version}"
+    HWE_DISTRO_CODENAME="${HWE_DISTRO_CODENAME:-$codename}"
+    if [[ -z "${HWE_DISTRO:-}" ]]; then
+        case "$HWE_DISTRO_ID" in
+            arch)   HWE_DISTRO=arch ;;
+            ubuntu) HWE_DISTRO=debian ;;
+            *)      HWE_DISTRO="${HWE_DISTRO_ID:-unknown}" ;;
+        esac
+    fi
+    export HWE_DISTRO HWE_DISTRO_ID HWE_DISTRO_ID_LIKE HWE_DISTRO_VERSION_ID HWE_DISTRO_CODENAME
 }
 
 # The package-manager family, which is what the _pm_* verbs actually switch on.
@@ -47,17 +55,18 @@ _distro_family() {
     esac
 }
 
-# Refuse early and clearly rather than half-installing onto something we do not
-# know how to drive.
 _distro_supported() {
-    case "$(_distro_family)" in
-        pacman|apt) return 0 ;;
-        *)
-            err "unsupported distribution: ${HWE_DISTRO:-unknown}"
-            info "HWE installs on Arch and on Ubuntu/Debian; set HWE_DISTRO to force one"
-            return 1
-            ;;
-    esac
+    if [[ "${HWE_DISTRO_ID:-}" == arch && "$(_distro_family)" == pacman ]]; then
+        return 0
+    fi
+    if [[ "${HWE_DISTRO_ID:-}" == ubuntu && "${HWE_DISTRO_VERSION_ID:-}" == 27.04 \
+          && "$(_distro_family)" == apt ]]; then
+        return 0
+    fi
+    err "unsupported distribution: ${HWE_DISTRO_ID:-${HWE_DISTRO:-unknown}} ${HWE_DISTRO_VERSION_ID:-unknown}"
+    info "HWE 2.0 supports Arch and Ubuntu 27.04 (experimental), both with Hyprland >= 0.57"
+    info "Ubuntu 26.04 and Hyprland 0.53–0.56 need the HWE 1.4.x legacy-conf line"
+    return 1
 }
 
 # --- package name translation ---------------------------------------------
@@ -283,7 +292,11 @@ _hypr_ppa_fetch_key() {
 
 _hypr_ppa_enable() {
     local suite
-    suite="$(. /etc/os-release 2>/dev/null && printf '%s' "${VERSION_CODENAME:-}")"
+    [[ "${HWE_DISTRO_ID:-}" == ubuntu && "${HWE_DISTRO_VERSION_ID:-}" == 27.04 ]] || {
+        err "the Hyprland PPA is allowed only on the explicitly supported Ubuntu 27.04 target"
+        return 1
+    }
+    suite="$HWE_DISTRO_CODENAME"
     [[ -n "$suite" ]] || { err "cannot read VERSION_CODENAME from /etc/os-release"; return 1; }
 
     _hypr_ppa_announce

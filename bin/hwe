@@ -49,7 +49,8 @@ ${C_BOLD}Commands:${C_RESET}
               Toggle screen recording (wf-recorder -> ~/Videos)
   ${C_CYAN}sunset${C_RESET} <toggle|on|off|status>
               Toggle the night light (hyprsunset; schedule in ~/.config/hwe)
-  ${C_CYAN}checkconfig${C_RESET}  Report Hyprland config errors from the running compositor
+  ${C_CYAN}checkconfig${C_RESET}  Verify Lua config and report running-compositor errors
+  ${C_CYAN}hypr${C_RESET} <dpms>   Compatibility dispatcher for session components
   ${C_CYAN}doctor${C_RESET} [host|vm|--report]
               Health-check this machine (host, default) or VM prerequisites (vm);
               --report emits it as one paste-ready block for an issue
@@ -136,6 +137,9 @@ case "$cmd" in
         # shellcheck source=lib/checkconfig.sh
         source "$HWE_ROOT/lib/checkconfig.sh"
         checkconfig_main "$@"
+        ;;
+    hypr)
+        hypr_main "$@"
         ;;
     version|--version|-V)
         echo "hwe $HWE_VERSION"

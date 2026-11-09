@@ -17,8 +17,11 @@ rendered — see check_values().
 from __future__ import annotations
 
 import math
+import os
 import re
+import shutil
 import sys
+import tempfile
 import tomllib
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -101,12 +104,9 @@ BAR_WS_INDICATORS = {
 
 # ── Value shapes ──────────────────────────────────────────────────────────
 # The role contract says WHICH keys a theme must set; this says what a value is
-# allowed to BE. It is not politeness towards typos (though it catches those):
-# every value here is interpolated verbatim into a config file, and
-# config/hypr/theme.conf is `source`d by hyprland.conf. A colour carrying a
-# newline would therefore append arbitrary Hyprland directives — `exec-once =
-# <anything>` — and run them at login. A theme is data, not code; these checks
-# are what keep that true, and what makes a theme from a stranger safe to render.
+# allowed to BE. Config-specific serializers keep values inert: Hyprland's Lua
+# strings escape quotes, backslashes and control characters, while the other
+# formats retain their own strict shape checks. A theme is data, not code.
 #
 # Each checker returns None when the value is fine, else the complaint.
 HEX_RE = re.compile(r"#[0-9a-fA-F]{6}")
@@ -379,12 +379,12 @@ def build_context(theme: dict, *, lenient: bool) -> dict:
     params["opacity_unfocused"] = round(float(params["opacity"]) - 0.04, 4)
     # Default active/inactive to opacity so EVERY window (not just terminals) shows
     # blur through. A theme may pin them (void: active == inactive). Applied via a
-    # global windowrule in hypr/theme.conf whose 3rd value forces fullscreen opaque.
+    # global windowrule in hypr/theme.lua whose 3rd value forces fullscreen opaque.
     params.setdefault("active_opacity", params["opacity"])
     params.setdefault("inactive_opacity", params["opacity_unfocused"])
 
-    # Window geometry, rendered into hypr/theme.conf (sourced after and overriding
-    # appearance.conf). Defaults mirror that baseline so omitting them renders
+    # Window geometry, rendered into hypr/theme.lua (required after and overriding
+    # appearance.lua). Defaults mirror that baseline so omitting them renders
     # unchanged and StrictUndefined never trips on a missing key.
     params.setdefault("border_size", 2)
     params.setdefault("rounding", 10)
@@ -392,8 +392,8 @@ def build_context(theme: dict, *, lenient: bool) -> dict:
     params.setdefault("gaps_out", 12)
 
     # Two independent knobs: blur_size = kernel radius per pass (strength),
-    # blur_passes = passes stacked (quality, costlier). Drive window blur (theme.conf)
-    # and the hyprlock background; defaults mirror appearance.conf.
+    # blur_passes = passes stacked (quality, costlier). Drive window blur (theme.lua)
+    # and the hyprlock background; defaults mirror appearance.lua.
     params.setdefault("blur_size", 6)
     params.setdefault("blur_passes", 3)
 
@@ -425,7 +425,7 @@ def build_context(theme: dict, *, lenient: bool) -> dict:
     # Desktop look-and-feel knobs that used to be hardcoded outside the theme:
     #   scheme        — light/dark preference handed to GTK (prefer-dark) and KDE.
     #   anim_speed    — a single multiplier over the window-animation durations in
-    #                   the generated theme.conf; 1.0 = the historic feel, higher =
+    #                   the generated theme.lua; 1.0 = the historic feel, higher =
     #                   snappier, 0 = animations off. A quiet theme can slow down.
     #   *_theme       — icon / cursor / GTK theme names, previously pinned to
     #                   Adwaita in the templates. Defaults keep the current look.
@@ -441,7 +441,7 @@ def build_context(theme: dict, *, lenient: bool) -> dict:
     # Window-animation durations (deciseconds), scaled by anim_speed. The base
     # values mirror the historic appearance.conf set; anim_speed is a "faster"
     # knob (higher = shorter = snappier), and 0 turns animations off entirely
-    # (params.anim = None → the template writes `enabled = 0`). Clamped to >= 1ds
+    # (params.anim = None → the template disables the animation group). Clamped to >= 1ds
     # because Hyprland rejects a zero-duration animation.
     _anim_base = {"windows": 5, "windowsIn": 5, "windowsOut": 4,
                   "windowsMove": 4, "border": 8, "fade": 6, "workspaces": 5}
@@ -496,6 +496,29 @@ def _kcol(c: str) -> str:
     return f"{int(h[0:2], 16)},{int(h[2:4], 16)},{int(h[4:6], 16)}"
 
 
+def _lua(value) -> str:
+    """Serialize theme data as Lua, never as interpolated source code."""
+    if value is None:
+        return "nil"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)):
+        if isinstance(value, float) and not math.isfinite(value):
+            raise ValueError("Lua numbers must be finite")
+        return repr(value)
+    if isinstance(value, str):
+        escapes = {"\\": "\\\\", '"': '\\"', "\n": "\\n", "\r": "\\r",
+                   "\t": "\\t", "\b": "\\b", "\f": "\\f"}
+        body = "".join(escapes.get(ch, f"\\{ord(ch):03d}" if ord(ch) < 32 or ord(ch) == 127 else ch)
+                       for ch in value)
+        return f'"{body}"'
+    if isinstance(value, (list, tuple)):
+        return "{ " + ", ".join(_lua(item) for item in value) + " }"
+    if isinstance(value, dict):
+        return "{ " + ", ".join(f"[{_lua(str(key))}] = {_lua(item)}" for key, item in value.items()) + " }"
+    raise TypeError(f"cannot serialize {type(value).__name__} as Lua")
+
+
 def make_env(templates_dir: Path) -> Environment:
     try:
         from jinja2 import Environment, FileSystemLoader, StrictUndefined
@@ -512,21 +535,44 @@ def make_env(templates_dir: Path) -> Environment:
     env.filters["rgba"] = _rgba
     env.filters["hexa"] = _hexa
     env.filters["kcol"] = _kcol
+    env.filters["lua"] = _lua
     return env
+
+
+def _atomic_write(dest: Path, rendered: str) -> None:
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(prefix=f".{dest.name}.", dir=dest.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(rendered)
+        os.replace(temporary, dest)
+    except BaseException:
+        os.unlink(temporary)
+        raise
 
 
 def render_all(theme: dict, templates_dir: Path, out_dir: Path, *, lenient: bool) -> list[Path]:
     ctx = build_context(theme, lenient=lenient)
     env = make_env(templates_dir)
-    written = []
-    for tmpl_path in sorted(templates_dir.rglob("*.j2")):
-        rel = tmpl_path.relative_to(templates_dir).with_suffix("")  # drop .j2
-        dest = out_dir / rel
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        rendered = env.get_template(str(tmpl_path.relative_to(templates_dir))).render(**ctx)
-        dest.write_text(rendered)
-        written.append(dest)
-    return written
+    out_dir.parent.mkdir(parents=True, exist_ok=True)
+    staging = Path(tempfile.mkdtemp(prefix=f".{out_dir.name}.stage-", dir=out_dir.parent))
+    try:
+        staged = []
+        for tmpl_path in sorted(templates_dir.rglob("*.j2")):
+            rel = tmpl_path.relative_to(templates_dir).with_suffix("")
+            dest = staging / rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            rendered = env.get_template(str(tmpl_path.relative_to(templates_dir))).render(**ctx)
+            dest.write_text(rendered, encoding="utf-8")
+            staged.append((rel, rendered))
+        written = []
+        for rel, rendered in staged:
+            dest = out_dir / rel
+            _atomic_write(dest, rendered)
+            written.append(dest)
+        return written
+    finally:
+        shutil.rmtree(staging)
 
 
 def main(argv: list[str]) -> int:

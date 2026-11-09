@@ -11,7 +11,7 @@
 # looking, on the same reasoning as Font watch: an external fact written into the
 # repository needs something that notices it going stale.
 #
-# It runs in a clean ubuntu:26.04 container on purpose. On a machine that already
+# It runs in a clean ubuntu:27.04 container on purpose. On a machine that already
 # has the packages, the resolution cannot fail and the check proves nothing — so
 # the script refuses to pass when its simulation would install nothing.
 #
@@ -47,8 +47,8 @@ jobs:
     name: apt map still describes the archive
     runs-on: ubuntu-latest
     # The distribution HWE claims to install on, not the runner's own image —
-    # the question is about 26.04's archive specifically.
-    container: ubuntu:26.04
+    # the question is about 27.04's archive specifically.
+    container: ubuntu:27.04
     steps:
       # git for actions/checkout; ca-certificates so apt can reach the archive
       # over https once the check runs.

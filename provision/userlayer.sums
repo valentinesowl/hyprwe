@@ -18,3 +18,5 @@ baeba1540830b99c4cc9875882e94ca5d0318dacb65dfe1c9aa209c3810c7f4f  packages.lst
 # pre-1.4 hypr.conf (header promised "never rewrite"; superseded by the wording above)
 804e37bdd4f119a043af4e37916d6ad7e7b44491eecc4bc6cbe1e5a91b46f66f  hypr.conf
 faf330ae3e0c22b7ea6915d594d2d5868e296ca59266f37aa59595a869db7cf1  kanshi.conf
+6005850ec190395f787e211574538165f359da39bf60d21fb4c9e99904dc2e32  hypr.lua
+b2318b43d270af770a51c9f5fd049ce06267529100b78b3d325875951489a58a  kanshi.conf

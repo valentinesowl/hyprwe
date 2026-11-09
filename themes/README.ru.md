@@ -54,7 +54,7 @@ accent = "#cba6f7"
 # …
 
 [params]                  # опционально — геометрия/прозрачность (см. таблицу)
-font = "JetBrainsMono Nerd Font"
+font = "JetBrains Mono"
 ```
 
 ## Роли `[sem]` (обязательные — все 19)
@@ -73,11 +73,11 @@ font = "JetBrainsMono Nerd Font"
 
 ## Форма значений (проверяется до рендера)
 
-Контракт говорит, какие ключи должны быть; это — какими они имеют право **быть**. Каждое
-значение подставляется в конфиг дословно, а `config/hypr/theme.conf` **сорсится**
-`hyprland.conf` — поэтому цвет с переводом строки внутри дописал бы в него произвольные
-директивы Hyprland (`exec-once = …`), и они выполнились бы при логине. Тема — это данные,
-а не код; проверки ниже и есть то, что делает это правдой.
+Контракт говорит, какие ключи должны быть; это — какими они имеют право **быть**. Значения
+Hyprland в `config/hypr/theme.lua` проходят явный Lua-сериализатор (строки, boolean, числа
+и массивы), поэтому кавычки, обратные слэши и переводы строк остаются данными. Все шаблоны
+сначала рендерятся в staging: ошибка не меняет живые файлы, а `theme.lua` заменяется
+атомарно. Тема — это данные, а не код.
 
 | Что | Правило |
 |---|---|
@@ -154,7 +154,9 @@ font = "JetBrainsMono Nerd Font"
 
 | Ключ | Дефолт | Поверхность |
 |---|---|---|
-| `family` | `JetBrainsMono Nerd Font` | моно-шрифт: kitty, waybar, rofi, mako, hyprlock |
+| `family` | `JetBrains Mono` | моно-шрифт: kitty, waybar, rofi, mako, hyprlock |
+| `icon_family` | `Symbols Nerd Font Mono` | отдельные иконочные глифы, fallback после текстового шрифта |
+| `fallback_family` | `JetBrains Mono` | упакованный mono-fallback, если `family` темы недоступен |
 | `ui_family` | `Sans` | пропорциональный UI-шрифт GTK-приложений (размер — из `gtk`) |
 | `terminal` | `9.5` | kitty (starship наследует его — своего размера нет) |
 | `bar` | `12` | waybar |
@@ -164,7 +166,7 @@ font = "JetBrainsMono Nerd Font"
 
 ```toml
 [font]
-family   = "JetBrainsMono Nerd Font"
+family   = "JetBrains Mono"
 terminal = 11        # крупнее в терминале
 launcher = 12        # и в лаунчере
 ```

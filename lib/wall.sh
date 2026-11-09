@@ -175,7 +175,7 @@ wall_current() {
     fi
 }
 
-# Session-autostart entry point (autostart.conf: exec-once = hwe wall restore).
+# Session-autostart entry point (autostart.lua: hwe wall restore).
 # hyprpaper 0.8.4 config-file directives don't expand ~/$HOME, so a symlink path
 # in hyprpaper.conf loads NOTHING at boot -> grey screen. Instead: start
 # hyprpaper, wait for its IPC socket, then set a RESOLVED absolute path.

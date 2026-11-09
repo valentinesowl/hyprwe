@@ -45,3 +45,22 @@ clean_fn() {
     grep -q '_hypr_config_clean "\$errs"' "$HWE_ROOT/lib/doctor.sh"
     grep -q 'source "\$HWE_ROOT/lib/checkconfig.sh"' "$HWE_ROOT/lib/doctor.sh"
 }
+
+@test "checkconfig reports Lua errors even when configerrors is empty" {
+    local fakebin="$BATS_TEST_TMPDIR/bin" runtime="$BATS_TEST_TMPDIR/runtime"
+    mkdir -p "$fakebin" "$runtime/hypr/test-sig"
+    printf '#!/usr/bin/env bash\n[[ "${1:-}" == configerrors ]] && exit 0\nexit 1\n' > "$fakebin/hyprctl"
+    printf '#!/usr/bin/env bash\nprintf "======== Config parsing result:\\n\\n/home/hwe/.config/hypr/appearance.lua:43: bezier or spring is required\\n"\nexit 1\n' > "$fakebin/Hyprland"
+    chmod +x "$fakebin/hyprctl" "$fakebin/Hyprland"
+    PATH="$fakebin:$PATH" HYPRLAND_INSTANCE_SIGNATURE= XDG_RUNTIME_DIR="$runtime" \
+        run bash -c '
+            set -euo pipefail
+            HWE_ROOT="$HWE_REPO_ROOT"
+            source "$HWE_ROOT/lib/common.sh"
+            source "$HWE_ROOT/lib/checkconfig.sh"
+            checkconfig_main
+        '
+    assert_failure
+    assert_output --partial "appearance.lua:43: bezier or spring is required"
+    refute_output --partial "config OK"
+}

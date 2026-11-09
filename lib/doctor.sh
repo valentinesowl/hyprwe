@@ -16,8 +16,8 @@
 # defines functions — install_main runs only when the file is executed directly.
 # shellcheck source=provision/guest-install.sh
 HWE_INSTALL_STANDALONE=1 source "$HWE_ROOT/provision/guest-install.sh"
-# For _hypr_config_clean — the same "is the config clean?" predicate checkconfig
-# uses, so a login notification and a doctor line can never disagree.
+# For _hypr_config_errors and _hypr_config_clean — the same collector and verdict
+# checkconfig uses, so a login notification and a doctor line can never disagree.
 # shellcheck source=lib/checkconfig.sh
 source "$HWE_ROOT/lib/checkconfig.sh"
 
@@ -69,14 +69,17 @@ _doctor_link_status() {
     fi
 }
 
-# The login-shell verdict from a passwd shell field: ok (zsh) | drift (something
-# else) | unknown (unreadable — not drift we can be sure of). Pure, so the drift
-# rule is pinned without a live account.
+# The login-shell verdict from a passwd shell field: ok (zsh) | preserve (an
+# explicit opt-out) | drift | unknown. State is key/value data, never sourced.
 _doctor_shell_verdict() {
     local sh="$1"
     [[ -z "$sh" ]] && { echo unknown; return; }
     [[ "$(basename "$sh")" == zsh ]] && { echo ok; return; }
-    echo drift
+    if [[ "${HWE_NO_ZSH:-0}" == 1 || "$(_hwe_state_get shell)" == preserve ]]; then
+        echo preserve
+    else
+        echo drift
+    fi
 }
 
 # One systemd user unit's verdict from its ActiveState: ok (running) | lazy
@@ -123,10 +126,9 @@ _doctor_config_targets() {
 
 # Your own settings in ~/.config/hwe (see HWE_USER_CONFIG in lib/common.sh).
 # The layer being EDITED is not drift — it is the point of it, so a customised
-# file is reported and not counted against the machine. Only a missing file is a
-# finding, and only hypr.conf is a real one: hyprland.conf sources it
-# unconditionally, so its absence is a config error at every login. The file
-# list comes from the install's own skeleton dir, so the two cannot diverge.
+# file is reported and not counted against the machine. hypr.lua is required by
+# hyprland.lua, so its absence is a config error. An old hypr.conf is never
+# executed; a customised one without its Lua replacement is a migration finding.
 _doctor_user_layer() {
     local name dst missing=() customised=0 rc=0
     while IFS= read -r name; do
@@ -141,8 +143,8 @@ _doctor_user_layer() {
 
     if [[ ${#missing[@]} -gt 0 ]]; then
         warn "personal layer incomplete: ~/.config/hwe/{${missing[*]}} missing"
-        if [[ " ${missing[*]} " == *" hypr.conf "* ]]; then
-            info "hyprland.conf sources hypr.conf — until it exists, every login logs a config error"
+        if [[ " ${missing[*]} " == *" hypr.lua "* ]]; then
+            info "hyprland.lua requires hypr.lua — until it exists, every login logs a config error"
         fi
         info "recreate the missing file(s): ${C_BOLD}hwe update${C_RESET} (it never overwrites an edited one)"
         rc=1
@@ -150,6 +152,14 @@ _doctor_user_layer() {
         ok "personal layer in ~/.config/hwe ($customised file(s) of your own)"
     else
         ok "personal layer in ~/.config/hwe (untouched defaults)"
+    fi
+
+    if [[ -f "$HWE_USER_CONFIG/hypr.lua" && -f "$HWE_USER_CONFIG/hypr.conf" ]]; then
+        info "legacy hypr.conf is preserved for reference and ignored; only hypr.lua is loaded"
+    elif [[ -f "$HWE_USER_CONFIG/hypr.conf" ]] && ! _user_file_is_pristine hypr.conf; then
+        warn "customised legacy hypr.conf has not been migrated to hypr.lua"
+        info "hwe update will stop before deploy until you create ~/.config/hwe/hypr.lua"
+        rc=1
     fi
 
     # The hyprsunset bridge: a gitignored symlink in the repo is what lets the
@@ -256,6 +266,7 @@ doctor_host() {
     case "$(_doctor_shell_verdict "$sh")" in
         ok)      ok "login shell is zsh" ;;
         unknown) info "could not read the login shell for $user — skipping that check" ;;
+        preserve) ok "login shell preserved by user ($sh)" ;;
         drift)   # Counts as drift like every other check: install sets zsh, so bash
                  # here is a machine that no longer matches the repo, not a neutral fact.
                  warn "login shell is $sh, not zsh"
@@ -263,10 +274,36 @@ doctor_host() {
                  fail=1 ;;
     esac
 
+    # --- Hyprland version and Lua entry points -----------------------------
+    local hypr_version generated
+    hypr_version="$(_hypr_installed_version || true)"
+    if [[ -z "$hypr_version" ]]; then
+        warn "Hyprland is not installed or its version cannot be read"
+        fail=1
+    elif _hypr_version_at_least "$hypr_version"; then
+        ok "Hyprland $hypr_version supports Lua-only configuration"
+    else
+        _hypr_version_refuse "$hypr_version" installed
+        fail=1
+    fi
+    for generated in hyprland.lua theme.lua; do
+        if [[ -f "$HWE_ROOT/config/hypr/$generated" ]]; then
+            ok "Hyprland module present: config/hypr/$generated"
+        else
+            warn "missing Hyprland module: config/hypr/$generated"
+            [[ "$generated" == theme.lua ]] && info "generate it with: ${C_BOLD}hwe theme apply${C_RESET}"
+            fail=1
+        fi
+    done
+    [[ -f "$HWE_ROOT/config/hypr/hyprland.conf" ]] \
+        && info "legacy hyprland.conf is present but ignored by Hyprland 0.57"
+
     # --- Hyprland config errors ------------------------------------------
-    if command -v hyprctl >/dev/null 2>&1 && _doctor_hypr_session; then
+    # The standalone verifier also works from ssh and without a live session;
+    # _hypr_config_errors additionally asks the running compositor when present.
+    if command -v Hyprland >/dev/null 2>&1 || { command -v hyprctl >/dev/null 2>&1 && _doctor_hypr_session; }; then
         local errs
-        errs="$(hyprctl configerrors 2>/dev/null | sed '/^[[:space:]]*$/d' || true)"
+        errs="$(_hypr_config_errors)"
         if _hypr_config_clean "$errs"; then
             ok "Hyprland config: no errors"
         else
@@ -275,7 +312,7 @@ doctor_host() {
             fail=1
         fi
     else
-        info "no running Hyprland session — skipping config-error check"
+        info "no Hyprland binary or running session — skipping config-error check"
     fi
 
     # --- screen sharing ---------------------------------------------------
@@ -342,7 +379,10 @@ doctor_report() {
     # grep, not `.`: sourcing an unfollowed file inside $() makes shellcheck
     # assume every variable in every file that sources us was clobbered (SC2031)
     distro="$(grep -m1 '^PRETTY_NAME=' /etc/os-release 2>/dev/null | cut -d= -f2- | tr -d '"' || true)"
-    hypr="$(hyprctl version 2>/dev/null | head -n1 || true)"
+    hypr="$(_hyprctl version 2>/dev/null | head -n1 || true)"
+    if [[ -z "$hypr" ]] && command -v Hyprland >/dev/null 2>&1; then
+        hypr="$(Hyprland --version 2>/dev/null | head -n1 || true)"
+    fi
     # Match the PCI class field, not the whole line — a "SanDisk Ultra 3D" SSD
     # must not read as a display adapter.
     gpu="$(lspci 2>/dev/null | grep -Ei '(vga|3d|display)[^:]*controller[^:]*:' \

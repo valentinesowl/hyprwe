@@ -39,7 +39,7 @@
 [[ -n "${HWE_VM_NAME+x}" ]]   && HWE_VM_TARGET_NAMED=1
 : "${HWE_VM_TARGET_NAMED:=}"
 : "${HWE_VM_DISTRO:=arch}"
-: "${HWE_VM_UBUNTU_RELEASE:=26.04}"
+: "${HWE_VM_UBUNTU_RELEASE:=27.04}"
 
 # Every domain name HWE itself creates. Used to find the VM you meant when you
 # did not say which — never to guess between two of them.

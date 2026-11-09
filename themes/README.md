@@ -55,7 +55,7 @@ accent = "#cba6f7"
 # …
 
 [params]                  # optional — geometry/opacity (see the table)
-font = "JetBrainsMono Nerd Font"
+font = "JetBrains Mono"
 ```
 
 ## `[sem]` roles (required — all 19)
@@ -74,11 +74,11 @@ are filled with a screaming `#ff00ff`).
 
 ## Value shape (checked before rendering)
 
-The contract says which keys must be there; this says what they are allowed **to be**. Every
-value is substituted into a config verbatim, and `config/hypr/theme.conf` is **sourced** by
-`hyprland.conf` — so a color with a newline inside it would append arbitrary Hyprland
-directives (`exec-once = …`) to that file, and they would run at login. A theme is data, not
-code; the checks below are what makes that true.
+The contract says which keys must be there; this says what they are allowed **to be**.
+Hyprland values in `config/hypr/theme.lua` are emitted through an explicit Lua serializer
+(strings, booleans, numbers and arrays), so quotes, backslashes and newlines remain data.
+All templates are rendered into staging first; a failure leaves the live files unchanged,
+and `theme.lua` is replaced atomically. A theme is data, not code.
 
 | What | Rule |
 |---|---|
@@ -155,7 +155,9 @@ be fractional.
 
 | Key | Default | Surface |
 |---|---|---|
-| `family` | `JetBrainsMono Nerd Font` | mono font: kitty, waybar, rofi, mako, hyprlock |
+| `family` | `JetBrains Mono` | mono font: kitty, waybar, rofi, mako, hyprlock |
+| `icon_family` | `Symbols Nerd Font Mono` | standalone icon glyphs, used as a fallback after the text font |
+| `fallback_family` | `JetBrains Mono` | packaged mono fallback when the theme's `family` is unavailable |
 | `ui_family` | `Sans` | proportional UI font for GTK applications (size comes from `gtk`) |
 | `terminal` | `9.5` | kitty (starship inherits it — it has no size of its own) |
 | `bar` | `12` | waybar |
@@ -165,7 +167,7 @@ be fractional.
 
 ```toml
 [font]
-family   = "JetBrainsMono Nerd Font"
+family   = "JetBrains Mono"
 terminal = 11        # larger in the terminal
 launcher = 12        # and in the launcher
 ```

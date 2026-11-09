@@ -43,6 +43,7 @@ hwe_fn() {
     run hwe_fn _deploy_user_layer
     assert_success
     for f in "$SKEL"/*; do
+        [[ "${f##*/}" == hypr.conf ]] && continue
         [[ -f "$USER_CONFIG/${f##*/}" ]] || fail "missing ${f##*/} in the deployed layer"
     done
 }
@@ -50,6 +51,7 @@ hwe_fn() {
 @test "the deployed files are the skeletons verbatim" {
     hwe_fn _deploy_user_layer
     for f in "$SKEL"/*; do
+        [[ "${f##*/}" == hypr.conf ]] && continue
         run cmp -s "$f" "$USER_CONFIG/${f##*/}"
         assert_success
     done
@@ -65,21 +67,21 @@ hwe_fn() {
 # ── the file is yours ─────────────────────────────────────────────────────
 @test "an edited file is never overwritten" {
     hwe_fn _deploy_user_layer
-    printf 'monitor = eDP-1, 2560x1600@165, 0x0, 1.6\n' > "$USER_CONFIG/hypr.conf"
+    printf 'monitor = eDP-1, 2560x1600@165, 0x0, 1.6\n' > "$USER_CONFIG/hypr.lua"
     run hwe_fn _deploy_user_layer
     assert_success
-    run cat "$USER_CONFIG/hypr.conf"
+    run cat "$USER_CONFIG/hypr.lua"
     assert_output --partial "eDP-1"
 }
 
 @test "a deleted file is recreated, the others left alone" {
     hwe_fn _deploy_user_layer
     printf '# mine\nmpv\n' > "$USER_CONFIG/packages.lst"
-    rm -f "$USER_CONFIG/hypr.conf"
+    rm -f "$USER_CONFIG/hypr.lua"
 
     run hwe_fn _deploy_user_layer
     assert_success
-    assert_output --partial "hypr.conf"
+    assert_output --partial "hypr.lua"
     refute_output --partial "packages.lst"
     run cat "$USER_CONFIG/packages.lst"
     assert_output --partial "mpv"
@@ -128,18 +130,18 @@ hwe_fn() {
 
 @test "doctor counts your own files without calling them drift" {
     hwe_fn _deploy_user_layer
-    printf 'monitor = eDP-1, preferred, auto, 1.6\n' > "$USER_CONFIG/hypr.conf"
+    printf 'monitor = eDP-1, preferred, auto, 1.6\n' > "$USER_CONFIG/hypr.lua"
     run hwe_fn _doctor_user_layer
     assert_success
     assert_output --partial "1 file(s) of your own"
 }
 
-@test "doctor fails on a missing hypr.conf and says why it matters" {
+@test "doctor fails on a missing hypr.lua and says why it matters" {
     hwe_fn _deploy_user_layer
-    rm -f "$USER_CONFIG/hypr.conf"
+    rm -f "$USER_CONFIG/hypr.lua"
     run hwe_fn _doctor_user_layer
     assert_failure
-    assert_output --partial "hypr.conf"
+    assert_output --partial "hypr.lua"
     assert_output --partial "config error"
 }
 
@@ -224,11 +226,47 @@ _scratch_skel_evolve() {
 }
 
 # ── the contract with the rest of the repo ────────────────────────────────
-@test "hyprland.conf sources the personal hypr.conf" {
-    # The source line and the deploy path have to agree: Hyprland reports a
-    # missing source as a config error, and doctor would then blame the user.
-    run grep -qF 'source = ~/.config/hwe/hypr.conf' "$HWE_ROOT/config/hypr/hyprland.conf"
+@test "hyprland.lua requires the personal hypr.lua" {
+    run grep -qF 'require(config_home .. "/hwe/hypr")' "$HWE_ROOT/config/hypr/hyprland.lua"
     assert_success
+}
+
+@test "fresh deploy does not install a legacy personal config" {
+    hwe_fn _deploy_user_layer
+    [[ -f "$USER_CONFIG/hypr.lua" ]]
+    [[ ! -e "$USER_CONFIG/hypr.conf" ]]
+}
+
+@test "an untouched legacy personal file migrates without being deleted" {
+    mkdir -p "$USER_CONFIG"
+    printf 'monitor = eDP-1, preferred, auto, 1.5\n' > "$USER_CONFIG/hypr.conf"
+    local sums="$BATS_TEST_TMPDIR/userlayer.sums"
+    sha256sum "$USER_CONFIG/hypr.conf" | sed 's#  .*#  hypr.conf#' > "$sums"
+    HWE_USER_SUMS="$sums" run hwe_fn _user_layer_lua_preflight
+    assert_success
+    hwe_fn _deploy_user_layer
+    [[ -f "$USER_CONFIG/hypr.lua" ]]
+    [[ "$(cat "$USER_CONFIG/hypr.conf")" == 'monitor = eDP-1, preferred, auto, 1.5' ]]
+}
+
+@test "a customised legacy personal file stops migration before deploy" {
+    mkdir -p "$USER_CONFIG"
+    printf 'monitor = eDP-1, preferred, auto, 1.5\n' > "$USER_CONFIG/hypr.conf"
+    run hwe_fn _user_layer_lua_preflight
+    assert_failure
+    assert_output --partial "manual Lua migration"
+    assert_output --partial "hypr.lua"
+    [[ ! -e "$USER_CONFIG/hypr.lua" ]]
+}
+
+@test "an existing hypr.lua allows the old reference file to remain" {
+    mkdir -p "$USER_CONFIG"
+    printf '# my old settings\n' > "$USER_CONFIG/hypr.conf"
+    printf '# my Lua settings\n' > "$USER_CONFIG/hypr.lua"
+    run hwe_fn _user_layer_lua_preflight
+    assert_success
+    run hwe_fn _doctor_user_layer
+    assert_output --partial "preserved for reference"
 }
 
 @test "the tracked kanshi config includes the personal profiles" {
@@ -238,10 +276,8 @@ _scratch_skel_evolve() {
     assert_success
 }
 
-@test "no tracked config file tells the user to edit the repo for their monitors" {
-    # monitors.conf is a symlink into the checkout: editing it dirties the tree
-    # and blocks the ff-only pull. It must point at the personal layer instead.
-    run grep -qF '~/.config/hwe/hypr.conf' "$HWE_ROOT/config/hypr/monitors.conf"
+@test "the Lua monitor fallback points at the personal layer" {
+    run grep -qF '~/.config/hwe/hypr.lua' "$HWE_ROOT/config/hypr/monitors.lua"
     assert_success
 }
 

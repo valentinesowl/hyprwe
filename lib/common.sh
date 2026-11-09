@@ -60,6 +60,8 @@ HWE_CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/hwe"
 # manager. Sourced here so HWE_DISTRO is set for every module.
 # shellcheck source=lib/distro.sh
 source "$HWE_ROOT/lib/distro.sh"
+# shellcheck source=lib/hyprland.sh
+source "$HWE_ROOT/lib/hyprland.sh"
 
 # --- The personal layer ---------------------------------------------------
 # ~/.config/hwe/ holds what is YOURS rather than HWE's: the settings that differ
@@ -72,7 +74,7 @@ source "$HWE_ROOT/lib/distro.sh"
 # does not take your settings with it.
 #
 # The files (skeletons in provision/userlayer/, copied once by the install):
-#   hypr.conf           sourced last by hyprland.conf — displays, input, binds
+#   hypr.lua            required last by hyprland.lua — displays, input, binds
 #   packages.lst        extra packages for this machine (pacman)
 #   packages-aur.lst    same, from the AUR
 #   waybar.jsonc        bar composition, deep-merged over the generated config
@@ -80,6 +82,39 @@ source "$HWE_ROOT/lib/distro.sh"
 # Overridable like the theme roots, so the tests can exercise the layer without
 # writing into the live ~/.config of whoever runs them.
 : "${HWE_USER_CONFIG:=${XDG_CONFIG_HOME:-$HOME/.config}/hwe}"
+
+HWE_STATE_FILE="${HWE_STATE_FILE:-$HWE_USER_CONFIG/settings.conf}"
+
+_hwe_state_get() {
+    local key="$1" k value
+    [[ "$key" =~ ^[a-z_]+$ && -f "$HWE_STATE_FILE" ]] || return 1
+    while IFS='=' read -r k value; do
+        [[ "$k" == "$key" ]] || continue
+        [[ "$value" =~ ^[a-z0-9_.-]+$ ]] || return 1
+        printf '%s\n' "$value"
+        return 0
+    done < "$HWE_STATE_FILE"
+    return 1
+}
+
+_hwe_state_set() {
+    local key="$1" value="$2" tmp input=/dev/null
+    [[ "$key" =~ ^[a-z_]+$ && "$value" =~ ^[a-z0-9_.-]+$ ]] || return 1
+    mkdir -p "$HWE_USER_CONFIG"
+    [[ -f "$HWE_STATE_FILE" ]] && input="$HWE_STATE_FILE"
+    tmp="$(mktemp "$HWE_USER_CONFIG/.settings.XXXXXX")"
+    awk -v key="$key" -v value="$value" '
+        BEGIN { found = 0 }
+        index($0, key "=") == 1 { if (!found) print key "=" value; found = 1; next }
+        { print }
+        END { if (!found) print key "=" value }
+    ' "$input" > "$tmp" || {
+        rm -f "$tmp"
+        return 1
+    }
+    chmod 600 "$tmp"
+    mv -f "$tmp" "$HWE_STATE_FILE"
+}
 
 # --- Themes ---------------------------------------------------------------
 # Themes live in two roots: the ones HWE ships (repo themes/, tracked by git) and

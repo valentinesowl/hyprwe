@@ -211,10 +211,9 @@ _install_fetched_fonts() {
 # existing file is yours and is left exactly as it is, so this is safe to run on
 # every install and every update.
 #
-# hypr.conf MUST exist, because hyprland.conf sources it unconditionally and a
-# missing source file is a Hyprland config error. The rest are created only so
-# the layer is discoverable — an empty machine should show you where your
-# settings go, rather than documenting a path you have to create by hand.
+# hypr.lua MUST exist because hyprland.lua requires it unconditionally. A legacy
+# hypr.conf can still exist in the personal layer after an upgrade; it is preserved
+# for manual migration but is neither deployed nor executed.
 # The skeleton directory IS the definition of the layer: lib/doctor.sh reads the
 # same list, so the check cannot drift from what the install lays down.
 # Overridable for the tests (like HWE_USER_CONFIG in common.sh): the refresh
@@ -233,7 +232,7 @@ HWE_SUNSET_BRIDGE="${HWE_SUNSET_BRIDGE:-$HWE_ROOT/config/hypr/hyprsunset.conf}"
 _user_layer_files() {
     local f
     for f in "$HWE_USER_SKEL"/*; do
-        [[ -f "$f" ]] && printf '%s\n' "${f##*/}"
+        [[ -f "$f" && "${f##*/}" != hypr.conf ]] && printf '%s\n' "${f##*/}"
     done
     return 0
 }
@@ -246,6 +245,20 @@ _user_file_is_pristine() {
     local name="$1" h
     h="$(sha256sum "$HWE_USER_CONFIG/$name" 2>/dev/null | cut -d' ' -f1)"
     [[ -n "$h" ]] && grep -q "^$h  $name\$" "$HWE_USER_SUMS" 2>/dev/null
+}
+
+_user_layer_lua_preflight() {
+    local old="$HWE_USER_CONFIG/hypr.conf" new="$HWE_USER_CONFIG/hypr.lua"
+    [[ -e "$new" || ! -e "$old" ]] && return 0
+    _user_file_is_pristine hypr.conf && return 0
+    err "personal Hyprland settings need a manual Lua migration before update"
+    info "old file (preserved, not executed): $old"
+    info "create the replacement first:       $new"
+    info "monitor = ...       -> hl.monitor({ output = ..., mode = ..., position = ..., scale = ... })"
+    info "input/general { … } -> hl.config({ input = { … }, general = { … } })"
+    info "bind = ...          -> hl.bind(...); exec-once = ... -> hl.on(\"hyprland.start\", ...)"
+    info "then re-run hwe update; HWE never converts or deletes your old file"
+    return 1
 }
 
 # Copy-once with two carve-outs, both in the user's favour:
@@ -328,13 +341,13 @@ _install_vm_packages() {
 # --- Packaged session units that duplicate our autostart ------------------
 # Debian/Ubuntu ship systemd USER units for session programs and enable them the
 # moment the package installs; Arch ships none of these. HWE starts the same
-# programs itself from config/hypr/autostart.conf, so on apt you end up running
+# programs itself from config/hypr/autostart.lua, so on apt you end up running
 # two of each: two bars (you can see it on screen), two idle daemons racing to
 # lock, two wallpaper daemons fighting over the same output.
 #
-# Neither owner is wrong — there are simply two of them. autostart.conf is the
+# Neither owner is wrong — there are simply two of them. autostart.lua is the
 # one this project documents, themes and reloads, so the packaged units stand
-# down. hyprpolkitagent is deliberately NOT in this list: autostart.conf starts
+# down. hyprpolkitagent is deliberately NOT in this list: autostart.lua starts
 # that one BY unit, so the packaged unit is the intended owner there.
 #
 # `--global` edits /etc/systemd/user/*.wants, which is where these symlinks
@@ -620,23 +633,88 @@ EOF
     fi
 }
 
+_hwe_zshenv_begin='# >>> HWE zsh >>>'
+_hwe_zshenv_end='# <<< HWE zsh <<<'
+
+_zshenv_install_block() {
+    local file="$HOME/.zshenv" tmp existed=0 begins=0 ends=0 input=/dev/null
+    [[ -f "$file" ]] && { existed=1; input="$file"; }
+    [[ -e "$file" && ! -f "$file" ]] && { err "$file is not a regular file"; return 1; }
+    if [[ $existed -eq 1 ]]; then
+        begins="$(grep -Fxc "$_hwe_zshenv_begin" "$file" || true)"
+        ends="$(grep -Fxc "$_hwe_zshenv_end" "$file" || true)"
+        if [[ "$begins" -gt 1 || "$ends" -gt 1 || "$begins" != "$ends" ]]; then
+            err "$file has malformed HWE markers — leaving it unchanged"
+            return 1
+        fi
+        if [[ "$begins" -eq 0 ]]; then
+            cp -p "$file" "$file.hwe-bak.$$"
+            info "saved $(basename "$file").hwe-bak.$$"
+            _hwe_state_set zshenv_created 0
+        fi
+    else
+        _hwe_state_set zshenv_created 1
+    fi
+
+    log "Updating the HWE block in ~/.zshenv"
+    tmp="$(mktemp "$HOME/.zshenv.hwe.XXXXXX")"
+    awk -v begin="$_hwe_zshenv_begin" -v end="$_hwe_zshenv_end" '
+        $0 == begin {
+            found = 1; inside = 1
+            print begin
+            print "export ZDOTDIR=\"$HOME/.config/zsh\""
+            next
+        }
+        $0 == end && inside { inside = 0; next }
+        !inside { print }
+        END {
+            if (!found) {
+                if (NR > 0) print ""
+                print begin
+                print "export ZDOTDIR=\"$HOME/.config/zsh\""
+                print end
+            }
+        }
+    ' "$input" > "$tmp" || { rm -f "$tmp"; return 1; }
+    [[ $existed -eq 1 ]] && chmod --reference="$file" "$tmp"
+    mv -f "$tmp" "$file"
+}
+
+_zshenv_remove_block() {
+    local file="$HOME/.zshenv" tmp
+    [[ -f "$file" ]] || return 0
+    grep -Fxq "$_hwe_zshenv_begin" "$file" || return 0
+    tmp="$(mktemp "$HOME/.zshenv.hwe.XXXXXX")"
+    awk -v begin="$_hwe_zshenv_begin" -v end="$_hwe_zshenv_end" '
+        $0 == begin { inside = 1; next }
+        $0 == end && inside { inside = 0; next }
+        !inside { print }
+    ' "$file" > "$tmp"
+    if ! grep -q '[^[:space:]]' "$tmp" && [[ "$(_hwe_state_get zshenv_created)" == 1 ]]; then
+        rm -f "$tmp" "$file"
+        info "removed ~/.zshenv (it contained only HWE's block)"
+    else
+        chmod --reference="$file" "$tmp"
+        mv -f "$tmp" "$file"
+        info "removed HWE's block from ~/.zshenv; your lines were preserved"
+    fi
+    _hwe_state_set zshenv_created 0
+}
+
 # Make zsh the login shell and point it at the repo's XDG config. We only write
 # the tiny ~/.zshenv bootstrap here (it MUST live at $HOME); the real config
 # (.zshrc/.zprofile) is deployed as the ~/.config/zsh symlink by _deploy_configs.
 _setup_shell() {
-    [[ "${HWE_NO_ZSH:-0}" == 1 ]] && { info "HWE_NO_ZSH=1: leaving login shell unchanged"; return 0; }
+    if [[ "${HWE_NO_ZSH:-0}" == 1 ]]; then
+        _hwe_state_set shell preserve
+        info "HWE_NO_ZSH=1: leaving login shell unchanged (remembered for hwe doctor)"
+        return 0
+    fi
+    _hwe_state_set shell zsh
     command -v zsh >/dev/null 2>&1 || { info "zsh not installed: skipping shell setup"; return 0; }
     local user zsh_bin; user="$(id -un)"; zsh_bin="$(command -v zsh)"
 
-    # ~/.zshenv is read before anything else and just redirects to ~/.config/zsh.
-    if ! grep -q 'ZDOTDIR=.*/.config/zsh' "$HOME/.zshenv" 2>/dev/null; then
-        log "Writing ~/.zshenv (ZDOTDIR -> ~/.config/zsh)"
-        # shellcheck disable=SC2016  # $HOME must stay literal in the written file:
-        # zsh expands it per-user at startup. Baking in our value breaks every
-        # other account (and root) that reads this .zshenv.
-        printf '# HWE: keep zsh dotfiles under XDG config\nexport ZDOTDIR="$HOME/.config/zsh"\n' \
-            > "$HOME/.zshenv"
-    fi
+    _zshenv_install_block || return 1
 
     # zsh must be a registered login shell (else some logins fall back to bash).
     if ! grep -qxF "$zsh_bin" /etc/shells 2>/dev/null; then
@@ -781,8 +859,9 @@ install_main() {
     # is the ordinary one either way.
     _distro_compositor_source || return 1
     _pacman_sync
-    # Before the package steps: your own lists have to exist before they can be
-    # read, and hypr.conf before the compositor ever parses hyprland.conf.
+    _hypr_require_candidate || return 1
+    # Both gates run before any package, config, shell or service is changed.
+    _user_layer_lua_preflight || return 1
     _deploy_user_layer
     _pacman_install core.lst
     _pacman_install dev.lst
@@ -868,10 +947,9 @@ uninstall_main() {
     if [[ -n "$zsh_bin" && "$(getent passwd "$user" | cut -d: -f7)" == "$zsh_bin" && -n "$bash_bin" ]]; then
         if confirm "Revert login shell to bash?"; then
             run sudo usermod -s "$bash_bin" "$user" || warn "could not revert shell"
-            [[ -f "$HOME/.zshenv" ]] && grep -q 'ZDOTDIR=.*/.config/zsh' "$HOME/.zshenv" 2>/dev/null \
-                && { rm -f "$HOME/.zshenv"; info "removed ~/.zshenv"; }
         fi
     fi
+    _zshenv_remove_block
 
     # KDE colour-scheme symlink under XDG_DATA
     local sch="${XDG_DATA_HOME:-$HOME/.local/share}/color-schemes/HWE.colors"

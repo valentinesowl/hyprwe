@@ -116,7 +116,7 @@ fonts-lock *ARGS:
 # what the scheduled Apt map watch job runs.
 # Ask whether pkg/map/apt.map still describes Ubuntu's archive
 apt-map-check:
-    docker run --rm -v "$PWD:/hwe:ro" -w /hwe ubuntu:26.04 bash scripts/aptmapcheck.sh
+    docker run --rm -v "$PWD:/hwe:ro" -w /hwe ubuntu:27.04 bash scripts/aptmapcheck.sh
 
 # Regenerate every theme's wallpaper gradient
 walls:

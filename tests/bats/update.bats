@@ -189,7 +189,8 @@ run_update_main() {
         HWE_ROOT="$REPO"
         _update_refuse_root() { :; }
         for step in _deploy_user_layer _deploy_configs _link_cli \
-                    _update_apply_theme _update_packages _install_fetched_fonts; do
+                    _update_apply_theme _update_packages _install_fetched_fonts \
+                    _hypr_require_installed _user_layer_lua_preflight; do
             eval "$step() { echo \"stub:$step\"; }"
         done
         update_main

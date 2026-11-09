@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # lib/welcome.sh — `hwe welcome`: a one-time first-login greeting.
 #
-# Run from autostart (exec-once). On the very first graphical login it pops a
+# Run from autostart.lua. On the very first graphical login it pops a
 # short on-screen notice pointing at the keybind cheatsheet, then drops a
 # sentinel so it never nags again. `--force` shows it regardless (for testing).
 #

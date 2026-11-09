@@ -6,8 +6,9 @@
 # same on both sides. See lib/distro.sh for why this is a map and not a second
 # set of lists.
 #
-# Every entry below was verified against a real ubuntu:26.04 package index, not
-# guessed. Re-check the WHOLE translated set at once — and with a resolve, not a
+# These entries were verified against ubuntu:26.04 and MUST be revalidated against
+# ubuntu:27.04 before that experimental target is declared stable. Re-check the
+# WHOLE translated set at once — and with a resolve, not a
 # lookup:
 #
 #     apt-get install -s $(… | _pm_translate)

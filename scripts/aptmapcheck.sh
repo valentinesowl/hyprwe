@@ -28,7 +28,8 @@ export HWE_ROOT
 # shellcheck source=lib/common.sh
 source "$HWE_ROOT/lib/common.sh"
 
-[[ "$(_distro_family)" == apt ]] || die "run this on a Debian/Ubuntu system (or: just apt-map-check)"
+[[ "$(_distro_family)" == apt ]] || die "run this on the supported Ubuntu system (or: just apt-map-check)"
+_distro_supported || die "the package map is verified only for a supported Ubuntu release"
 command -v apt-get >/dev/null 2>&1 || die "apt-get not found"
 
 _sudo() { if [[ $EUID -eq 0 ]]; then "$@"; else sudo "$@"; fi; }

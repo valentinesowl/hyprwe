@@ -27,8 +27,24 @@ doctor_fn() {
     assert_output "ok"
 }
 
-@test "any other shell is drift (so doctor counts it, not just warns)" {
-    run doctor_fn _doctor_shell_verdict /bin/bash
+@test "any other shell is drift without an explicit opt-out" {
+    HWE_STATE_FILE="$BATS_TEST_TMPDIR/absent" run doctor_fn _doctor_shell_verdict /bin/bash
+    assert_output "drift"
+}
+
+@test "a saved shell preference makes bash neutral, not drift" {
+    printf 'shell=preserve\n' > "$BATS_TEST_TMPDIR/settings"
+    HWE_STATE_FILE="$BATS_TEST_TMPDIR/settings" run doctor_fn _doctor_shell_verdict /bin/bash
+    assert_output "preserve"
+}
+
+@test "HWE_NO_ZSH applies to the current doctor invocation" {
+    HWE_NO_ZSH=1 run doctor_fn _doctor_shell_verdict /bin/bash
+    assert_output "preserve"
+}
+
+@test "an unknown non-zsh shell still follows the same opt-out rule" {
+    HWE_STATE_FILE="$BATS_TEST_TMPDIR/absent" run doctor_fn _doctor_shell_verdict /bin/fish
     assert_output "drift"
 }
 

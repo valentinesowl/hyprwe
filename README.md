@@ -4,7 +4,7 @@
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
-[![Ubuntu](https://img.shields.io/badge/Ubuntu_26.04-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
+[![Ubuntu](https://img.shields.io/badge/Ubuntu_27.04_experimental-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
 [![Release](https://img.shields.io/badge/release-v1.4.2-blue)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
@@ -27,8 +27,8 @@ reproducibility keeps the whole stack in one tone.
 
 - **Theme engine** — one `theme.toml` sets the colours of every component at once;
   `hwe theme apply` changes the desktop live. Ten themes included.
-- **Modular Hyprland config** — hyprland, kitty, waybar, rofi, mako, hyprlock and
-  hypridle wired together with `source` includes.
+- **Modular Hyprland config** — Lua `require` modules for Hyprland 0.57, alongside
+  kitty, waybar, rofi, mako, hyprlock and hypridle.
 - **Dev VM in one command** — `hwe vm up` brings up an Arch or Ubuntu VM through
   `libvirt`/`virt-install` (visible in virt-manager), provisions it with `cloud-init`
   and deploys your chosen local git branch straight from your own repository.
@@ -117,45 +117,35 @@ After the install `hwe` is linked into `/usr/local/bin/hwe` — from then on you
 
 ### On Ubuntu
 
-HWE installs on **Ubuntu 26.04**. The environment itself is not forked for it: one
-`config/hypr/` parses cleanly under both Hyprland versions involved, and every theme
-renders identically. What differs is the packaging around it, and that is worth knowing
-before you start.
+The Lua-only HWE 2.0 development branch targets **Ubuntu 27.04 experimentally** and requires
+**Hyprland 0.57.0 or newer** (0.57.1 is recommended). This target has not yet passed the
+release VM matrix. **Ubuntu 26.04 is not supported by HWE 2.0**: its archive candidate is
+0.53.3, so installation stops before packages, configs, shell or services are changed.
+For Hyprland 0.53–0.56, use the HWE 1.4.x `legacy-conf` line instead.
 
 **Where the compositor comes from is your decision, and HWE will not make it quietly.**
 
-| `HWE_HYPR_SOURCE` | What you get | What you grant |
+| `HWE_HYPR_SOURCE` | Requirement | What you grant |
 |---|---|---|
-| `repo` *(default)* | Ubuntu's own `hyprland`, currently **0.53.3**, from `universe` | nothing new — the machine already trusts its distribution |
-| `ppa` | a current Hyprland (**0.55.4**) from a third-party archive | a stranger's signing key, confined by apt pinning to the Hyprland stack alone |
+| `repo` *(default)* | Ubuntu's candidate must be >= 0.57.0 | nothing new — the machine already trusts its distribution |
+| `ppa` | the explicit third-party candidate must also be >= 0.57.0 | a stranger's signing key, confined by apt pinning to the Hyprland stack |
 
 ```bash
-hwe install                        # Ubuntu's package
-HWE_HYPR_SOURCE=ppa hwe install    # opt in to the third-party archive
+hwe install                        # use Ubuntu's candidate, after the version gate
+HWE_HYPR_SOURCE=ppa hwe install    # explicitly opt in to the third-party archive
 ```
 
-Two things to be plain about. `universe` is community-maintained: it carries **no
-five-year security commitment** — that promise covers `main` only. And adding a
-third-party archive the ordinary way hands its key the right to install *any* package on
-that machine, for good; HWE pins such an archive so it can supply the compositor stack and
-nothing else. Setting `HWE_HYPR_SOURCE=ppa` **is** the consent, which is why
-`HWE_ASSUME_YES` does not cover it — a blanket yes to prompts should not be what extends
-trust to a stranger. Building the compositor from source is not offered.
+A PPA is not assumed to contain a suitable release: HWE checks its candidate after updating
+the package metadata and refuses it if it is too old. Adding a third-party archive ordinarily
+hands its key the right to install *any* package; HWE pins it to the compositor stack alone.
+Setting `HWE_HYPR_SOURCE=ppa` **is** the consent and is not covered by `HWE_ASSUME_YES`.
+Building the compositor from source is not offered, and HWE never switches sources to make
+the version check pass.
 
-Two smaller differences, so they do not surprise you:
-
-- **Ubuntu enables what it installs.** Debian-family packages start and enable their
-  services on install, including systemd *user* units for session programs. Since HWE
-  starts those from `config/hypr/autostart.conf`, the packaged units are stood down —
-  otherwise you get two bars and two idle daemons.
-- **A few tools are not in the archive.** `satty` (screenshot annotation, two keybinds
-  degrade to a plain screenshot), `hyprsunset` (night light — the bar's moon hides and
-  `hwe sunset` says why; the PPA carries it, so on that path one `apt install hyprsunset`
-  brings it back), `ruff` and `actionlint`. For `ruff`, `just lint-py`
-  and `just fmt-py` fall back to running it through uv — `pipx install uv` once (pipx
-  is packaged; uv itself is not, either) and they work. `actionlint` (`just lint-ci`)
-  has no such door and stays missing. `pkg/map/apt.map` records every such difference,
-  and says why.
+Ubuntu packages can enable systemd *user* units on installation. HWE starts the session
+programs from `config/hypr/autostart.lua`, so duplicate packaged units are stood down.
+Other package availability differences are recorded in `pkg/map/apt.map`; the map must be
+revalidated against Ubuntu 27.04 before that target is declared stable.
 
 ### Keeping a machine in sync
 
@@ -187,7 +177,7 @@ never rewritten afterwards.
 
 | File | What it holds |
 |---|---|
-| `hypr.conf` | displays, input, keybinds — sourced **last**, so it overrides what HWE ships |
+| `hypr.lua` | displays, input, keybinds — required **last**, so it overrides what HWE ships |
 | `packages.lst` | extra packages for this machine (the distribution's own) |
 | `packages-aur.lst` | the same, from the AUR (Arch; skipped on Ubuntu) |
 | `waybar.jsonc` | your bar's composition — merged over the generated config on every theme apply |
@@ -196,15 +186,20 @@ never rewritten afterwards.
 | `themes/` | HWE's own notes per theme — which theme is applied, which wallpaper each one uses. Written by `hwe`, so replacing the checkout forgets nothing |
 
 ```bash
-$EDITOR ~/.config/hwe/hypr.conf    # your monitors go here, not in config/hypr/monitors.conf
+$EDITOR ~/.config/hwe/hypr.lua    # your monitors go here, not in config/hypr/monitors.lua
 hyprctl reload                     # SUPER+SHIFT+R
 ```
 
 For a laptop that meets a dock, `kanshi.conf` is the better home for the monitors: a
-profile applies the moment its outputs are all connected, so plugging in rearranges the
-layout by itself and unplugging restores it. One owner per output though — a display
-managed by a kanshi profile should not also have a `monitor =` line in `hypr.conf`, or
-every reload restarts their argument.
+profile applies the moment its outputs are all connected. One owner per output though —
+a display managed by kanshi should not also have an `hl.monitor` call in `hypr.lua`.
+
+**Upgrading from HWE 1.4:** an untouched legacy `hypr.conf` gains a new `hypr.lua`
+automatically. If you changed `hypr.conf`, `hwe update` stops before deployment until you
+create `hypr.lua` yourself. The old file is preserved for reference and is never executed
+or deleted by HWE. See the skeleton for `hl.monitor`, `hl.config`, `hl.bind` and
+`hyprland.start` examples. The other Hypr* tools (`hypridle`, `hyprlock`, `hyprpaper` and
+`hyprsunset`) still use their `.conf` files.
 
 The location is the whole point. `config/` is deployed as symlinks into the repository, so
 tuning something in place would be an edit to a **tracked file** — and `hwe update` refuses
@@ -238,7 +233,8 @@ them as `*.hwe-bak`.
 | `hwe clip <show\|wipe>` | clipboard history (cliphist, rofi; `SUPER+C`) |
 | `hwe record <toggle\|region>` | screen recording (wf-recorder → `~/Videos`; bar indicator) |
 | `hwe sunset <toggle\|on\|off\|status>` | night light (hyprsunset; the moon at the bar's right edge) |
-| `hwe checkconfig [--notify]` | show config errors from the running Hyprland |
+| `hwe checkconfig [--notify]` | verify the Lua config and running Hyprland errors |
+| `hwe hypr dpms <on\|off>` | version-compatible DPMS dispatcher used by hypridle |
 | `hwe vm <up\|ssh\|console\|status\|list\|down\|destroy\|rebuild>` | the local dev VM (libvirt + cloud-init) |
 | `hwe doctor [host\|vm\|--report]` | health-check this machine (host, the default) or the VM prerequisites; `--report` = issue-ready block |
 | `hwe version` | print the version (from `bin/hwe`) |
@@ -288,21 +284,20 @@ procedural art in one of six styles — see `themes/README.md`. Put your own pho
 
 ## The Hyprland config
 
-The entry point is `config/hypr/hyprland.conf`, which does nothing but pull in the modules:
+The entry point is `config/hypr/hyprland.lua`, which requires each module separately:
 
 | File | What it covers |
 |---|---|
-| `colors.conf` | **generated** by `hwe theme` (`$accent`, …) |
-| `environment.conf` | session env + `$mainMod`, `$terminal`, `$launcher` |
-| `monitors.conf` | the default: every output at its preferred mode (**yours** go in `~/.config/hwe/hypr.conf`) |
-| `appearance.conf` | general / decoration / blur / animations |
-| `theme.conf` | **generated** — border, rounding, opacity from the theme |
-| `input.conf` | keyboard (us/ru), touchpad, gestures |
-| `keybindings.conf` | keybinds (SUPER; focus on the arrows; no duplicates) |
-| `windowrules.conf` | window and layer rules |
-| `autostart.conf` | autostart (waybar, mako, hyprpaper, polkit, tray…) |
+| `environment.lua` | session environment variables |
+| `monitors.lua` | the fallback output rule (**yours** go in `~/.config/hwe/hypr.lua`) |
+| `appearance.lua` | general / decoration / blur / curves / animations |
+| `theme.lua` | **generated** — border, geometry, opacity and animation speed |
+| `input.lua` | keyboard (us/ru), touchpad, gestures |
+| `keybindings.lua` | described keybinds (SUPER; focus on the arrows; no duplicates) |
+| `windowrules.lua` | window and layer rules |
+| `autostart.lua` | one `hyprland.start` handler for session programs |
 
-And last of all, `~/.config/hwe/hypr.conf` — yours, outside the repository, overriding
+And last of all, `~/.config/hwe/hypr.lua` — yours, outside the repository, overriding
 everything above it.
 
 Plus `hypridle.conf` (idle → lock/DPMS) and `hyprlock.conf` (generated). On every login
@@ -380,7 +375,7 @@ Configs inside the VM are deployed as **symlinks** into the repository, so edits
 | Variable | Default | Purpose |
 |---|---|---|
 | `HWE_VM_DISTRO` | `arch` | guest distribution: `arch` or `ubuntu` |
-| `HWE_VM_UBUNTU_RELEASE` | `26.04` | Ubuntu release to fetch (when `HWE_VM_DISTRO=ubuntu`) |
+| `HWE_VM_UBUNTU_RELEASE` | `27.04` | experimental Ubuntu release to fetch (when `HWE_VM_DISTRO=ubuntu`) |
 | `HWE_HYPR_SOURCE` | `repo` | where the guest's Hyprland comes from: `repo` or `ppa` |
 | `HWE_VM_NAME` | per distro | libvirt domain name (`hwe-dev`, `hwe-dev-ubuntu`) |
 | `HWE_VM_MEMORY` | `4096` | RAM, MiB |
@@ -424,7 +419,7 @@ hyprwe/
 ├── themes/<name>/          # theme.toml (palette + [sem]) + wallpaper.png + preview.png
 ├── templates/              # .j2 — every component's colours are rendered from [sem]
 ├── config/                 # XDG configs → symlinked into ~/.config
-│   ├── hypr/               # the modular Hyprland (see hyprland.conf)
+│   ├── hypr/               # the modular Hyprland (see hyprland.lua)
 │   ├── kanshi/             # monitor hotplug profiles (the profiles themselves: ~/.config/hwe)
 │   ├── waybar/ rofi/ mako/ kitty/ gtk-3.0/ gtk-4.0/ zsh/
 │   └── starship.toml
@@ -457,20 +452,11 @@ pipeline. How to contribute — [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Status
 
-`v1.4.2` — the daily-driver release, plus a doctor that answers the questions people
-actually bring: will screen sharing work (the pipewire → portal chain, checked), and
-"what machine is this" (`hwe doctor --report` — one paste-ready block for an issue).
-A night light on a schedule of your own (`hwe sunset`,
-with its moon at the bar's right edge), monitor profiles that follow the dock (kanshi),
-and a personal layer whose shipped defaults can finally evolve: an untouched file quietly
-keeps up with HWE, an edited one is never rewritten, and `hwe update --reset-defaults`
-restores the defaults deliberately, backups kept. Underneath, the 1.3 line stands: HWE
-installs on **Ubuntu 26.04** next to Arch from one unforked source, `hwe update`
-reconciles a machine and `hwe doctor` reports its drift, and the theme engine renders
-ten themes — every component from a single palette file.
-
-Tried and used daily on Arch; Ubuntu is verified end to end in a VM, not yet on bare
-metal. Next: more bar components, more workflows, polish.
+`v1.4.2` is the current release. This working tree contains the **HWE 2.0 Lua migration
+under verification**: it requires Hyprland 0.57+, preserves the legacy files during the
+test phase and does not yet claim a validated 2.0 release. Arch with Hyprland 0.57.1 is
+the reference target; Ubuntu 27.04 is experimental. NVIDIA and the full VM matrix still
+require their explicit release checks.
 
 ## Acknowledgements
 

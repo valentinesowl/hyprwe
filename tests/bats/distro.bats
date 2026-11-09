@@ -25,26 +25,46 @@ distro_fn() {
 }
 
 # ── detection ─────────────────────────────────────────────────────────────
-@test "an explicit HWE_DISTRO is respected" {
+@test "an explicit HWE_DISTRO selects the package backend" {
     HWE_DISTRO=debian run distro_fn _distro_family
     assert_success
     assert_output "apt"
 }
 
-@test "arch maps to pacman, ubuntu and debian to apt" {
+@test "arch maps to pacman and ubuntu to apt" {
     HWE_DISTRO=arch   run distro_fn _distro_family; assert_output "pacman"
     HWE_DISTRO=debian run distro_fn _distro_family; assert_output "apt"
 }
 
 @test "an unknown distro is refused, and the message names it" {
-    HWE_DISTRO=plan9 run distro_fn _distro_supported
+    HWE_DISTRO=plan9 HWE_DISTRO_ID=plan9 run distro_fn _distro_supported
     assert_failure
     assert_output --partial "plan9"
 }
 
-@test "arch and debian are both supported" {
-    HWE_DISTRO=arch   run distro_fn _distro_supported; assert_success
-    HWE_DISTRO=debian run distro_fn _distro_supported; assert_success
+@test "Arch and Ubuntu 27.04 are supported" {
+    HWE_DISTRO=arch HWE_DISTRO_ID=arch run distro_fn _distro_supported
+    assert_success
+    HWE_DISTRO=debian HWE_DISTRO_ID=ubuntu HWE_DISTRO_VERSION_ID=27.04 \
+        run distro_fn _distro_supported
+    assert_success
+}
+
+@test "Debian and Ubuntu derivatives are not accepted through ID_LIKE" {
+    HWE_DISTRO=debian HWE_DISTRO_ID=debian HWE_DISTRO_ID_LIKE=ubuntu \
+        run distro_fn _distro_supported
+    assert_failure
+    HWE_DISTRO=debian HWE_DISTRO_ID=linuxmint HWE_DISTRO_ID_LIKE=ubuntu \
+        HWE_DISTRO_VERSION_ID=27.04 run distro_fn _distro_supported
+    assert_failure
+}
+
+@test "Ubuntu 26.04 is refused with the legacy migration path" {
+    HWE_DISTRO=debian HWE_DISTRO_ID=ubuntu HWE_DISTRO_VERSION_ID=26.04 \
+        run distro_fn _distro_supported
+    assert_failure
+    assert_output --partial "26.04"
+    assert_output --partial "legacy-conf"
 }
 
 # ── name translation ──────────────────────────────────────────────────────
