@@ -28,11 +28,13 @@ hypr_fn() {
 }
 
 @test "installed version is parsed from hyprctl when the binary is unavailable" {
-    local fakebin="$BATS_TEST_TMPDIR/bin"; mkdir -p "$fakebin"
-    printf '#!/usr/bin/env bash\nprintf "Hyprland 0.57.1 built from branch main\\n"\n' > "$fakebin/hyprctl"
+    local fakebin="$BATS_TEST_TMPDIR/bin" runtime="$BATS_TEST_TMPDIR/runtime"
+    mkdir -p "$fakebin" "$runtime/hypr/test-sig"
+    printf '#!/usr/bin/env bash\n[[ "${HYPRLAND_INSTANCE_SIGNATURE:-}" == test-sig ]] || exit 1\nprintf "Hyprland 0.57.1 built from branch main\\n"\n' > "$fakebin/hyprctl"
     printf '#!/usr/bin/env bash\nexit 1\n' > "$fakebin/Hyprland"
     chmod +x "$fakebin/hyprctl" "$fakebin/Hyprland"
-    PATH="$fakebin:$PATH" run hypr_fn _hypr_installed_version
+    PATH="$fakebin:$PATH" HYPRLAND_INSTANCE_SIGNATURE= XDG_RUNTIME_DIR="$runtime" \
+        run hypr_fn _hypr_installed_version
     assert_output "0.57.1"
 }
 
