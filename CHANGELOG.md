@@ -9,6 +9,17 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+## [2.0.2] — 2026-11-10
+
+### Added
+
+- **`hwe session` saves and restores named desktop snapshots.** `save`, `restore`, `list`
+  and `clear` cover every mapped window, workspace and monitor. Restore launches missing
+  applications and applies tiled geometry through a Lua layout provider, without closing
+  current windows or enabling automatic floating. Snapshots are atomic, private and never
+  restore themselves automatically. `SUPER+S` followed by `1..9` saves a slot, and
+  `SUPER+S` followed by `SHIFT+1..9` restores it; scratchpad moves to `SUPER+X`.
+
 ## [2.0.1] — 2026-11-09
 
 ### Fixed
@@ -540,7 +551,8 @@ to it only ship in 2.0.0.
   that environment's uninstaller. If the login screen looks foreign after
   `hwe theme sddm`, look at what is in that directory.
 
-[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v2.0.1...HEAD
+[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v2.0.2...HEAD
+[2.0.2]: https://github.com/valentinesowl/hyprwe/releases/tag/v2.0.2
 [2.0.1]: https://github.com/valentinesowl/hyprwe/releases/tag/v2.0.1
 [2.0.0]: https://github.com/valentinesowl/hyprwe/releases/tag/v2.0.0
 [1.4.2]: https://github.com/valentinesowl/hyprwe/releases/tag/v1.4.2

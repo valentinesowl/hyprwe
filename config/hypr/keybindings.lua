@@ -69,7 +69,24 @@ end
 
 bind("SUPER + mouse_down", hl.dsp.focus({ workspace = "e+1" }), "Next workspace")
 bind("SUPER + mouse_up", hl.dsp.focus({ workspace = "e-1" }), "Previous workspace")
-bind("SUPER + S", hl.dsp.workspace.toggle_special("magic"), "Toggle scratchpad")
-bind("SUPER + SHIFT + S", hl.dsp.window.move({ workspace = "special:magic" }), "Move window to scratchpad")
+bind("SUPER + X", hl.dsp.workspace.toggle_special("magic"), "Toggle scratchpad")
+bind("SUPER + SHIFT + X", hl.dsp.window.move({ workspace = "special:magic" }), "Move window to scratchpad")
+
+local function session_command(action, slot)
+    return string.format(
+        'hwe session %s %d && hyprctl notify 0 2500 "rgb(88c0d0)" "HWE: %s slot %d" || hyprctl notify 0 4000 "rgb(ff5555)" "HWE: %s failed for slot %d"',
+        action, slot, action, slot, action, slot
+    )
+end
+
+bind("SUPER + S", hl.dsp.submap("session"), "Session save/restore mode")
+hl.define_submap("session", function()
+    for slot = 1, 9 do
+        bind(tostring(slot), hl.dsp.exec_cmd(session_command("save", slot)), "Save session slot " .. slot)
+        bind("SHIFT + " .. slot, hl.dsp.exec_cmd(session_command("restore", slot)), "Restore session slot " .. slot)
+    end
+    bind("Escape", hl.dsp.submap("reset"), "Cancel session mode")
+end, "reset")
+
 bind("SUPER + mouse:272", hl.dsp.window.drag(), "Drag window", { mouse = true })
 bind("SUPER + mouse:273", hl.dsp.window.resize(), "Resize window", { mouse = true })

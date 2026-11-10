@@ -14,7 +14,7 @@ set -euo pipefail
 # The single source of truth for the version. The release workflow refuses to
 # publish a tag that disagrees with it, and tests/test_release.py pins it to the
 # newest CHANGELOG entry — so these three can never drift apart.
-HWE_VERSION="2.0.1"
+HWE_VERSION="2.0.2"
 
 # Resolve the repo root from this script's location (bin/hwe -> repo root).
 _self="$(readlink -f "${BASH_SOURCE[0]}")"
@@ -49,6 +49,8 @@ ${C_BOLD}Commands:${C_RESET}
               Toggle screen recording (wf-recorder -> ~/Videos)
   ${C_CYAN}sunset${C_RESET} <toggle|on|off|status>
               Toggle the night light (hyprsunset; schedule in ~/.config/hwe)
+  ${C_CYAN}session${C_RESET} <save|restore|list|clear>
+              Named snapshots of every application, workspace and window position
   ${C_CYAN}checkconfig${C_RESET}  Verify Lua config and report running-compositor errors
   ${C_CYAN}doctor${C_RESET} [host|vm|--report]
               Health-check this machine (host, default) or VM prerequisites (vm);
@@ -126,6 +128,11 @@ case "$cmd" in
         # shellcheck source=lib/sunset.sh
         source "$HWE_ROOT/lib/sunset.sh"
         sunset_main "$@"
+        ;;
+    session)
+        # shellcheck source=lib/session.sh
+        source "$HWE_ROOT/lib/session.sh"
+        session_main "$@"
         ;;
     welcome)
         # shellcheck source=lib/welcome.sh

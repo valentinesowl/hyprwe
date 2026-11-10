@@ -6,7 +6,7 @@
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu_27.04_experimental-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
-[![Release](https://img.shields.io/badge/release-v2.0.1-blue)](../../releases/latest)
+[![Release](https://img.shields.io/badge/release-v2.0.2-blue)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 **A working environment on Arch and Ubuntu — Hyprland and everything around it: bar,
@@ -236,7 +236,28 @@ them as `*.hwe-bak`.
 | `hwe checkconfig [--notify]` | verify the Lua config and running Hyprland errors |
 | `hwe vm <up\|ssh\|console\|status\|list\|down\|destroy\|rebuild>` | the local dev VM (libvirt + cloud-init) |
 | `hwe doctor [host\|vm\|--report]` | health-check this machine (host, the default) or the VM prerequisites; `--report` = issue-ready block |
+| `hwe session <save\|restore\|list\|clear>` | named snapshots of every application, workspace and window position |
 | `hwe version` | print the version (from `bin/hwe`) |
+
+### Named session snapshots
+
+```bash
+hwe session save 1       # save every window and workspace to slot 1
+hwe session restore 1    # restore that session
+hwe session list         # names, dates and snapshot sizes
+hwe session clear 1      # delete one snapshot
+hwe session clear --all  # delete all snapshots (with confirmation)
+```
+
+A snapshot covers every mapped window, workspace and monitor, including the active
+workspace and tiled window geometry. Restore reuses matching open applications, launches
+missing ones and applies positions through a Lua layout provider without making windows
+floating. It does not close your current windows. Nothing is saved or restored automatically.
+
+Snapshots live in `~/.local/state/hwe/sessions/` and are written atomically with mode `0600`.
+Window titles, PIDs and command-line arguments are not persisted. Application-internal state
+(browser tabs, terminal processes and unsaved documents) belongs to those applications, not
+to the snapshot.
 
 ---
 
@@ -294,6 +315,7 @@ The entry point is `config/hypr/hyprland.lua`, which requires each module separa
 | `input.lua` | keyboard (us/ru), touchpad, gestures |
 | `keybindings.lua` | described keybinds (SUPER; focus on the arrows; no duplicates) |
 | `windowrules.lua` | window and layer rules |
+| `session-layout.lua` | Lua layout provider for exact session restore |
 | `autostart.lua` | one `hyprland.start` handler for session programs |
 
 And last of all, `~/.config/hwe/hypr.lua` — yours, outside the repository, overriding
@@ -305,7 +327,8 @@ Plus `hypridle.conf` (idle → lock/DPMS) and `hyprlock.conf` (generated). On ev
 **The main binds:**
 `SUPER+T` terminal · `SUPER+N` files · `SUPER+B` browser · `SUPER+R` launcher (rofi) ·
 `SUPER+Q` close · `SUPER+V` floating · `SUPER+F` fullscreen · `SUPER+←↑↓→` focus ·
-`SUPER+SHIFT+←↑↓→` move the window · `SUPER+1..0` workspaces · `SUPER+S` scratchpad ·
+`SUPER+SHIFT+←↑↓→` move the window · `SUPER+1..0` workspaces · `SUPER+X` scratchpad ·
+`SUPER+S` then `1..9` save session · `SUPER+S` then `SHIFT+1..9` restore session ·
 `SUPER+L` / `SUPER+Escape` lock · `SUPER+Space` us↔ru layout ·
 `SUPER+SHIFT+T` theme · `SUPER+SHIFT+W` wallpaper · `SUPER+SHIFT+E` power menu ·
 `SUPER+/` bind cheatsheet · `SUPER+C` clipboard · `SUPER+SHIFT+C` colour picker ·
@@ -405,6 +428,7 @@ hyprwe/
 │   ├── clip.sh             # hwe clip — clipboard history (cliphist)
 │   ├── record.sh           # hwe record — screen recording (wf-recorder)
 │   ├── sunset.sh           # hwe sunset — night light (hyprsunset)
+│   ├── session.sh          # hwe session — named desktop snapshots
 │   ├── checkconfig.sh      # hwe checkconfig — Hyprland config errors
 │   └── welcome.sh          # hwe welcome — greeting on the first login
 ├── provision/
@@ -451,7 +475,7 @@ pipeline. How to contribute — [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Status
 
-`v2.0.1` is the current release. HWE is Lua-only on Hyprland 0.57+ and no longer ships
+`v2.0.2` is the current release. HWE is Lua-only on Hyprland 0.57+ and no longer ships
 legacy compositor configs. Arch with Hyprland 0.57.2 is the verified reference target;
 Ubuntu 27.04 remains experimental and has not passed the full release VM matrix.
 NVIDIA setup is still unverified on real hardware.

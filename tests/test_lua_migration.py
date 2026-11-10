@@ -5,14 +5,14 @@ import pytest
 def test_entry_point_requires_each_module_and_personal_layer_last(repo):
     entry = (repo / "config/hypr/hyprland.lua").read_text()
     modules = ["environment", "monitors", "appearance", "theme", "input",
-               "keybindings", "windowrules", "autostart"]
+               "keybindings", "windowrules", "session-layout", "autostart"]
     positions = [entry.index(f'require("{module}")') for module in modules]
     assert positions == sorted(positions)
     assert entry.index('require(config_home .. "/hwe/hypr")') > positions[-1]
 
 
 @pytest.mark.parametrize("module", ["environment", "monitors", "appearance", "input",
-                                    "keybindings", "windowrules", "autostart"])
+                                    "keybindings", "windowrules", "session-layout", "autostart"])
 def test_system_modules_have_no_legacy_hyprlang(repo, module):
     text = (repo / f"config/hypr/{module}.lua").read_text()
     for directive in ("source =", "exec-once", "$mainMod", "windowrule =", "layerrule ="):

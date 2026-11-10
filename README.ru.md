@@ -6,7 +6,7 @@
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu_27.04_experimental-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
-[![Release](https://img.shields.io/badge/release-v2.0.1-blue)](../../releases/latest)
+[![Release](https://img.shields.io/badge/release-v2.0.2-blue)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 **Рабочее окружение на Arch и Ubuntu — Hyprland и всё вокруг него: бар, лаунчер,
@@ -233,7 +233,28 @@ hyprctl reload                     # SUPER+SHIFT+R
 | `hwe checkconfig [--notify]` | проверить Lua-конфиг и ошибки запущенного Hyprland |
 | `hwe vm <up\|ssh\|console\|status\|list\|down\|destroy\|rebuild>` | локальная dev-VM (libvirt + cloud-init) |
 | `hwe doctor [host\|vm\|--report]` | проверить эту машину (host, по умолчанию) или пред-условия для VM; `--report` = готовый блок для issue |
+| `hwe session <save\|restore\|list\|clear>` | именованные снимки всех приложений, workspace и положений окон |
 | `hwe version` | показать версию (из `bin/hwe`) |
+
+### Именованные снимки сессий
+
+```bash
+hwe session save 1       # сохранить все окна и workspace в слот 1
+hwe session restore 1    # восстановить эту сессию
+hwe session list         # имена, даты и размеры снимков
+hwe session clear 1      # удалить один снимок
+hwe session clear --all  # удалить все снимки (с подтверждением)
+```
+
+Снимок охватывает каждое отображаемое окно, workspace и монитор, включая активный
+workspace и геометрию тайловых окон. Восстановление использует уже открытые приложения,
+запускает недостающие и применяет положения через Lua layout provider, не делая окна
+плавающими. Текущие окна не закрываются. Автоматического сохранения или восстановления нет.
+
+Снимки живут в `~/.local/state/hwe/sessions/`, записываются атомарно с правами `0600`.
+Заголовки окон, PID и аргументы командной строки не сохраняются. Внутреннее состояние
+приложений (вкладки браузера, процессы в терминале, несохранённые документы) остаётся
+задачей самих приложений, а не снимка.
 
 ---
 
@@ -290,6 +311,7 @@ hwe wall set <path|name>      # конкретный файл или имя из
 | `input.lua` | клавиатура (us/ru), тачпад, жесты |
 | `keybindings.lua` | бинды с описаниями (SUPER; фокус на стрелках; без дублей) |
 | `windowrules.lua` | правила окон и слоёв |
+| `session-layout.lua` | Lua layout provider для точного восстановления сессии |
 | `autostart.lua` | один обработчик `hyprland.start` для программ сессии |
 
 И самым последним — `~/.config/hwe/hypr.lua`, твой, вне репозитория, перекрывающий всё,
@@ -301,7 +323,8 @@ hwe wall set <path|name>      # конкретный файл или имя из
 **Основные бинды:**
 `SUPER+T` терминал · `SUPER+N` файлы · `SUPER+B` браузер · `SUPER+R` лаунчер (rofi) ·
 `SUPER+Q` закрыть · `SUPER+V` плавающее · `SUPER+F` фуллскрин · `SUPER+←↑↓→` фокус ·
-`SUPER+SHIFT+←↑↓→` двигать окно · `SUPER+1..0` воркспейсы · `SUPER+S` scratchpad ·
+`SUPER+SHIFT+←↑↓→` двигать окно · `SUPER+1..0` воркспейсы · `SUPER+X` scratchpad ·
+`SUPER+S`, затем `1..9` сохранить сессию · `SUPER+S`, затем `SHIFT+1..9` восстановить ·
 `SUPER+L` / `SUPER+Escape` лок · `SUPER+Space` раскладка us↔ru ·
 `SUPER+SHIFT+T` тема · `SUPER+SHIFT+W` обои · `SUPER+SHIFT+E` меню питания ·
 `SUPER+/` шпаргалка биндов · `SUPER+C` буфер обмена · `SUPER+SHIFT+C` цветопипетка ·
@@ -401,6 +424,7 @@ hyprwe/
 │   ├── clip.sh             # hwe clip — история буфера (cliphist)
 │   ├── record.sh           # hwe record — запись экрана (wf-recorder)
 │   ├── sunset.sh           # hwe sunset — ночной свет (hyprsunset)
+│   ├── session.sh          # hwe session — именованные снимки рабочего стола
 │   ├── checkconfig.sh      # hwe checkconfig — ошибки конфига Hyprland
 │   └── welcome.sh          # hwe welcome — приветствие при первом входе
 ├── provision/
@@ -447,7 +471,7 @@ just gallery    # пересобрать assets/themes.png из превью
 
 ## Статус
 
-`v2.0.1` — текущий релиз. HWE работает только на Lua-конфиге Hyprland 0.57+ и больше не
+`v2.0.2` — текущий релиз. HWE работает только на Lua-конфиге Hyprland 0.57+ и больше не
 содержит legacy-конфиги композитора. Эталонная проверенная цель — Arch с Hyprland 0.57.2;
 Ubuntu 27.04 остаётся экспериментальной и не прошла полную релизную VM-матрицу.
 Настройка NVIDIA по-прежнему не проверена на реальном оборудовании.

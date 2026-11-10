@@ -72,6 +72,11 @@ def fontlock():
     return _load("fontlock")
 
 
+@pytest.fixture(scope="session")
+def session():
+    return _load("session")
+
+
 def theme_paths() -> list[Path]:
     """Every shipped theme's theme.toml, sorted (used to parametrise tests)."""
     return sorted(THEMES.glob("*/theme.toml"))

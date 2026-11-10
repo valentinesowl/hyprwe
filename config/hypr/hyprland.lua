@@ -8,6 +8,7 @@ require("theme")
 require("input")
 require("keybindings")
 require("windowrules")
+require("session-layout")
 require("autostart")
 
 local config_home = os.getenv("XDG_CONFIG_HOME")
