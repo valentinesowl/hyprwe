@@ -14,11 +14,10 @@ bg_dark    = "#050508"
 bg_normal  = "#0a0a10"
 bg_light   = "#101018"
 bg_lighter = "#181824"
-# text (dim -> max contrast): cold, phosphor. Even a void needs readable text:
-# the old #2a2a40/#5a5a78 were 1.41:1 / 2.98:1 on this near-black — invisible and
-# sub-AA. Lifted just enough (3.14:1 / 4.67:1) to stay phosphor-cold but legible.
-fg_dim     = "#5c5c88"
-fg_normal  = "#78789c"
+# text (dim -> max contrast): cold, phosphor. Both roles clear AA for small
+# text, including on the bar's composite background over a white wallpaper.
+fg_dim     = "#7d7da7"
+fg_normal  = "#7d7da0"
 fg_bright  = "#9a9ab8"
 fg_white   = "#d0d0e8"
 # accent — neon cyan
@@ -48,7 +47,8 @@ inactive_opacity = 0.75
 blur_passes   = 1
 blur_size     = 6
 # ── Waybar geometry (glued & flat by default; set bar_float = true to float) ──
-bar_height  = 26
+bar_height  = 28
+bar_opacity = 0.94
 bar_float   = false
 bar_gap     = 6      # top gap when floating
 bar_gap_x   = 8      # side gap when floating
@@ -57,8 +57,8 @@ bar_radius  = 14     # corner radius when floating
 # glow: accent halo on the number | underline: rule growing from the centre
 # pill: the tag widens into a chip | dot: a mark rising from below.
 # (No style slides between tags — GTK3 CSS has no transform; see theme.css.j2.)
-bar_ws_indicator = "glow"
-bar_ws_speed     = 220   # ms for the indicator to settle
+bar_ws_indicator = "underline"
+bar_ws_speed     = 220   # calm default; personal reduced_motion forces 0
 
 
 # ── Typography (contract): font family + per-surface sizes ────────────────
@@ -69,11 +69,11 @@ family    = "Lilex Nerd Font"
 icon_family     = "Symbols Nerd Font Mono"   # the bar/launcher glyphs
 fallback_family = "JetBrains Mono"           # used where `family` is not installed
 ui_family = "Sans"   # GTK/UI apps (size from `gtk`)
-terminal = 9   # kitty
-bar      = 10     # waybar
-launcher = 10     # rofi menus (base; pickers scale ± from this)
-notify   = 10     # mako
-gtk      = 10     # GTK apps (family stays Sans)
+terminal = 9.5  # kitty
+bar      = 12     # waybar
+launcher = 12     # rofi menus (base; pickers scale ± from this)
+notify   = 11     # mako
+gtk      = 11     # GTK apps (family stays Sans)
 
 # ── Wallpaper (scripts/genwall.py) ───────────────────────────────────────
 # style: mesh | aurora | voronoi | grid | signal. seed rerolls the composition.

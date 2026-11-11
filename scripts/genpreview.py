@@ -1,64 +1,37 @@
 #!/usr/bin/env python3
-"""genpreview.py — generate a theme preview *card* for an HWE theme.
+"""genpreview.py — render a graphic identity card for an HWE theme.
 
-A poster-style card: the theme NAME is the hero (centred, in the theme's bright
-text, with an accent underline and a tagline beneath), over the theme's own
-wallpaper darkened by a theme-tinted overlay + vignette so the text always
-reads. Each theme gets a bit
-of its own personality via light per-theme decor (glow / ice particles / sparks
-/ leaf corners / scanlines). Colours all come from the [sem] contract, so it
-works for every theme with no per-theme colour map.
+Cards combine the theme palette, its typeface and a distinctive geometric motif.
+A softly blurred, darkened wallpaper sits behind the identity artwork; fictitious
+desktop widgets are deliberately not part of the preview.
 
-Cards are SQUARE, and that is load-bearing rather than taste: rofi lays its
-element-icon out as a square box of `size` and letterboxes the image inside, so a
-16:9 card left ~45px of dead box above and below every row of `hwe theme pick`
-(`squared: false` does not apply to element-icon — see templates/rofi/theme.rasi.j2).
-The wallpaper is centre-cropped to fill the tile.
+Depends on ImageMagick (`magick`) and fontconfig (`fc-match`), both shipped in HWE.
 
-Depends on ImageMagick (`magick`) + fontconfig (`fc-match`), both shipped in HWE.
-Previews are committed PNGs so a bare install just uses them; regeneration only
-runs on a dev box (justfile `previews`).
-
-Usage:
-    genpreview.py <theme.toml> <out.png> [--size WxH]
+Usage: genpreview.py <theme.toml> <out.png> [--size WxH]
 """
+import math
 import shutil
 import subprocess
 import sys
 import tomllib
 from pathlib import Path
 
-# Short tagline per theme (keyed by directory name). A theme may override this
-# with a top-level `tagline = "..."` in its theme.toml; else this map; else "".
-TAGLINES = {
-    "default":  "Clean · Minimal",
-    "ember":    "Warm · Fiery",
-    "frost":    "Cool · Icy",
-    "garden":   "Fresh · Natural",
-    "void":     "Dark · Mysterious",
-    "neon":     "Electric · Vibrant",
-    "amethyst": "Amethyst · Monochrome",
-    "mocha":    "Cozy · Catppuccin",
-    "paper":    "Light · Daylight",
-    "linen":    "Warm · Soft",
-}
-
-# Per-theme decorative personality (keyed by directory name); default "none".
-DECOR = {
-    "neon":     "glow",
-    "amethyst": "glow",
-    "frost":    "particles",
-    "ember":    "sparks",
-    "garden":   "leaves",
-    "void":     "scanlines",
+CANVAS = 480
+MOTIFS = {
+    "amethyst": "crystal",
+    "default": "orbit",
+    "ember": "flame",
+    "frost": "snowflake",
+    "garden": "branch",
+    "linen": "weave",
+    "mocha": "palette",
+    "neon": "bolt",
+    "paper": "fold",
+    "void": "signal",
 }
 
 
 def _theme_validators():
-    """render-theme.py's value validators, loaded by path (its hyphen makes it
-    unimportable the normal way). Reusing them keeps ONE definition of "is this a
-    safe theme to render" — so a submitted theme is held to the same line here as
-    at runtime, before any of its values reach an ImageMagick argument."""
     import importlib.util
 
     mod_name = "hwe_render_theme"
@@ -76,13 +49,6 @@ def _reject_malformed_theme(doc: dict, path: Path) -> None:
     checked = dict(doc)
     checked.setdefault("name", path.parent.name)
     problems = rt.check_values(checked)
-    # `name` and `tagline` are drawn onto the card as the text argument of
-    # `magick -annotate`, where ImageMagick reads a leading `@` as "the rest is a
-    # file to read in" (an arbitrary-file-read that lands in a committed PNG) and
-    # expands `%` as a property escape. check_values never sees `tagline`, and
-    # neither metacharacter is barred for config output — so both are held here,
-    # before either value reaches an ImageMagick argument. A leading space does
-    # not help: ImageMagick strips whitespace before testing for the `@`.
     tag = checked.get("tagline")
     if tag is not None:
         problem = rt._inline(tag)
@@ -93,137 +59,227 @@ def _reject_malformed_theme(doc: dict, path: Path) -> None:
         if not isinstance(value, str):
             continue
         if value.lstrip().startswith("@"):
-            problems.append(f"{label} must not begin with '@' (ImageMagick would read it as a file)")
+            problems.append(f"{label} must not begin with '@'")
         elif "%" in value:
-            problems.append(f"{label} must not contain '%' (ImageMagick would expand it as an escape)")
+            problems.append(f"{label} must not contain '%'")
     if problems:
         sys.exit(f"{path}: refusing a malformed theme:\n  " + "\n  ".join(problems))
 
 
-def rgba(hexs: str, a: float) -> str:
+def rgba(hexs: str, a: float = 1.0) -> str:
     h = str(hexs).lstrip("#")
     return f"rgba({int(h[0:2],16)},{int(h[2:4],16)},{int(h[4:6],16)},{a})"
 
 
-def resolve_font(family: str = "JetBrainsMono Nerd Font") -> str:
-    """A concrete font file for ImageMagick (it can't resolve fc family names).
-
-    Takes the theme's own [font].family so the card previews the real typeface —
-    Space Mono on neon, Monaspice on garden — not a single hardcoded font. Falls
-    back to the JetBrainsMono default (then a built-in) if the family is absent."""
+def resolve_font(family: str = "JetBrains Mono") -> str:
     try:
-        f = subprocess.run(
+        font = subprocess.run(
             ["fc-match", "-f", "%{file}", f"{family}:weight=bold"],
-            capture_output=True, text=True, check=True,
+            capture_output=True,
+            text=True,
+            check=True,
         ).stdout.strip()
-        if f:
-            return f
+        if font:
+            return font
     except (OSError, subprocess.CalledProcessError):
         pass
-    return "DejaVu-Sans-Bold"  # ImageMagick built-in fallback
+    return "DejaVu-Sans-Bold"
 
 
-def decor_layer(kind: str, sem: dict, w: int, h: int) -> list[str]:
-    """A parenthesised ImageMagick layer for a theme's personality, or []."""
+def _layer(draw: list[str], blur: int = 0) -> list[str]:
+    layer = ["(", "-size", f"{CANVAS}x{CANVAS}", "xc:none", *draw]
+    if blur:
+        layer += ["-blur", f"0x{blur}"]
+    return [*layer, ")", "-compose", "over", "-composite"]
+
+
+def _frost_draw(accent: str) -> list[str]:
+    draw = ["-fill", "none", "-stroke", accent, "-strokewidth", "7", "-draw", "stroke-linecap round"]
+    cx, cy, radius = 240, 170, 100
+    for spoke in range(6):
+        angle = math.radians(spoke * 60 - 90)
+        ex, ey = cx + radius * math.cos(angle), cy + radius * math.sin(angle)
+        draw += ["-draw", f"line {cx},{cy} {ex:.1f},{ey:.1f}"]
+        bx, by = cx + 60 * math.cos(angle), cy + 60 * math.sin(angle)
+        for side in (-1, 1):
+            branch = angle + side * math.radians(42)
+            tx, ty = bx - 27 * math.cos(branch), by - 27 * math.sin(branch)
+            draw += ["-draw", f"line {bx:.1f},{by:.1f} {tx:.1f},{ty:.1f}"]
+    return draw
+
+
+def motif_layers(kind: str, sem: dict) -> list[str]:
     accent = sem["accent"]
-    if kind == "glow":  # neon/amethyst: a soft accent halo hugging the edge
-        rr = f"roundrectangle 9,9,{w - 10},{h - 10},13,13"
-        return ["(", "-size", f"{w}x{h}", "xc:none",
-                "-fill", "none", "-stroke", rgba(accent, 0.9), "-strokewidth", "2",
-                "-draw", rr, "-blur", "0x4",
-                "-stroke", rgba(accent, 0.9), "-strokewidth", "1", "-draw", rr,
-                ")", "-compose", "over", "-composite"]
-    if kind == "particles":  # frost: cool white specks scattered up high
-        col = rgba("#ffffff", 0.45)
-        pts = [(.08, .12), (.55, .10), (.88, .16), (.20, .30), (.75, .34),
-               (.40, .20), (.94, .70), (.13, .78), (.33, .55), (.66, .62)]
-        draws: list[str] = []
-        for fx, fy in pts:
-            x, y = int(fx * w), int(fy * h)
-            draws += ["-draw", f"circle {x},{y} {x + 1},{y}"]
-        return ["(", "-size", f"{w}x{h}", "xc:none", "-fill", col, *draws,
-                "-blur", "0x1", ")", "-compose", "over", "-composite"]
-    if kind == "sparks":  # ember: warm two-tone embers rising from the bottom
-        hot = [(.12, .82), (.30, .72), (.62, .86), (.85, .76), (.45, .92), (.72, .66)]
-        bright = [(.22, .88), (.52, .78), (.90, .90)]
-        draws = ["-fill", rgba(accent, 0.75)]
-        for fx, fy in hot:
-            x, y = int(fx * w), int(fy * h)
-            draws += ["-draw", f"circle {x},{y} {x + 3},{y}"]
-        draws += ["-fill", rgba(sem.get("yellow", accent), 0.65)]
-        for fx, fy in bright:
-            x, y = int(fx * w), int(fy * h)
-            draws += ["-draw", f"circle {x},{y} {x + 2},{y}"]
-        return ["(", "-size", f"{w}x{h}", "xc:none", *draws,
-                "-blur", "0x2", ")", "-compose", "over", "-composite"]
-    if kind == "leaves":  # garden: soft rounded blobs in the corners
-        s = int(min(w, h) * 0.24)
-        blobs = [(6, 6, 6 + s, 6 + s), (w - 7 - s, 6, w - 7, 6 + s),
-                 (6, h - 7 - s, 6 + s, h - 7), (w - 7 - s, h - 7 - s, w - 7, h - 7)]
-        draws = []
-        for x1, y1, x2, y2 in blobs:
-            draws += ["-draw", f"roundrectangle {x1},{y1},{x2},{y2},{s},{s}"]
-        return ["(", "-size", f"{w}x{h}", "xc:none",
-                "-fill", rgba(accent, 0.22), *draws, "-blur", "0x3",
-                ")", "-compose", "over", "-composite"]
-    if kind == "scanlines":  # void: faint CRT horizontal lines
-        return ["(", "-size", f"{w}x2", "xc:none", f"xc:{rgba('#000000', 0.10)}",
-                "-append", "-write", "mpr:sl", "+delete",
-                "-size", f"{w}x{h}", "tile:mpr:sl", ")",
-                "-compose", "over", "-composite"]
-    return []
+    soft = sem["accent_soft"]
+    bright = sem["fg_bright"]
 
+    if kind == "crystal":
+        silhouette = "polygon 240,52 337,146 285,282 195,282 143,146"
+        facets = [
+            "-fill", rgba(accent, 0.20), "-stroke", accent, "-strokewidth", "4",
+            "-draw", silhouette,
+            "-fill", rgba(soft, 0.38), "-stroke", "none",
+            "-draw", "polygon 240,52 240,196 143,146",
+            "-fill", rgba(bright, 0.13),
+            "-draw", "polygon 240,52 337,146 240,196",
+            "-fill", rgba(accent, 0.36),
+            "-draw", "polygon 143,146 240,196 195,282",
+            "-fill", rgba(soft, 0.23),
+            "-draw", "polygon 337,146 285,282 240,196",
+            "-fill", "none", "-stroke", rgba(bright, 0.65), "-strokewidth", "2",
+            "-draw", "polyline 143,146 240,196 337,146",
+            "-draw", "line 240,52 240,196",
+            "-draw", "line 240,196 240,282",
+        ]
+        return _layer(["-fill", rgba(accent, 0.28), "-draw", silhouette], 18) + _layer(facets)
 
-def build_cmd(name: str, sem: dict, disp: str, tag: str, wall: Path, font: str,
-              out: Path, w: int, h: int) -> list[str]:
-    accent, dark, text = sem["accent"], sem["bg_dark"], sem["fg_white"]
+    if kind == "flame":
+        outer = "path 'M 240,286 C 150,268 142,199 188,143 C 205,122 224,92 232,57 C 277,111 264,145 294,157 C 321,169 337,217 313,252 C 296,276 270,287 240,286 Z'"
+        inner = "path 'M 241,270 C 198,259 190,222 216,190 C 231,172 242,151 246,128 C 278,167 297,190 285,226 C 278,252 262,267 241,270 Z'"
+        core = "path 'M 242,260 C 222,247 222,226 238,205 C 249,191 253,180 254,169 C 274,204 270,238 242,260 Z'"
+        return (
+            _layer(["-fill", rgba(accent, 0.32), "-draw", outer], 20)
+            + _layer(["-fill", soft, "-stroke", "none", "-draw", outer])
+            + _layer(["-fill", accent, "-draw", inner])
+            + _layer(["-fill", sem["yellow"], "-draw", core])
+        )
 
-    # base: the theme wallpaper filled to card ratio (softly blurred), or a
-    # sem gradient if the wallpaper isn't there yet.
-    if wall.is_file():
-        base = [str(wall), "-resize", f"{w}x{h}^", "-gravity", "center",
-                "-extent", f"{w}x{h}", "-blur", "0x3"]
-    else:
-        base = ["-size", f"{w}x{h}", f"gradient:{sem['bg_normal']}-{dark}"]
+    if kind == "snowflake":
+        return _layer(_frost_draw(rgba(accent, 0.30)), 16) + _layer(_frost_draw(accent))
 
-    # a theme-tinted darkening (top->bottom) + vignette so the CENTRED name reads
-    overlay = ["(", "-size", f"{w}x{h}",
-               f"gradient:{rgba(sem['bg_normal'], 0.55)}-{rgba(dark, 0.80)}", ")",
-               "-compose", "over", "-composite",
-               "(", "-size", f"{w}x{h}",
-               f"radial-gradient:none-{rgba('#000000', 0.45)}", ")",
-               "-compose", "over", "-composite"]
+    if kind == "branch":
+        leaves = [
+            "path 'M 229,185 C 174,185 148,156 151,112 C 195,111 225,135 229,185 Z'",
+            "path 'M 248,150 C 250,101 280,74 324,77 C 323,121 294,149 248,150 Z'",
+            "path 'M 213,243 C 169,244 142,222 137,185 C 179,177 208,199 213,243 Z'",
+            "path 'M 259,224 C 270,183 300,166 337,174 C 326,214 299,231 259,224 Z'",
+        ]
+        draw = [
+            "-fill", "none", "-stroke", accent, "-strokewidth", "7", "-draw", "stroke-linecap round",
+            "-draw", "path 'M 198,285 C 226,240 239,182 273,112'",
+            "-fill", rgba(soft, 0.85), "-stroke", "none", "-draw", leaves[0],
+            "-fill", accent, "-draw", leaves[1],
+            "-fill", rgba(accent, 0.72), "-draw", leaves[2],
+            "-fill", rgba(sem["green"], 0.90), "-draw", leaves[3],
+        ]
+        return _layer(draw)
 
-    # underline bar (centred, just under the title) as its own layer
-    ul_w, ul_h = 64, 3
-    underline = ["(", "-size", f"{ul_w}x{ul_h}", f"xc:{accent}", ")",
-                 "-gravity", "center", "-geometry", "+0+8", "-compose", "over",
-                 "-composite"]
+    if kind == "weave":
+        paths = [
+            (soft, 18, "path 'M 64,128 C 139,61 208,195 282,128 C 329,85 369,84 416,121'"),
+            (accent, 14, "path 'M 64,183 C 133,116 207,250 282,183 C 332,138 371,141 416,176'"),
+            (sem["blue"], 9, "path 'M 64,238 C 137,171 205,303 282,238 C 330,195 371,196 416,231'"),
+        ]
+        layers = []
+        for colour, width, path in paths:
+            layers += _layer([
+                "-fill", "none", "-stroke", rgba(colour, 0.82), "-strokewidth", str(width),
+                "-draw", "stroke-linecap round", "-draw", path,
+            ])
+        return layers
 
-    cmd = ["magick", *base, *overlay]
-    cmd += decor_layer(DECOR.get(name, "none"), sem, w, h)
-    cmd += [
-        # hero name, centred, with a soft drop shadow
-        "-gravity", "center", "-font", font,
-        "-fill", rgba("#000000", 0.55), "-pointsize", "34", "-annotate", "+2-16", disp,
-        "-fill", text, "-pointsize", "34", "-annotate", "+0-18", disp,
+    if kind == "palette":
+        circles = [
+            (sem["magenta"], "circle 183,133 183,82"),
+            (sem["blue"], "circle 293,133 293,82"),
+            (sem["orange"], "circle 183,239 183,188"),
+            (sem["green"], "circle 293,239 293,188"),
+        ]
+        draw = []
+        for colour, circle in circles:
+            draw += ["-fill", rgba(colour, 0.88), "-stroke", "none", "-draw", circle]
+        draw += [
+            "-fill", rgba(sem["bg_dark"], 0.78), "-stroke", bright, "-strokewidth", "4",
+            "-draw", "circle 239,187 239,153",
+            "-fill", bright, "-stroke", "none", "-draw", "circle 239,187 239,179",
+        ]
+        return _layer(draw)
+
+    if kind == "bolt":
+        bolt = "polygon 257,48 155,194 222,194 202,292 329,132 254,132 294,48"
+        edge = "polyline 257,48 155,194 222,194"
+        return (
+            _layer(["-fill", rgba(accent, 0.55), "-draw", bolt], 22)
+            + _layer(["-fill", accent, "-stroke", "none", "-draw", bolt])
+            + _layer([
+                "-fill", "none", "-stroke", sem["cyan"], "-strokewidth", "5", "-draw", "stroke-linecap round",
+                "-draw", edge,
+            ])
+        )
+
+    if kind == "fold":
+        page = "polygon 143,64 294,64 341,111 341,278 143,278"
+        shadow = _layer(["-fill", rgba(sem["fg_white"], 0.18), "-draw", page], 14)
+        paper = _layer([
+            "-fill", sem["bg_lighter"], "-stroke", rgba(accent, 0.65), "-strokewidth", "3", "-draw", page,
+            "-fill", rgba(soft, 0.42), "-stroke", "none", "-draw", "polygon 294,64 294,111 341,111",
+            "-fill", "none", "-stroke", accent, "-strokewidth", "3", "-draw", "polyline 294,64 294,111 341,111",
+            "-strokewidth", "7", "-draw", "stroke-linecap round",
+            "-draw", "line 179,157 305,157",
+            "-draw", "line 179,192 305,192",
+            "-draw", "line 179,227 263,227",
+        ])
+        return shadow + paper
+
+    if kind == "signal":
+        signal = "polyline 58,173 143,173 171,129 202,231 239,79 275,228 307,139 334,173 422,173"
+        return (
+            _layer([
+                "-fill", "none", "-stroke", rgba(accent, 0.48), "-strokewidth", "10",
+                "-draw", "stroke-linejoin round", "-draw", "stroke-linecap round", "-draw", signal,
+            ], 18)
+            + _layer([
+                "-fill", "none", "-stroke", accent, "-strokewidth", "6",
+                "-draw", "stroke-linejoin round", "-draw", "stroke-linecap round", "-draw", signal,
+            ])
+        )
+
+    rings = [
+        "-fill", "none", "-stroke", accent, "-strokewidth", "11",
+        "-draw", "circle 220,164 220,77",
+        "-stroke", rgba(soft, 0.72), "-strokewidth", "4",
+        "-draw", "circle 271,192 271,125",
+        "-fill", accent, "-stroke", "none", "-draw", "circle 313,102 313,91",
     ]
-    cmd += underline
-    if tag:
-        cmd += ["-gravity", "center", "-font", font, "-fill", rgba(text, 0.72),
-                "-pointsize", "13", "-annotate", "+0+30", tag]
+    return _layer(rings)
+
+
+def build_cmd(
+    name: str, sem: dict, display: str, font: str, wall: Path, out: Path, w: int, h: int
+) -> list[str]:
+    size = 34 if len(display) > 13 else 40
+    kind = MOTIFS.get(name, "orbit")
+    if wall.is_file():
+        base = [
+            str(wall), "-resize", f"{CANVAS}x{CANVAS}^", "-gravity", "center",
+            "-extent", f"{CANVAS}x{CANVAS}", "-blur", "0x3", "-modulate", "78,90",
+        ]
+    else:
+        base = ["-size", f"{CANVAS}x{CANVAS}", f"gradient:{sem['bg_normal']}-{sem['bg_dark']}"]
+    cmd = ["magick", *base]
+    if wall.is_file():
+        cmd += [
+            "(", "-size", f"{CANVAS}x{CANVAS}",
+            f"gradient:{rgba(sem['bg_normal'], 0.24)}-{rgba(sem['bg_dark'], 0.42)}", ")",
+            "-compose", "over", "-composite",
+        ]
+    cmd += _layer([
+        "-fill", rgba(sem["accent"], 0.10), "-draw", "circle 240,155 240,20",
+    ], 48)
+    cmd += motif_layers(kind, sem)
     cmd += [
-        # rounded corners
-        "(", "-size", f"{w}x{h}", "xc:none", "-fill", "white",
-        "-draw", f"roundrectangle 0,0,{w - 1},{h - 1},18,18", ")",
+        "-fill", sem["accent"], "-stroke", "none",
+        "-draw", "roundrectangle 42,350 98,355 2,2",
+        "-gravity", "southwest", "-font", font, "-pointsize", str(size),
+        "-fill", sem["fg_white"], "-annotate", "+42+48", display,
+        "(", "-size", f"{CANVAS}x{CANVAS}", "xc:none", "-fill", "white",
+        "-draw", f"roundrectangle 0,0,{CANVAS - 1},{CANVAS - 1},22,22", ")",
         "-alpha", "off", "-compose", "CopyOpacity", "-composite",
-        # quiet accent border
         "-compose", "over",
-        "(", "-size", f"{w}x{h}", "xc:none", "-fill", "none",
-        "-stroke", accent, "-strokewidth", "3",
-        "-draw", f"roundrectangle 1,1,{w - 2},{h - 2},18,18", ")",
-        "-composite",
-        str(out),
+        "(", "-size", f"{CANVAS}x{CANVAS}", "xc:none", "-fill", "none",
+        "-stroke", rgba(sem["accent"], 0.88), "-strokewidth", "4",
+        "-draw", f"roundrectangle 2,2,{CANVAS - 3},{CANVAS - 3},20,20", ")",
+        "-composite", "-resize", f"{w}x{h}!", "-strip", str(out),
     ]
     return cmd
 
@@ -243,18 +299,15 @@ def main(argv: list[str]) -> int:
         sys.exit("genpreview: ImageMagick (`magick`) not found — install imagemagick")
 
     w, h = (int(v) for v in size.lower().split("x"))
-    tdir = theme_path.parent
-    name = tdir.name
     with theme_path.open("rb") as fh:
-        t = tomllib.load(fh)
-    _reject_malformed_theme(t, theme_path)
-    sem = t.get("sem", {})
-    disp = t.get("name", name.capitalize())
-    tag = t.get("tagline", TAGLINES.get(name, ""))
-    font = resolve_font(t.get("font", {}).get("family", "JetBrainsMono Nerd Font"))
+        theme = tomllib.load(fh)
+    _reject_malformed_theme(theme, theme_path)
+    sem = _theme_validators().build_context(theme, lenient=False)["sem"]
+    display = theme.get("name", theme_path.parent.name)
+    font = resolve_font(theme.get("font", {}).get("family", "JetBrains Mono"))
 
     out.parent.mkdir(parents=True, exist_ok=True)
-    cmd = build_cmd(name, sem, disp, tag, tdir / "wallpaper.png", font, out, w, h)
+    cmd = build_cmd(theme_path.parent.name, sem, display, font, theme_path.parent / "wallpaper.png", out, w, h)
     subprocess.run(cmd, check=True)
     print(f"wrote {out} ({out.stat().st_size} bytes, {w}x{h})")
     return 0

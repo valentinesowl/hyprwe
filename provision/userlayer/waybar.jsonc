@@ -9,7 +9,9 @@
 // wholesale (you state the order you want); a key set to null deletes it.
 // Colours and fonts do NOT belong here — those come from the theme.
 {
-    // "modules-right": ["pulseaudio", "network", "battery", "clock"],
+    // "modules-right": ["hyprland/language", "pulseaudio", "battery", "custom/sunset"],
     // "clock": { "format": "{:%H:%M  %a %d.%m}" },
-    // "cpu": null
+    // "custom/cpu": { "format": "{icon}" },
+    // "custom/memory": { "format": "{icon}" },
+    // "custom/temp": null
 }

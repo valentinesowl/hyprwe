@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """wbstat.py — CPU / RAM / temperature readings for the HWE waybar.
 
-Emits one line of Waybar custom-module JSON. The BAR gets only a percentage:
-Waybar turns it into a morphing glyph itself (`format-icons`, low -> high in
-config.jsonc), keeping this side of the bar glyph-only like every other
-indicator. The precise reading — the exact value plus a rolling sparkline of the
-recent trend (▁▂▃▄▅▆▇█) — goes to the tooltip. State (previous CPU counters +
-that history) lives in ~/.cache/hwe/wbstat so successive polls form a trend.
+Emits one line of Waybar custom-module JSON. CPU and RAM stay glyph-only on the
+bar. Temperature emits visible text only near its warning threshold. Tooltips
+carry the precise reading, a rolling sparkline
+(▁▂▃▄▅▆▇█) and available mouse actions. State (previous CPU counters + history)
+lives in ~/.cache/hwe/wbstat so successive polls form a trend.
 
 Usage (from waybar config, return-type json):  wbstat.py <cpu|mem|temp>
                                                wbstat.py temp --probe
@@ -178,12 +177,12 @@ def temp_json(argv):
            else "warning" if celsius >= TEMP_WARNING * crit
            else "busy" if celsius >= TEMP_BUSY * crit else "")
     print(json.dumps({
-        "text": "",
+        "text": f"󰔏 {celsius:.0f}°C" if cls in ("warning", "critical") else "",
         "percentage": round(max(0.0, min(100.0, pct))),
         # The chip is named on purpose: it is the one thing you want to see when
         # this reads oddly on an unfamiliar machine.
-        "tooltip": f"CPU: {celsius:.0f}°C   {spark(hist, TEMP_FLOOR, crit)}"
-                   f"   ({chip}, critical {crit:.0f}°C)",
+        "tooltip": f"CPU temperature: {celsius:.0f}°C   {spark(hist, TEMP_FLOOR, crit)}"
+                   f"   ({chip}, critical {crit:.0f}°C)\nLeft click: system monitor",
         "class": cls,
     }))
     return 0
@@ -206,11 +205,10 @@ def main(argv):
            else "busy" if pct >= BUSY else "")
     label = "CPU" if kind == "cpu" else "RAM"
     print(json.dumps({
-        # No text: config.jsonc formats these as "{icon}" and picks the glyph
-        # from `percentage`, so anything here would never reach the bar anyway.
+        # Waybar combines this percentage with format-icons and prints the value.
         "text": "",
         "percentage": round(pct),
-        "tooltip": f"{label}: {pct:.0f}%   {spark(hist)}",
+        "tooltip": f"{label}: {pct:.0f}%   {spark(hist)}\nLeft click: system monitor",
         "class": cls,
     }))
     return 0

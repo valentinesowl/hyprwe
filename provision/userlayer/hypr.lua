@@ -15,6 +15,15 @@
 --     },
 -- })
 
+-- Reduced motion: set true to disable window animations and the infinite border
+-- loop. Reload Hyprland, then run `hwe theme apply` to disable Waybar transitions too.
+-- This personal file is preserved by theme apply and hwe update.
+-- local reduced_motion = true
+-- if reduced_motion then
+--     hl.config({ animations = { enabled = false }, decoration = { blur = { enabled = false } } })
+--     hl.animation({ leaf = "borderangle", enabled = false })
+-- end
+
 -- Keybindings: unbind the exact key string before replacing an HWE binding.
 -- hl.unbind("SUPER + T")
 -- hl.bind("SUPER + RETURN", hl.dsp.exec_cmd("kitty"), { description = "Terminal" })

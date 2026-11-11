@@ -10,6 +10,7 @@
     fg-bright:    {{ sem.fg_bright }};
     fg-white:     {{ sem.fg_white }};
     accent:       {{ sem.accent }};
+    on-accent:    {{ sem.on_accent }};
     accent-soft:  {{ sem.accent_soft }};
     transparent:  #00000000;
 
@@ -70,7 +71,7 @@ element {
 
 element selected.normal {
     background-color: @accent;
-    text-color:       @bg-dark;
+    text-color:       @on-accent;
     border:           2px;
     border-color:     @accent-soft;
 }

@@ -4,7 +4,7 @@
 
 font={{ font.family }}, {{ font.fallback_family }}, {{ font.icon_family }} {{ font.notify }}
 width=360
-height=120
+height=300
 margin=10
 padding=14
 border-size={{ params.border_size }}
@@ -16,7 +16,7 @@ ignore-timeout=1
 
 background-color={{ sem.bg_normal }}
 text-color={{ sem.fg_bright }}
-border-color={{ sem.accent }}
+border-color={{ sem.border }}
 progress-color=over {{ sem.bg_light }}
 
 [urgency=low]
@@ -25,6 +25,16 @@ border-color={{ sem.info }}
 [urgency=high]
 border-color={{ sem.urgent }}
 default-timeout=0
+
+[category=hwe-success]
+border-color={{ sem.green }}
+
+[category=hwe-warning]
+border-color={{ sem.orange }}
+
+[category=hwe-error]
+border-color={{ sem.urgent }}
+default-timeout=8000
 
 [category=mpd]
 default-timeout=2000

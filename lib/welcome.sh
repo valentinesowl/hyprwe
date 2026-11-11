@@ -16,9 +16,5 @@ welcome_main() {
     fi
     mkdir -p "$state" && : >"$flag"
 
-    # On-screen only inside a running Hyprland; silent no-op otherwise.
-    command -v hyprctl >/dev/null 2>&1 || return 0
-    hyprctl notify -1 9000 "rgb(cba6f7)" \
-        "  Welcome to HWE — press SUPER + / for the keybind cheatsheet" \
-        >/dev/null 2>&1 || true
+    notify info "Welcome to HWE" "Press SUPER + / for the keybind cheatsheet"
 }

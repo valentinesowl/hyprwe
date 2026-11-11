@@ -33,6 +33,7 @@ fixture_theme() {
     [[ "$root" == user ]] && dir="$HWE_THEMES_USER/$name" || dir="$HWE_THEMES/$name"
     mkdir -p "$dir"
     cp "$HWE_ROOT/themes/default/theme.toml" "$dir/theme.toml"
+    sed -i "s/^name = .*/name = \"$name\"/" "$dir/theme.toml"
     printf '%s\n' "$dir"
 }
 
@@ -346,4 +347,176 @@ EOF
     "
     assert_success
     assert_output "alpha"
+}
+
+
+# --- picker labels, current marker and fallbacks ----------------------------
+
+hwe_theme_pick() {
+    bash -c '
+        set -euo pipefail
+        source "$HWE_ROOT/lib/common.sh"
+        source "$HWE_ROOT/lib/theme.sh"
+        pgrep() { return 1; }
+        need() { :; }
+        rofi() {
+            printf "%s\n" "$*" > "$ROFI_ARGS"
+            cat > "$ROFI_INPUT"
+            printf "%s\n" "$ROFI_CHOICE"
+        }
+        theme_apply() { printf "apply:%s\n" "$1"; }
+        theme_pick
+    '
+}
+
+@test "theme picker always marks current and maps its display label back to the directory" {
+    fixture_theme alpha
+    fixture_theme beta
+    printf png > "$HWE_THEMES/alpha/preview.png"
+    mkdir -p "$HWE_USER_CONFIG/themes"
+    echo beta > "$HWE_USER_CONFIG/themes/.current"
+    export ROFI_INPUT="$BATS_TEST_TMPDIR/input" ROFI_ARGS="$BATS_TEST_TMPDIR/args"
+    export ROFI_CHOICE="● beta"
+    run hwe_theme_pick
+    assert_success
+    assert_output "apply:beta"
+    run grep -a 'theme-previews/beta.png' "$ROFI_INPUT"
+    assert_success
+    run grep -a 'alpha' "$ROFI_INPUT"
+    assert_success
+    run cat "$ROFI_ARGS"
+    assert_output --partial "-selected-row 1"
+    assert_output --partial "-mesg ● beta · Enter apply · Esc cancel"
+}
+
+@test "theme picker keeps a custom display name separate from the apply value" {
+    fixture_theme custom-dir user
+    sed -i 's/^name = .*/name = "My Custom Theme"/' "$HWE_THEMES_USER/custom-dir/theme.toml"
+    mkdir -p "$HWE_USER_CONFIG/themes"
+    echo custom-dir > "$HWE_USER_CONFIG/themes/.current"
+    export ROFI_INPUT="$BATS_TEST_TMPDIR/input" ROFI_ARGS="$BATS_TEST_TMPDIR/args"
+    export ROFI_CHOICE="● My Custom Theme"
+    run hwe_theme_pick
+    assert_success
+    assert_output "apply:custom-dir"
+}
+
+@test "theme picker keeps a text fallback when preview generation fails" {
+    mkdir -p "$HWE_THEMES/broken"
+    printf 'name = "broken"\n[sem]\nbg_dark = "#000000"\n' > "$HWE_THEMES/broken/theme.toml"
+    mkdir -p "$HWE_USER_CONFIG/themes"
+    echo broken > "$HWE_USER_CONFIG/themes/.current"
+    export ROFI_INPUT="$BATS_TEST_TMPDIR/input" ROFI_ARGS="$BATS_TEST_TMPDIR/args"
+    export ROFI_CHOICE="● broken · no preview"
+    run hwe_theme_pick
+    assert_success
+    assert_output "apply:broken"
+    run grep -a '● broken · no preview' "$ROFI_INPUT"
+    assert_success
+    run cat "$ROFI_ARGS"
+    assert_output --partial 'children: [ "element-icon", "element-text" ]'
+}
+
+@test "cancelling the theme picker applies nothing" {
+    fixture_theme alpha
+    export ROFI_INPUT="$BATS_TEST_TMPDIR/input" ROFI_ARGS="$BATS_TEST_TMPDIR/args"
+    export ROFI_CHOICE=""
+    run hwe_theme_pick
+    assert_success
+    assert_output ""
+}
+
+
+# --- scheme-aware Kvantum ---------------------------------------------------
+
+kvantum_with_scheme() {
+    bash -c '
+        set -euo pipefail
+        source "$HWE_ROOT/lib/common.sh"
+        source "$HWE_ROOT/lib/theme.sh"
+        HOME="$BATS_TEST_TMPDIR/home"
+        HWE_THEME_OUT="$BATS_TEST_TMPDIR/rendered"
+        mkdir -p "$HWE_THEME_OUT/gtk-4.0" "$HWE_THEME_OUT/kvantum" "$HOME"
+        if [[ "$SCHEME" == light ]]; then dark=0; else dark=1; fi
+        printf "gtk-application-prefer-dark-theme=%s\n" "$dark" > "$HWE_THEME_OUT/gtk-4.0/settings.ini"
+        printf "[GeneralColors]\nwindow.color=#111111\n" > "$HWE_THEME_OUT/kvantum/generalcolors.ini"
+        kvantummanager() { :; }
+        _theme_kvantum
+    '
+}
+
+@test "light scheme selects KvArc" {
+    SCHEME=light run --separate-stderr kvantum_with_scheme
+    assert_success
+    [[ "$stderr" == *"from KvArc "* ]]
+    [[ "$stderr" != *"from KvArcDark"* ]]
+}
+
+@test "dark scheme selects KvArcDark" {
+    SCHEME=dark run --separate-stderr kvantum_with_scheme
+    assert_success
+    [[ "$stderr" == *"from KvArcDark"* ]]
+}
+
+@test "an explicit Kvantum base wins over the light scheme" {
+    local base="$BATS_TEST_TMPDIR/CustomArc"
+    mkdir -p "$base"
+    printf '<svg/>\n' > "$base/CustomArc.svg"
+    printf '[General]\ntransparent=false\n' > "$base/CustomArc.kvconfig"
+    HWE_KVANTUM_BASE="$base" SCHEME=light run --separate-stderr kvantum_with_scheme
+    assert_success
+    [[ "$stderr" == *"from CustomArc"* ]]
+    [[ "$stderr" != *"from KvArc "* ]]
+}
+
+
+@test "theme apply passes the personal reduced-motion flag to the renderer" {
+    fixture_theme alpha
+    mkdir -p "$HWE_USER_CONFIG"
+    printf 'local reduced_motion = true\n' > "$HWE_USER_CONFIG/hypr.lua"
+    export ROFI_ARGS="$BATS_TEST_TMPDIR/render-env"
+    run bash -c '
+        set -euo pipefail
+        source "$HWE_ROOT/lib/common.sh"
+        source "$HWE_ROOT/lib/theme.sh"
+        need() { :; }
+        python3() { printf "HWE_REDUCED_MOTION=%s\n" "$HWE_REDUCED_MOTION" > "$ROFI_ARGS"; }
+        _theme_waybar_overrides() { :; }
+        _theme_deploy_links() { :; }
+        _theme_kvantum() { :; }
+        _wall_default() { printf "wall\n"; }
+        _wall_activate() { :; }
+        _sddm_refresh_if_free() { :; }
+        _theme_reload() { :; }
+        notify() { :; }
+        theme_apply alpha
+    '
+    assert_success
+    run cat "$ROFI_ARGS"
+    assert_output "HWE_REDUCED_MOTION=1"
+}
+
+
+@test "expected manual SDDM sync is informational rather than a theme warning" {
+    fixture_theme alpha
+    run bash -c '
+        set -euo pipefail
+        source "$HWE_ROOT/lib/common.sh"
+        source "$HWE_ROOT/lib/theme.sh"
+        need() { :; }
+        python3() { :; }
+        _theme_waybar_overrides() { :; }
+        _theme_deploy_links() { :; }
+        _theme_kvantum() { :; }
+        _wall_default() { printf "wall\n"; }
+        _wall_activate() { :; }
+        _sddm_refresh_if_free() { return 2; }
+        _theme_reload() { :; }
+        notify() { printf "notify:%s|%s|%s\n" "$1" "$2" "${3:-}"; }
+        theme_apply alpha
+    '
+    assert_success
+    assert_output --partial "notify:success|Theme 'alpha' applied"
+    assert_output --partial "hwe theme sddm"
+    refute_output --partial "applied with warnings"
 }

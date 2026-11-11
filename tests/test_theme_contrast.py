@@ -1,22 +1,9 @@
-"""Tests for the legibility of every shipped theme — the WCAG contrast floor.
+"""WCAG contrast checks for the semantic roles used by every shipped theme.
 
-A theme is data, and until now nothing held that data to a *readability* line:
-render-theme.py checks a colour is a well-formed #rrggbb, never that you can see
-it. A theme could satisfy the whole role contract and still paint dim text you
-cannot read (ember's fg_dim once sat at 1.90:1, void's fg_normal at 2.98:1).
-
-These tests are that missing line. They compute the WCAG 2.1 contrast ratio for
-the role pairings that actually reach the screen as text/glyph, and hold every
-shipped theme to a documented floor. The thresholds ARE the spec the palettes
-are tuned against — loosen one only with a reason, in this file, on purpose.
-
-The pairings mirror what the templates render:
-  * fg_* on bg_normal      — body / bright / dim text on the base surface
-  * accent on bg_dark      — the active workspace glyph (bar bg is bg_dark @ .62)
-                             and the rofi prompt (bg_dark @ opacity); bg_dark is
-                             the conservative opaque floor, ignoring the wallpaper
-                             showing through, so passing here passes everywhere.
-  * red / urgent on bg_normal — alert ink must stay legible, not just present.
+Small text needs 4.5:1. The 3:1 floor is reserved for large text and meaningful
+non-text UI, never for the 12px bar or secondary labels. The bar is tested after
+alpha compositing over black, white and a mid-grey wallpaper, not just against
+its authored background colour.
 """
 import tomllib
 
@@ -24,23 +11,13 @@ import pytest
 
 from conftest import theme_ids, theme_paths
 
-# ── The readability floor (WCAG 2.1 relative-luminance contrast ratio) ─────
-# 4.5 = AA for body text; 3.0 = AA for large text and UI components. The bar
-# glyphs, workspace numbers and rofi prompt are all "large" by WCAG's measure,
-# so 3.0 is their honest floor; fg_normal is body text and earns the full 4.5.
-FG_NORMAL_MIN = 4.5   # primary reading text (kitty fg, mako body, rofi entry)
-# fg_bright is high-emphasis text; 6.0 sits between AA body (4.5) and AAA body
-# (7.0). It is deliberately NOT 7.0: ember's signature is a MUTED dusty rose, and
-# forcing AAA there would bleach the one thing that makes the theme itself. 6.0
-# still guarantees fg_bright reads emphatically above fg_normal.
+TEXT_MIN = 4.5
 FG_BRIGHT_MIN = 6.0
-FG_DIM_MIN = 3.0      # secondary text: inactive tags, placeholders, mako second line
-ACCENT_ON_BAR_MIN = 3.0   # accent as a glyph on the bar / rofi prompt (over bg_dark)
-ALERT_MIN = 3.0       # red / urgent must read as an alert, not a smudge
+UI_MIN = 3.0
+CONTROL_WALLPAPERS = ("#000000", "#ffffff", "#808080")
 
 
 def _relative_luminance(hex_colour: str) -> float:
-    """WCAG 2.1 relative luminance of an #rrggbb colour (0.0 black .. 1.0 white)."""
     h = hex_colour.lstrip("#")
     channels = (int(h[i : i + 2], 16) / 255 for i in (0, 2, 4))
 
@@ -52,20 +29,32 @@ def _relative_luminance(hex_colour: str) -> float:
 
 
 def contrast_ratio(a: str, b: str) -> float:
-    """WCAG contrast ratio between two colours, 1.0 (identical) .. 21.0 (b&w)."""
     la, lb = _relative_luminance(a), _relative_luminance(b)
     hi, lo = max(la, lb), min(la, lb)
     return (hi + 0.05) / (lo + 0.05)
 
 
-def _sem(theme_path) -> dict:
-    """The [sem] table of a theme, straight from disk (no resolution needed —
-    contrast is a property of the authored colours, not the derived params)."""
+def composite(foreground: str, background: str, alpha: float) -> str:
+    channels = [
+        round(int(foreground[i : i + 2], 16) * alpha + int(background[i : i + 2], 16) * (1 - alpha))
+        for i in (1, 3, 5)
+    ]
+    return "#" + "".join(f"{channel:02x}" for channel in channels)
+
+
+def _theme(theme_path) -> dict:
     with open(theme_path, "rb") as fh:
-        return tomllib.load(fh)["sem"]
+        return tomllib.load(fh)
 
 
-# ── The contrast helper itself, so a bug in it can't silently pass a theme ─
+def _sem(theme_path) -> dict:
+    return _theme(theme_path)["sem"]
+
+
+def _context(theme_path, render_theme) -> dict:
+    return render_theme.build_context(_theme(theme_path), lenient=False)
+
+
 def test_contrast_of_black_on_white_is_the_wcag_maximum():
     assert contrast_ratio("#000000", "#ffffff") == pytest.approx(21.0, abs=0.01)
 
@@ -78,52 +67,68 @@ def test_identical_colours_have_no_contrast():
     assert contrast_ratio("#808080", "#808080") == pytest.approx(1.0)
 
 
-# ── Every shipped theme must clear the floor ───────────────────────────────
+def test_composite_over_white_uses_both_colours():
+    assert composite("#000000", "#ffffff", 0.5) == "#808080"
+
+
 @pytest.mark.parametrize("theme_path", theme_paths(), ids=theme_ids())
-def test_body_text_is_legible(theme_path):
+@pytest.mark.parametrize("role", ["fg_normal", "fg_dim"])
+def test_small_text_is_legible_on_the_base_surface(theme_path, role):
     sem = _sem(theme_path)
-    ratio = contrast_ratio(sem["fg_normal"], sem["bg_normal"])
-    assert ratio >= FG_NORMAL_MIN, (
-        f"fg_normal on bg_normal is {ratio:.2f}:1, below the AA body floor "
-        f"{FG_NORMAL_MIN} — primary text would be hard to read"
-    )
+    ratio = contrast_ratio(sem[role], sem["bg_normal"])
+    assert ratio >= TEXT_MIN, f"{role} on bg_normal is {ratio:.2f}:1, below {TEXT_MIN}"
 
 
 @pytest.mark.parametrize("theme_path", theme_paths(), ids=theme_ids())
 def test_bright_text_is_emphatic(theme_path):
     sem = _sem(theme_path)
     ratio = contrast_ratio(sem["fg_bright"], sem["bg_normal"])
-    assert ratio >= FG_BRIGHT_MIN, (
-        f"fg_bright on bg_normal is {ratio:.2f}:1, below {FG_BRIGHT_MIN}"
-    )
+    assert ratio >= FG_BRIGHT_MIN, f"fg_bright on bg_normal is {ratio:.2f}:1, below {FG_BRIGHT_MIN}"
 
 
 @pytest.mark.parametrize("theme_path", theme_paths(), ids=theme_ids())
-def test_dim_text_stays_readable(theme_path):
+@pytest.mark.parametrize("surface", ["bg_dark", "bg_normal"])
+def test_accent_small_text_is_legible(theme_path, surface):
     sem = _sem(theme_path)
-    ratio = contrast_ratio(sem["fg_dim"], sem["bg_normal"])
-    assert ratio >= FG_DIM_MIN, (
-        f"fg_dim on bg_normal is {ratio:.2f}:1, below the large-text/UI floor "
-        f"{FG_DIM_MIN} — inactive tags and placeholders would vanish"
-    )
-
-
-@pytest.mark.parametrize("theme_path", theme_paths(), ids=theme_ids())
-def test_accent_reads_as_a_glyph_on_the_bar(theme_path):
-    sem = _sem(theme_path)
-    ratio = contrast_ratio(sem["accent"], sem["bg_dark"])
-    assert ratio >= ACCENT_ON_BAR_MIN, (
-        f"accent on bg_dark is {ratio:.2f}:1, below {ACCENT_ON_BAR_MIN} — the "
-        f"active workspace glyph and rofi prompt would be near-invisible"
-    )
+    ratio = contrast_ratio(sem["accent"], sem[surface])
+    assert ratio >= TEXT_MIN, f"accent on {surface} is {ratio:.2f}:1, below {TEXT_MIN}"
 
 
 @pytest.mark.parametrize("theme_path", theme_paths(), ids=theme_ids())
 @pytest.mark.parametrize("role", ["red", "urgent"])
-def test_alert_ink_is_legible(theme_path, role):
+def test_alert_small_text_is_legible(theme_path, role):
     sem = _sem(theme_path)
     ratio = contrast_ratio(sem[role], sem["bg_normal"])
-    assert ratio >= ALERT_MIN, (
-        f"{role} on bg_normal is {ratio:.2f}:1, below {ALERT_MIN} — an alert "
-        f"that dim does not alert"
+    assert ratio >= TEXT_MIN, f"{role} on bg_normal is {ratio:.2f}:1, below {TEXT_MIN}"
+
+
+@pytest.mark.parametrize("theme_path", theme_paths(), ids=theme_ids())
+@pytest.mark.parametrize("role", ["accent", "urgent"])
+def test_selected_rows_have_legible_ink(theme_path, role, render_theme):
+    sem = _context(theme_path, render_theme)["sem"]
+    ink = sem[f"on_{role}"]
+    ratio = contrast_ratio(ink, sem[role])
+    assert ratio >= TEXT_MIN, f"{ink} on {role} is {ratio:.2f}:1, below {TEXT_MIN}"
+
+
+@pytest.mark.parametrize("theme_path", theme_paths(), ids=theme_ids())
+@pytest.mark.parametrize("role", ["fg_normal", "fg_dim", "accent"])
+@pytest.mark.parametrize("wallpaper", CONTROL_WALLPAPERS)
+def test_bar_text_survives_compositing(theme_path, role, wallpaper):
+    theme = _theme(theme_path)
+    sem = theme["sem"]
+    alpha = theme.get("params", {}).get("bar_opacity", 0.94)
+    actual_background = composite(sem["bg_dark"], wallpaper, alpha)
+    ratio = contrast_ratio(sem[role], actual_background)
+    assert ratio >= TEXT_MIN, (
+        f"{role} on the bar over {wallpaper} is {ratio:.2f}:1 "
+        f"(alpha={alpha}, composite={actual_background}), below {TEXT_MIN}"
     )
+
+
+@pytest.mark.parametrize("theme_path", theme_paths(), ids=theme_ids())
+@pytest.mark.parametrize("role", ["accent", "urgent"])
+def test_meaningful_nontext_ui_clears_the_component_floor(theme_path, role):
+    sem = _sem(theme_path)
+    ratio = contrast_ratio(sem[role], sem["bg_normal"])
+    assert ratio >= UI_MIN, f"{role} UI on bg_normal is {ratio:.2f}:1, below {UI_MIN}"

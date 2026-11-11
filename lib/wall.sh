@@ -131,7 +131,7 @@ _wall_activate() {
     path="$(readlink -f "$path")"
     mkdir -p "$(dirname "$HWE_WALL_LINK")"
     ln -sfn "$path" "$HWE_WALL_LINK"
-    _wall_reload "$path"
+    _wall_apply "$path"
 }
 
 # The raw live swap, and it tells the truth. Locates the Hyprland instance
@@ -162,10 +162,6 @@ _wall_apply() {
     fi
     return 1
 }
-
-# Best-effort wrapper around the swap — must NEVER fail the caller (theme apply
-# runs under set -euo pipefail at install time).
-_wall_reload() { _wall_apply "$1" || true; }
 
 wall_current() {
     if [[ -L "$HWE_WALL_LINK" ]]; then
@@ -250,21 +246,37 @@ wall_set() {
         fi
         [[ ${#matches[@]} -eq 1 ]] && path="${matches[0]}"
     fi
-    [[ -n "$path" && -f "$path" ]] || { err "wallpaper not found: $arg"; return 1; }
-    _wall_activate "$path" || return 1
+    [[ -n "$path" && -f "$path" ]] || {
+        err "wallpaper not found: $arg"
+        notify error "Wallpaper failed" "Not found: $arg"
+        return 1
+    }
+    _wall_activate "$path" || {
+        notify error "Wallpaper failed" "hyprpaper refused the image · run 'hwe wall restore'"
+        return 1
+    }
     _wall_remember "$theme" "$path"
     ok "wallpaper: $(_wall_label "$path")"
+    notify success "Wallpaper changed" "$(_wall_label "$path") · $theme"
 }
 
 wall_random() {
     local theme; theme="$(_wall_theme "${1:-}")"
     local files=() p
     while IFS= read -r p; do [[ -n "$p" ]] && files+=("$p"); done < <(_wall_candidates "$theme")
-    [[ ${#files[@]} -gt 0 ]] || { err "no wallpapers for '$theme'"; return 1; }
+    [[ ${#files[@]} -gt 0 ]] || {
+        err "no wallpapers for '$theme'"
+        notify error "Wallpaper failed" "No wallpapers found for '$theme'"
+        return 1
+    }
     local pick="${files[RANDOM % ${#files[@]}]}"
-    _wall_activate "$pick" || return 1
+    _wall_activate "$pick" || {
+        notify error "Wallpaper failed" "hyprpaper refused the image · run 'hwe wall restore'"
+        return 1
+    }
     _wall_remember "$theme" "$pick"
     ok "wallpaper: $(_wall_label "$pick")"
+    notify success "Wallpaper changed" "$(_wall_label "$pick") · $theme"
 }
 
 # Interactive rofi picker with thumbnails (bound to SUPER+SHIFT+W).

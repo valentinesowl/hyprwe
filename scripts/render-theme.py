@@ -80,7 +80,7 @@ FONT_DEFAULTS = {
     "ui_family": "Sans",  # the UI/proportional font for GTK apps (size from [font].gtk)
     "terminal":  9.5,   # kitty
     "bar":       12,    # waybar
-    "launcher":  11,    # rofi menus — base size; pickers scale ± from it in their templates
+    "launcher":  12,    # rofi menus — base size; pickers scale ± from it in their templates
     "notify":    11,    # mako
     "gtk":       11,    # GTK apps (proportional; family is ui_family, this is the size)
 }
@@ -323,14 +323,38 @@ def _contrast(a: str, b: str) -> float:
     return (hi + 0.05) / (lo + 0.05)
 
 
+def accessibility_warnings(theme: dict) -> list[str]:
+    """Non-fatal guidance for custom themes; shipped themes are held to these in pytest."""
+    warnings = []
+    minimums = {"terminal": 9.5, "bar": 12, "launcher": 12, "notify": 11, "gtk": 11}
+    for role, minimum in minimums.items():
+        value = theme.get("font", {}).get(role, FONT_DEFAULTS[role])
+        if isinstance(value, (int, float)) and not isinstance(value, bool) and value < minimum:
+            warnings.append(f"[font].{role}={value} is below the accessible minimum {minimum}")
+    height = theme.get("params", {}).get("bar_height", 28)
+    if isinstance(height, (int, float)) and not isinstance(height, bool) and height < 28:
+        warnings.append(f"[params].bar_height={height} is below the accessible minimum 28")
+    sem = theme.get("sem", {})
+    surface = sem.get("bg_normal")
+    if surface:
+        for role in ("fg_normal", "fg_dim", "red", "urgent"):
+            colour = sem.get(role)
+            if colour and _contrast(colour, surface) < 4.5:
+                warnings.append(f"[sem].{role} on bg_normal is below 4.5:1")
+    if sem.get("accent") and sem.get("bg_dark") and _contrast(sem["accent"], sem["bg_dark"]) < 4.5:
+        warnings.append("[sem].accent on bg_dark is below 4.5:1")
+    return warnings
+
+
 def _pick_on_accent(accent: str, bg_dark: str, fg_white: str) -> str:
-    """Legible ink for text/glyphs on an ACCENT fill. Picks whichever of the two
-    role extremes — bg_dark (the darkest surface) and fg_white (the max-contrast
-    text) — reads better ON the accent. These two sit at opposite ends of the
-    luminance range in EITHER scheme (in a light theme bg_dark is a pale grey and
-    fg_white is near-black), so choosing by contrast, not by a fixed 'accent is
-    dark → use white' rule, is what keeps this correct for light themes too."""
-    return bg_dark if _contrast(accent, bg_dark) >= _contrast(accent, fg_white) else fg_white
+    """Pick the strongest ink for a filled semantic colour.
+
+    Theme extremes come first so ordinary selections retain the palette's character.
+    Pure black and white are fallbacks for mid-luminance fills where neither themed
+    extreme reaches the 4.5:1 small-text floor (notably urgent rows in light themes).
+    """
+    candidates = (bg_dark, fg_white, "#000000", "#ffffff")
+    return max(candidates, key=lambda ink: _contrast(accent, ink))
 
 
 def build_context(theme: dict, *, lenient: bool) -> dict:
@@ -350,6 +374,10 @@ def build_context(theme: dict, *, lenient: bool) -> dict:
     sem.setdefault(
         "on_accent",
         _pick_on_accent(sem.get("accent", UGLY), sem.get("bg_dark", UGLY), sem.get("fg_white", UGLY)),
+    )
+    sem.setdefault(
+        "on_urgent",
+        _pick_on_accent(sem.get("urgent", UGLY), sem.get("bg_dark", UGLY), sem.get("fg_white", UGLY)),
     )
 
     # Signature HWE animated border: the gradient angle rotates forever so colours
@@ -401,7 +429,7 @@ def build_context(theme: dict, *, lenient: bool) -> dict:
     # floating "frosted island": edge gap via JSON margins (CSS margin on
     # window#waybar is unreliable, Waybar #1533) + rounding/border/shadow. The
     # numeric knobs only take effect while floating.
-    params.setdefault("bar_height", 26)
+    params.setdefault("bar_height", 28)
     params.setdefault("bar_float", False)
     params.setdefault("bar_gap", 6)      # top gap when floating
     params.setdefault("bar_gap_x", 8)    # side gap when floating
@@ -410,17 +438,19 @@ def build_context(theme: dict, *, lenient: bool) -> dict:
     # Waybar workspace focus indicator — see BAR_WS_INDICATORS. The whole
     # #workspaces block lives in the generated theme.css (style.css must not
     # restate it: style.css @imports theme.css, so its own rules would win).
-    params.setdefault("bar_ws_indicator", "glow")
+    params.setdefault("bar_ws_indicator", "underline")
     if params["bar_ws_indicator"] not in BAR_WS_INDICATORS:
         sys.exit(
             f"[theme] '{theme['name']}': unknown bar_ws_indicator "
             f"'{params['bar_ws_indicator']}'\n[theme] expected one of: "
             + ", ".join(BAR_WS_INDICATORS)
         )
-    params.setdefault("bar_ws_speed", 220)  # ms for the indicator to settle
-    # Bar backdrop alpha over the wallpaper (the frosted-glass strength). Was a
-    # literal 0.62 buried in style.css; now a theme knob rendered into theme.css.
-    params.setdefault("bar_opacity", 0.62)
+    params["reduced_motion"] = os.environ.get("HWE_REDUCED_MOTION") == "1"
+    params.setdefault("bar_ws_speed", 220)
+    if params["reduced_motion"]:
+        params["bar_ws_speed"] = 0
+    # Enough backing opacity to preserve small-text contrast on arbitrary wallpapers.
+    params.setdefault("bar_opacity", 0.94)
 
     # Desktop look-and-feel knobs that used to be hardcoded outside the theme:
     #   scheme        — light/dark preference handed to GTK (prefer-dark) and KDE.
@@ -611,6 +641,8 @@ def main(argv: list[str]) -> int:
         if not lenient:
             sys.stderr.write("[theme] refusing to render an incomplete theme (use --lenient to force)\n")
             return 2
+    for warning in accessibility_warnings(theme):
+        sys.stderr.write(f"[theme] '{label}': accessibility warning: {warning}\n")
     if check_only:
         if not missing:
             print(f"[theme] '{theme['name']}' satisfies the contract ({len(REQUIRED_ROLES)} roles)")

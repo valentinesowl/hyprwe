@@ -64,3 +64,20 @@ clean_fn() {
     assert_output --partial "appearance.lua:43: bezier or spring is required"
     refute_output --partial "config OK"
 }
+
+
+@test "checkconfig --notify uses the shared themed helper" {
+    run bash -c '
+        set -euo pipefail
+        HWE_ROOT="$HWE_REPO_ROOT"
+        source "$HWE_ROOT/lib/common.sh"
+        source "$HWE_ROOT/lib/checkconfig.sh"
+        Hyprland() { :; }
+        _hypr_config_errors() { printf "bad config\n"; }
+        notify() { printf "notify:%s|%s|%s\n" "$1" "$2" "$3"; }
+        checkconfig_main --notify
+    '
+    assert_failure
+    assert_output --partial "notify:error|Hyprland config errors|Run 'hwe checkconfig' for details"
+    refute_output --partial "rgb("
+}

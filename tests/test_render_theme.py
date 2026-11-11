@@ -450,20 +450,18 @@ def test_on_accent_is_not_a_required_role(render_theme):
     assert "on_accent" not in render_theme.REQUIRED_ROLES
 
 
-def test_on_accent_is_derived_from_the_role_extremes(render_theme, minimal_theme):
+def test_on_accent_falls_back_to_pure_black_or_white_when_needed(render_theme, minimal_theme):
     ctx = render_theme.build_context(minimal_theme, lenient=False)
-    sem = ctx["sem"]
-    assert sem["on_accent"] in (sem["bg_dark"], sem["fg_white"])
+    assert ctx["sem"]["on_accent"] in ("#000000", "#ffffff")
 
 
-def test_on_accent_picks_the_higher_contrast_extreme(render_theme, minimal_theme):
-    """A near-white accent must get the dark extreme as ink, not the light one —
-    and this must hold whichever role happens to be the dark one (light themes)."""
+def test_on_accent_picks_the_highest_contrast_ink(render_theme, minimal_theme):
+    """A near-white accent gets black ink when it outranks both theme extremes."""
     minimal_theme["sem"]["accent"] = "#ffffff"
-    minimal_theme["sem"]["bg_dark"] = "#101010"     # the dark extreme
-    minimal_theme["sem"]["fg_white"] = "#efefef"    # the light extreme
+    minimal_theme["sem"]["bg_dark"] = "#101010"
+    minimal_theme["sem"]["fg_white"] = "#efefef"
     ctx = render_theme.build_context(minimal_theme, lenient=False)
-    assert ctx["sem"]["on_accent"] == "#101010"
+    assert ctx["sem"]["on_accent"] == "#000000"
 
 
 def test_a_theme_may_pin_on_accent(render_theme, minimal_theme):
@@ -527,15 +525,33 @@ def test_anim_speed_zero_means_no_animations(render_theme, minimal_theme, templa
     assert "hl.animation" not in lua
 
 
-# bar_opacity — the bar backdrop, now themed rather than a style.css literal.
-def test_bar_opacity_defaults_to_the_historic_value(render_theme, minimal_theme):
-    assert render_theme.build_context(minimal_theme, lenient=False)["params"]["bar_opacity"] == 0.62
+# bar_opacity — enough backing to keep text readable over arbitrary wallpapers.
+def test_bar_opacity_defaults_to_the_accessible_value(render_theme, minimal_theme):
+    assert render_theme.build_context(minimal_theme, lenient=False)["params"]["bar_opacity"] == 0.94
 
 
 def test_bar_opacity_threads_into_the_bar_backdrop(render_theme, minimal_theme, templates_dir, tmp_path):
     minimal_theme["params"]["bar_opacity"] = 0.5
     out = _render(render_theme, minimal_theme, templates_dir, tmp_path)
     assert "alpha(@bg_dark, 0.5)" in (out / "waybar" / "theme.css").read_text()
+
+
+def test_waybar_motion_defaults_to_a_calm_transition(render_theme, minimal_theme, templates_dir, tmp_path, monkeypatch):
+    monkeypatch.delenv("HWE_REDUCED_MOTION", raising=False)
+    params = render_theme.build_context(minimal_theme, lenient=False)["params"]
+    assert params["bar_ws_speed"] == 220 and params["reduced_motion"] is False
+    css = (_render(render_theme, minimal_theme, templates_dir, tmp_path) / "waybar" / "theme.css").read_text()
+    assert "transition: all 220ms ease" in css
+    assert "transition: color 0.2s ease" in css
+
+
+def test_reduced_motion_disables_all_waybar_transitions(render_theme, minimal_theme, templates_dir, tmp_path, monkeypatch):
+    monkeypatch.setenv("HWE_REDUCED_MOTION", "1")
+    params = render_theme.build_context(minimal_theme, lenient=False)["params"]
+    assert params["bar_ws_speed"] == 0 and params["reduced_motion"] is True
+    css = (_render(render_theme, minimal_theme, templates_dir, tmp_path) / "waybar" / "theme.css").read_text()
+    assert "transition: all 0ms ease" in css
+    assert "transition: color" not in css
 
 
 # Desktop theme names + the UI font family.

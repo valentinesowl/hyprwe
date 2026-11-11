@@ -24,12 +24,12 @@ bg_normal  = "#eceff4"
 bg_light   = "#f4f6fa"
 bg_lighter = "#fbfcfe"
 # text (dim -> max contrast): grey -> near-black slate ink
-fg_dim     = "#767d8a"
+fg_dim     = "#555a64"
 fg_normal  = "#3a414d"
 fg_bright  = "#232833"
 fg_white   = "#12151b"
 # accent — ink blue (dark enough to read as a glyph on the pale bar)
-accent      = "#255f9e"
+accent      = "#245b98"
 accent_soft = "#3f82c8"
 # raw colours — darkened so they read on paper, not just on black
 red     = "#c33025"
@@ -41,7 +41,7 @@ magenta = "#9a4593"
 cyan    = "#227f7f"
 # service
 border = "#c6cbd4"
-urgent = "#c33025"
+urgent = "#a82920"
 
 [params]
 scheme        = "light"      # the switch: GTK prefer-dark off, kitty ANSI swap
@@ -53,10 +53,10 @@ border_size   = 1
 # Light glass wants to stay fairly solid — heavy translucency over a bright
 # wallpaper reads as washed-out, not frosted.
 opacity       = 0.92
-bar_opacity   = 0.78
+bar_opacity   = 0.94
 blur_passes   = 3
 blur_size     = 6
-bar_height    = 26
+bar_height    = 28
 bar_float     = false
 bar_gap       = 6
 bar_gap_x     = 8
@@ -74,7 +74,7 @@ fallback_family = "JetBrains Mono"           # used where `family` is not instal
 ui_family = "Sans"
 terminal  = 9.5
 bar       = 12
-launcher  = 11
+launcher  = 12
 notify    = 11
 gtk       = 11
 

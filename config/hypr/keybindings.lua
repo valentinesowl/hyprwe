@@ -34,12 +34,11 @@ bind("SUPER + SHIFT + Q", hl.dsp.exit(), "Exit Hyprland session")
 bind("SUPER + SPACE", hl.dsp.exec_cmd("hyprctl switchxkblayout current next"), "Cycle keyboard layout", { locked = true })
 
 -- Screenshots.
-bind("Print", hl.dsp.exec_cmd("grim - | wl-copy"), "Whole screen to clipboard")
-bind("SHIFT + Print", hl.dsp.exec_cmd('g=$(slurp) && grim -g "$g" - | wl-copy'), "Region to clipboard")
-bind("SUPER + Print", hl.dsp.exec_cmd('g=$(slurp) && mkdir -p ~/Pictures && grim -g "$g" ~/Pictures/$(date +%F_%H-%M-%S).png'), "Region to file")
-local annotate = 'g=$(slurp) && mkdir -p ~/Pictures && grim -g "$g" - | satty --filename - --copy-command wl-copy --output-filename ~/Pictures/$(date +%F_%H-%M-%S).png'
-bind("SUPER + SHIFT + Print", hl.dsp.exec_cmd(annotate), "Annotate region")
-bind("SUPER + P", hl.dsp.exec_cmd(annotate), "Annotate region")
+bind("Print", hl.dsp.exec_cmd("hwe screenshot screen"), "Whole screen to clipboard")
+bind("SHIFT + Print", hl.dsp.exec_cmd("hwe screenshot region"), "Region to clipboard")
+bind("SUPER + Print", hl.dsp.exec_cmd("hwe screenshot file"), "Region to file")
+bind("SUPER + SHIFT + Print", hl.dsp.exec_cmd("hwe screenshot annotate"), "Annotate region")
+bind("SUPER + P", hl.dsp.exec_cmd("hwe screenshot annotate"), "Annotate region")
 
 -- Volume and brightness; repeating and locked match the former bindel/bindl flags.
 bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("swayosd-client --output-volume raise"), "Raise volume", { repeating = true, locked = true })
@@ -73,13 +72,10 @@ bind("SUPER + X", hl.dsp.workspace.toggle_special("magic"), "Toggle scratchpad")
 bind("SUPER + SHIFT + X", hl.dsp.window.move({ workspace = "special:magic" }), "Move window to scratchpad")
 
 local function session_command(action, slot)
-    return string.format(
-        'hwe session %s %d && hyprctl notify 0 2500 "rgb(88c0d0)" "HWE: %s slot %d" || hyprctl notify 0 4000 "rgb(ff5555)" "HWE: %s failed for slot %d"',
-        action, slot, action, slot, action, slot
-    )
+    return string.format("hwe session %s %d", action, slot)
 end
 
-bind("SUPER + S", hl.dsp.submap("session"), "Session save/restore mode")
+bind("SUPER + S", hl.dsp.exec_cmd("hwe session mode"), "Session save/restore mode")
 hl.define_submap("session", function()
     for slot = 1, 9 do
         bind(tostring(slot), hl.dsp.exec_cmd(session_command("save", slot)), "Save session slot " .. slot)

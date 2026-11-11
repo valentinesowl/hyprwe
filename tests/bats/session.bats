@@ -46,3 +46,29 @@ setup() {
     assert_failure
     [[ "$stderr" == *"session not found: missing"* ]]
 }
+
+@test "session mode shows the key hint before entering the submap" {
+    run bash -c '
+        source "$HWE_ROOT/lib/common.sh"
+        source "$HWE_ROOT/lib/session.sh"
+        notify() { printf "notify:%s|%s|%s\n" "$1" "$2" "$3"; }
+        _hyprctl() { printf "hyprctl:%s\n" "$*"; }
+        session_main mode
+    '
+    assert_success
+    assert_output --partial "1–9 save · Shift+1–9 restore · Esc cancel"
+    assert_output --partial 'hl.dsp.submap("session")'
+}
+
+@test "a failed session save reports an error rather than success" {
+    run bash -c '
+        source "$HWE_ROOT/lib/common.sh"
+        source "$HWE_ROOT/lib/session.sh"
+        python3() { return 42; }
+        notify() { printf "notify:%s|%s|%s\n" "$1" "$2" "$3"; }
+        session_main save 3
+    '
+    assert_failure
+    assert_output --partial "notify:error|Session save failed|Snapshot '3'"
+    refute_output --partial "notify:success"
+}

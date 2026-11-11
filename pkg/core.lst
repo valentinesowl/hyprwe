@@ -31,6 +31,7 @@ kitty                        # terminal
 waybar                       # status bar
 rofi-wayland                 # application launcher (rofi with native layer-shell)
 mako                         # notification daemon
+libnotify                    # notify-send — themed HWE feedback through mako
 dolphin                      # GUI file manager (SUPER+N) — Qt, themed via qt6ct/Fusion
 gwenview                     # image viewer — default for image/* opened from Dolphin;
                              # KDE-native (kvantum-themed), thumbnails + folder browsing.

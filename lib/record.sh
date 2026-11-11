@@ -27,12 +27,20 @@ record_main() {
 
     # A running capture means "stop", regardless of the requested mode.
     if pgrep -x wf-recorder >/dev/null 2>&1; then
-        pkill -INT -x wf-recorder
-        _record_notify "Recording stopped" "Saved to ~/Videos"
+        if ! pkill -INT -x wf-recorder; then
+            err "could not stop wf-recorder"
+            notify error "Recording failed" "Could not stop wf-recorder"
+            return 1
+        fi
+        ok "recording stopped — saved to ~/Videos"
+        notify success "Recording stopped" "Saved to ~/Videos"
         return 0
     fi
 
-    need wf-recorder wf-recorder || return 1
+    need wf-recorder wf-recorder || {
+        notify error "Recording failed" "wf-recorder is not installed"
+        return 1
+    }
     local dir="$HOME/Videos"
     mkdir -p "$dir"
     local out
@@ -40,20 +48,21 @@ record_main() {
 
     local -a geo=()
     if [[ "${1:-}" == region ]]; then
-        need slurp slurp || return 1
+        need slurp slurp || {
+            notify error "Recording failed" "slurp is not installed"
+            return 1
+        }
         local g
-        g="$(slurp)" || return 0 # cancelled selection: abort cleanly
+        if ! g="$(slurp)" || [[ -z "$g" ]]; then
+            info "recording cancelled"
+            notify info "Recording cancelled"
+            return 0
+        fi
         geo=(-g "$g")
     fi
 
     # Detached so the keybind returns immediately; wf-recorder keeps running.
     wf-recorder "${geo[@]}" -f "$out" >/dev/null 2>&1 &
     disown
-    _record_notify "Recording…" "→ ${out/#$HOME/\~}"
-}
-
-# Best-effort on-screen feedback via Hyprland's built-in notify (no libnotify).
-_record_notify() {
-    command -v hyprctl >/dev/null 2>&1 || return 0
-    hyprctl notify -1 3000 "rgb(ee4444)" "  $1${2:+ — $2}" >/dev/null 2>&1 || true
+    notify warning "Recording started" "● REC · ${out/#$HOME/\~}"
 }

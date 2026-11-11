@@ -9,6 +9,52 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+## [2.0.3] — 2026-11-11
+
+### Added
+
+- **Visible action feedback through themed mako notifications.** Theme and wallpaper apply,
+  screenshots, recording, session save/restore, night light and config errors now report
+  success, cancellation, warnings or failure without losing normal CLI output. `libnotify`
+  (`libnotify-bin` on Ubuntu) is an explicit dependency; Hyprland's translucent popup is
+  never used as a fallback.
+- **Safer, more discoverable interaction.** `hwe screenshot` owns clipboard, region, file
+  and annotation workflows with distinct success/cancel/error results. Logout, reboot and
+  shutdown require a second, Cancel-first confirmation. `SUPER+S` displays the session keys.
+- **Persistent reduced motion.** `local reduced_motion = true` in `~/.config/hwe/hypr.lua`
+  disables Hyprland animations, blur, the infinite border loop and generated Waybar
+  transitions. Normal installations retain calm 220ms workspace/indicator transitions.
+- **Accessible login screens.** SDDM gains keyboard focus, session/layout selection,
+  Caps Lock text, password visibility and on-accent ink. Hyprlock adds a scheme-aware scrim,
+  layout and live Caps Lock feedback.
+
+### Changed
+
+- **All shipped themes are tuned for legibility.** Meaningful small text clears 4.5:1,
+  including dim/accent/urgent roles and selected rows with derived `on_accent`/`on_urgent`.
+  Tests include real alpha-composited bar and access-screen backgrounds over control wallpapers.
+  The bar stays a quiet 28px glyph strip with full-height targets and no undersized Void typography.
+- **Waybar communicates state without visual noise.** The tray leads the right-hand group,
+  followed by custom monitors, hardware indicators, layout and the glyph-only night-light
+  toggle. Exact values and mouse actions live in tooltips. Temperature appears only near
+  warning, and active workspaces retain a shape marker.
+- **The theme picker is a quiet 5×2 gallery of graphic identity cards.** Each card combines
+  the theme palette, typeface and a distinctive motif over a softly blurred, darkened wallpaper;
+  fake desktop widgets are not used. All ten shipped themes fit at once, custom themes get cached
+  generated cards or a text fallback, and selection is an accent outline rather than a filled card.
+  Enter applies; Escape cancels without temporary theme state.
+- **Light themes use the complete scheme.** Kvantum selects `KvArc`/`KvArcDark` while preserving
+  an explicit `HWE_KVANTUM_BASE`; SDDM and hyprlock use scheme-coloured 94% scrims.
+
+### Fixed
+
+- Mako's opaque rounded surface no longer gets a translucent square backdrop from a Hyprland
+  layer-blur rule. Notification categories distinguish success, warning and error.
+- The night-light module emits one line of valid JSON, so the moon remains visible in Waybar.
+- Rofi selected rows use derived readable ink, and theme-picker display labels cannot corrupt
+  the directory name passed to `hwe theme apply`.
+- Removed the obsolete `general:grace` option rejected by hyprlock 0.9.7.
+
 ## [2.0.2] — 2026-11-10
 
 ### Added

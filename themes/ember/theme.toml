@@ -21,7 +21,7 @@ bg_lighter = "#283040"
 # blurred the whole desktop into one red smear. Pulling the text to warm-neutral
 # leaves the coral accent as the ONLY red — a focal pop, not a field. Still warm
 # (R>G>B), still the ember signature, just legible. All rows clear the WCAG floor.
-fg_dim     = "#7a7168"
+fg_dim     = "#91887e"
 fg_normal  = "#a89c8c"
 fg_bright  = "#ddd2c4"
 fg_white   = "#efe6da"
@@ -29,7 +29,7 @@ fg_white   = "#efe6da"
 accent      = "#e97e70"
 accent_soft = "#c85a4a"
 # raw colours — sunset aurora
-red     = "#c13d2e"
+red     = "#d55d4f"
 green   = "#7a9a6a"
 yellow  = "#d09868"
 orange  = "#e97e70"
@@ -38,7 +38,7 @@ magenta = "#9a6a8a"
 cyan    = "#6a9a8a"
 # service
 border = "#1e2636"
-urgent = "#c13d2e"
+urgent = "#d8675a"
 
 [params]
 font          = "JetBrainsMono Nerd Font"
@@ -50,7 +50,8 @@ opacity       = 0.94
 blur_passes   = 3
 blur_size     = 6
 # ── Waybar geometry (glued & flat by default; set bar_float = true to float) ──
-bar_height  = 26
+bar_height  = 28
+bar_opacity = 0.94
 bar_float   = false
 bar_gap     = 6      # top gap when floating
 bar_gap_x   = 8      # side gap when floating
@@ -59,8 +60,8 @@ bar_radius  = 14     # corner radius when floating
 # glow: accent halo on the number | underline: rule growing from the centre
 # pill: the tag widens into a chip | dot: a mark rising from below.
 # (No style slides between tags — GTK3 CSS has no transform; see theme.css.j2.)
-bar_ws_indicator = "glow"
-bar_ws_speed     = 220   # ms for the indicator to settle
+bar_ws_indicator = "underline"
+bar_ws_speed     = 220   # calm default; personal reduced_motion forces 0
 
 
 # ── Typography (contract): font family + per-surface sizes ────────────────
@@ -73,7 +74,7 @@ fallback_family = "JetBrains Mono"           # used where `family` is not instal
 ui_family = "Sans"   # GTK/UI apps (size from `gtk`)
 terminal = 9.5    # kitty
 bar      = 12     # waybar
-launcher = 11     # rofi menus (base; pickers scale ± from this)
+launcher = 12     # rofi menus (base; pickers scale ± from this)
 notify   = 11     # mako
 gtk      = 11     # GTK apps (family stays Sans)
 

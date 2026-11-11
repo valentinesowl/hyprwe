@@ -23,12 +23,26 @@ power_main() {
     choice="$(printf '%s\n' "${opts[@]}" | rofi "${args[@]}")" || return 0
     case "$choice" in
         Lock)     hyprlock ;;
-        Logout)   _power_logout ;;
         Suspend)  systemctl suspend ;;
-        Reboot)   systemctl reboot ;;
-        Shutdown) systemctl poweroff ;;
-        *)        return 0 ;;
+        Logout|Reboot|Shutdown)
+            _power_confirm "$choice" "$rasi" || { info "$choice cancelled"; return 0; }
+            case "$choice" in
+                Logout)   _power_logout ;;
+                Reboot)   systemctl reboot ;;
+                Shutdown) systemctl poweroff ;;
+            esac
+            ;;
+        *) return 0 ;;
     esac
+}
+
+_power_confirm() {
+    local action="$1" rasi="$2" choice
+    local -a args=(-dmenu -i -p "" -mesg "$action?" -no-custom -selected-row 0
+        -theme-str 'element selected.normal { background-color: @bg-light; text-color: @fg-bright; } message { text-color: @urgent; }')
+    [[ -f "$rasi" ]] && args+=(-theme "$rasi")
+    choice="$(printf 'Cancel\nConfirm %s\n' "$action" | rofi "${args[@]}")" || return 1
+    [[ "$choice" == "Confirm $action" ]]
 }
 
 # Leave the session cleanly: prefer uwsm (tears down the systemd user session)

@@ -59,3 +59,27 @@ def test_legacy_compositor_configs_are_not_shipped(repo):
     for name in ("colors.conf", "theme.conf"):
         assert not (repo / f"templates/hypr/{name}.j2").exists()
     assert not (repo / "provision/userlayer/hypr.conf").exists()
+
+
+def test_personal_layer_supports_persistent_reduced_motion(repo):
+    text = (repo / "provision/userlayer/hypr.lua").read_text()
+    assert "local reduced_motion = true" in text
+    assert "animations = { enabled = false }" in text
+    assert 'hl.animation({ leaf = "borderangle", enabled = false })' in text
+    assert "preserved by theme apply and hwe update" in text
+
+
+def test_waybar_motion_is_generated_from_the_personal_preference(repo):
+    style = (repo / "config/waybar/style.css").read_text()
+    template = (repo / "templates/waybar/theme.css.j2").read_text()
+    assert "transition: color" not in style
+    assert "{% if not params.reduced_motion %}" in template
+    assert "transition: all {{ params.bar_ws_speed }}ms ease" in template
+
+
+def test_notification_layer_has_no_compositor_backdrop(repo):
+    text = (repo / "config/hypr/windowrules.lua").read_text()
+    mako_rules = [line for line in text.splitlines() if "mako|notifications" in line]
+    assert len(mako_rules) == 1
+    assert "no_anim = true" in mako_rules[0]
+    assert "blur = true" not in mako_rules[0]

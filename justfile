@@ -136,6 +136,17 @@ skel-sums:
     tail -n5 provision/userlayer.sums
 
 gallery:
-    montage themes/*/preview.png -tile 5x -geometry 480x480+28+28 -background '#0d0d12' -depth 8 assets/themes.png
-    # 2:1 variant for GitHub's social preview (it crops anything else; ≤1MB)
-    magick assets/themes.png -background '#0d0d12' -gravity center -extent 2680x1340 -depth 8 assets/social-preview.png
+    montage themes/*/preview.png -tile 5x -geometry 480x480+28+28 \
+        -background '#0d0d12' -depth 8 assets/themes.png
+    # Branded 2:1 card for GitHub's social preview (it crops anything else; ≤1MB)
+    magick -size 1280x640 xc:'#0d0d12' \
+        \( assets/hero.png -resize '720x405^' -gravity center -extent 720x405 -bordercolor '#8a5cf5' -border 2 \) \
+        -gravity northeast -geometry +48+118 -composite \
+        -font "$(fc-match -f '%{file}' 'JetBrains Mono')" -fill '#f4f1ff' -pointsize 86 -gravity northwest -annotate +56+80 'HWE' \
+        -font "$(fc-match -f '%{file}' 'DejaVu Sans')" -fill '#c9c4d4' -pointsize 34 -annotate +60+194 'Hyprland Workstation' \
+        -annotate +60+240 'Environment' \
+        -fill '#9c96aa' -pointsize 25 -annotate +60+334 'A complete Wayland desktop' \
+        -annotate +60+372 'for Arch Linux & Ubuntu' \
+        -font "$(fc-match -f '%{file}' 'JetBrains Mono')" -fill '#b89cff' -pointsize 20 -annotate +60+458 '10 themes • Lua config • Dev VM' \
+        -fill '#9c96aa' -pointsize 18 -annotate +60+558 'github.com/valentinesowl/hyprwe' \
+        -strip -depth 8 assets/social-preview.png

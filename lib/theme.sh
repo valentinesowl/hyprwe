@@ -89,37 +89,82 @@ theme_list() {
     info "yours: ${C_DIM}$HWE_THEMES_USER${C_RESET}"
 }
 
-# Interactive rofi theme selector (bound to SUPER+SHIFT+T). Each entry carries
-# the theme's preview.png as its rofi icon (dmenu \0icon\x1f protocol) so you
-# pick by look. NULs stay inside the pipe; only the chosen name comes back.
+_theme_display_name() {
+    local name="$1" dir
+    dir="$(_theme_dir "$name")" || return 1
+    python3 - "$dir/theme.toml" "$name" <<'PY'
+import sys
+import tomllib
+
+path, fallback = sys.argv[1:3]
+with open(path, "rb") as handle:
+    value = tomllib.load(handle).get("name", fallback)
+if not isinstance(value, str) or not value.strip() or len(value) > 80 or any(ord(c) < 32 for c in value):
+    value = fallback
+print(value)
+PY
+}
+
+# Display labels stay separate from directory names, so current/no-preview
+# markers never corrupt the value passed to apply. Enter applies; Escape cancels.
 theme_pick() {
-    # toggle: a second press closes the picker (matches wall/power menus)
     if pgrep -x rofi >/dev/null 2>&1; then pkill -x rofi; return 0; fi
     need rofi rofi-wayland || return 1
-    local cur name choice icon rasi sel=-1 i=0
+    need python3 python-jinja || return 1
+    local cur name label icon rasi choice cur_label mesg
+    local -a names=() displays=() icons=()
     cur="$(_theme_current)"; cur="${cur:-none}"
-    rasi="$HWE_ROOT/config/rofi/theme.rasi"    # generated gallery (hwe theme apply)
-    # No -mesg: theme.rasi has no "message" child, so rofi dropped it silently — and
-    # the current theme is already announced by -selected-row pre-highlighting its tile.
+    cur_label=""
+    local missing=0
+    rasi="$HWE_ROOT/config/rofi/theme.rasi"
     local args=(-dmenu -i -p "Theme" -show-icons)
     [[ -f "$rasi" ]] && args+=(-theme "$rasi")
-    # Pre-highlight the current theme's tile.
+    local sel=-1 i=0
     while IFS= read -r name; do
-        [[ "$name" == "$cur" ]] && sel=$i
+        label="$(_theme_display_name "$name")"
+        [[ "$name" == "$cur" ]] && { sel=$i; label="● $label"; cur_label="$label"; }
+        icon="$(_theme_dir "$name" 2>/dev/null)/preview.png"
+        if [[ ! -f "$icon" ]]; then
+            icon="$HWE_CACHE/theme-previews/$name.png"
+            mkdir -p "${icon%/*}" && command -v magick >/dev/null 2>&1 \
+                && python3 "$HWE_ROOT/scripts/genpreview.py" "$(_theme_dir "$name")/theme.toml" "$icon" \
+                    >/dev/null 2>&1 || icon=""
+        fi
+        if [[ -n "$icon" ]]; then
+            icons+=("$icon")
+        else
+            icons+=("")
+            label="$label · no preview"
+            missing=1
+        fi
+        names+=("$name")
+        displays+=("$label")
         i=$((i + 1))
     done < <(theme_names)
+    mesg="Enter apply · Esc cancel"
+    [[ -n "$cur_label" ]] && mesg="$cur_label · $mesg"
+    args+=(-mesg "$mesg")
+    [[ $missing -eq 1 ]] && args+=(-theme-str 'element { children: [ "element-icon", "element-text" ]; orientation: vertical; spacing: 6px; }')
     [[ $sel -ge 0 ]] && args+=(-selected-row "$sel")
     choice="$(
-        while IFS= read -r name; do
-            icon="$(_theme_dir "$name" 2>/dev/null)/preview.png"
-            if [[ -f "$icon" ]]; then
-                printf '%s\0icon\x1f%s\n' "$name" "$icon"
+        for i in "${!names[@]}"; do
+            if [[ -n "${icons[$i]}" ]]; then
+                printf '%s\0icon\x1f%s\n' "${displays[$i]}" "${icons[$i]}"
             else
-                printf '%s\n' "$name"
+                printf '%s\n' "${displays[$i]}"
             fi
-        done < <(theme_names) | rofi "${args[@]}"
+        done | rofi "${args[@]}"
     )" || return 0
-    [[ -n "$choice" ]] && theme_apply "$choice"
+    [[ -n "$choice" ]] || return 0
+    for i in "${!names[@]}"; do
+        if [[ "${displays[$i]}" == "$choice" ]]; then
+            theme_apply "${names[$i]}"
+            return
+        fi
+    done
+    err "could not resolve theme selection: $choice"
+    notify error "Theme selection failed" "The selected row did not match a theme"
+    return 1
 }
 
 _theme_toml() {
@@ -189,12 +234,25 @@ _theme_deploy_links() {
 
 # Kvantum reliably themes Qt/KDE apps (esp. Dolphin): one engine paints every
 # widget from a single palette (Fusion+KColorScheme left Dolphin labels black).
-# We borrow the installed base theme's SVG/geometry (not vendored) + our palette.
-HWE_KVANTUM_BASE="${HWE_KVANTUM_BASE:-/usr/share/Kvantum/KvArcDark}"
+# An explicit base always wins; otherwise match the generated light/dark scheme.
+: "${HWE_KVANTUM_BASE:=}"
 
 _theme_kvantum() {
     command -v kvantummanager >/dev/null 2>&1 || return 0     # kvantum not installed
-    local base="$HWE_KVANTUM_BASE" bn
+    local base="$HWE_KVANTUM_BASE" bn candidate
+    if [[ -z "$base" ]]; then
+        local -a candidates=(/usr/share/Kvantum/KvArcDark /usr/share/Kvantum/KvArc)
+        grep -qs '^gtk-application-prefer-dark-theme=0' "$HWE_THEME_OUT/gtk-4.0/settings.ini" \
+            && candidates=(/usr/share/Kvantum/KvArc /usr/share/Kvantum/KvArcDark)
+        for candidate in "${candidates[@]}"; do
+            bn="$(basename "$candidate")"
+            if [[ -f "$candidate/$bn.svg" && -f "$candidate/$bn.kvconfig" ]]; then
+                base="$candidate"
+                break
+            fi
+        done
+    fi
+    [[ -n "$base" ]] || { warn "no installed KvArc/KvArcDark base — skipping Qt theming"; return 0; }
     bn="$(basename "$base")"
     [[ -f "$base/$bn.svg" && -f "$base/$bn.kvconfig" ]] || { warn "Kvantum base '$bn' not found — skipping Qt theming"; return 0; }
     local gc="$HWE_THEME_OUT/kvantum/generalcolors.ini"        # generated from [sem]
@@ -226,7 +284,7 @@ PY
         warn "backed up existing kvantum.kvconfig -> $(basename "$kv").hwe-bak.$$"
     fi
     printf '[General]\ntheme=HWE\n' > "$kv"
-    info "Kvantum theme HWE generated (restart Qt apps to apply)"
+    info "Kvantum theme HWE generated from $bn (restart Qt apps to apply)"
 }
 
 # Optional user Waybar overrides. Bar COMPOSITION (which modules, their order, a
@@ -251,30 +309,58 @@ _theme_waybar_overrides() {
 theme_apply() {
     local name="${1:-}"
     [[ -z "$name" ]] && name="$(_theme_current)"
-    local t; t="$(_theme_toml "$name")" || { theme_list; return 1; }
-    need python3 python-jinja || return 1
+    local t
+    if ! t="$(_theme_toml "$name")"; then
+        theme_list
+        notify error "Theme apply failed" "Unknown or invalid theme · run 'hwe theme list'"
+        return 1
+    fi
+    need python3 python-jinja || {
+        notify error "Theme apply failed" "python3 is required · run 'hwe doctor'"
+        return 1
+    }
 
     log "Applying theme '$name'"
-    python3 "$HWE_THEME_RENDER" "$t" "$HWE_TEMPLATES" "$HWE_THEME_OUT" || return 1
+    local reduced_motion=0
+    grep -qsE '^[[:space:]]*local[[:space:]]+reduced_motion[[:space:]]*=[[:space:]]*true[[:space:]]*$' \
+        "$HWE_USER_CONFIG/hypr.lua" && reduced_motion=1
+    if ! HWE_REDUCED_MOTION="$reduced_motion" \
+        python3 "$HWE_THEME_RENDER" "$t" "$HWE_TEMPLATES" "$HWE_THEME_OUT"; then
+        notify error "Theme apply failed" "Run 'hwe theme validate $name' for details"
+        return 1
+    fi
     mkdir -p "$(dirname "$HWE_THEME_CURRENT")"
     printf '%s\n' "$name" > "$HWE_THEME_CURRENT"
     # Layer the user's Waybar composition over the generated config, if any.
     _theme_waybar_overrides || true
     # Symlink every rendered config dir into ~/.config (else colours aren't live).
     # Self-heals newly-added themed dirs on older boxes. Idempotent.
-    _theme_deploy_links
+    _theme_deploy_links || {
+        notify error "Theme apply failed" "Config deployment failed · run 'hwe doctor'"
+        return 1
+    }
     # Assemble the Kvantum theme (Qt/KDE apps incl. Dolphin). Best-effort.
     _theme_kvantum || true
-    # Point the wallpaper at this theme's choice. Best-effort: like the reload it
-    # must never fail apply.
-    _wall_activate "$(_wall_default "$name")" || true
-    # Sync the SDDM greeter to the theme, but only if free (passwordless sudo) —
-    # theme apply must stay non-interactive. Best-effort, never fails the apply.
-    _sddm_refresh_if_free "$name" || true
-    # Live-reload is cosmetic — it must NEVER fail the apply (and thus the whole
-    # install, which runs under `set -euo pipefail`). Best-effort only.
+    local partial=0
+    # The theme itself is valid even if a cosmetic daemon refuses a live reload.
+    _wall_activate "$(_wall_default "$name")" || {
+        partial=1
+        warn "wallpaper did not reload — run 'hwe wall restore'"
+    }
+    # Manual SDDM sync is an expected follow-up, not a partial theme failure.
+    local sddm_pending=0
+    _sddm_refresh_if_free "$name" || sddm_pending=1
+    # Live-reload is cosmetic and must not fail an installation.
     _theme_reload || true
     ok "theme '$name' applied"
+    local details="Restart Qt apps to apply every change."
+    [[ $sddm_pending -eq 1 ]] && details="$details Run 'hwe theme sddm' to sync the login screen."
+    if [[ $partial -eq 1 ]]; then
+        details="$details Check the wallpaper warning above."
+        notify warning "Theme '$name' applied with warnings" "$details"
+    else
+        notify success "Theme '$name' applied" "$details"
+    fi
 }
 
 # Live-reload running apps so regenerated colours take effect. Locates the
@@ -384,7 +470,8 @@ _sddm_refresh_if_free() {
         [[ -f "$wall" ]] && sudo -n install -m644 "$wall" "$HWE_SDDM_THEME_DIR/background.png" 2>/dev/null
         [[ -f "$gen"  ]] && sudo -n install -m644 "$gen"  "$HWE_SDDM_THEME_DIR/theme.conf"     2>/dev/null
         info "login greeter updated to match '$1'"
-    else
-        info "login screen still shows the old theme — run ${C_BOLD}hwe theme sddm${C_RESET} to update it"
+        return 0
     fi
+    info "login screen still shows the old theme — run ${C_BOLD}hwe theme sddm${C_RESET} to update it"
+    return 2
 }

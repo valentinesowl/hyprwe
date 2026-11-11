@@ -77,6 +77,11 @@ def session():
     return _load("session")
 
 
+@pytest.fixture(scope="session")
+def lockstate():
+    return _load("lockstate")
+
+
 def theme_paths() -> list[Path]:
     """Every shipped theme's theme.toml, sorted (used to parametrise tests)."""
     return sorted(THEMES.glob("*/theme.toml"))

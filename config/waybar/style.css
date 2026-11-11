@@ -1,8 +1,7 @@
-/* waybar/style.css — the HWE bar: thin, monochrome, minimal.
-   Glyphs read crisp, the active workspace glows in the theme accent, only ALERTS
-   earn colour. The bar is glued & flat by default; a theme can float it into a
-   frosted island via `bar_float` (geometry in the generated theme.css + margins).
-   Colours come from the generated colors.css (via `hwe theme`). */
+/* waybar/style.css — the HWE bar: compact, legible and quiet.
+   Active workspaces have a shape marker as well as colour; recording, mute and
+   battery warnings also carry text. The bar is glued by default, with optional
+   floating geometry in the generated theme.css. */
 
 @import "colors.css";
 @import "theme.css";
@@ -46,14 +45,18 @@ window#waybar {
 #battery,
 #pulseaudio,
 #backlight,
+#language,
 #custom-cpu,
 #custom-memory,
 #custom-temp,
+#custom-record,
+#custom-sunset,
 #tray {
+    min-height: 28px;
     padding: 0 6px;
     color: @fg_normal;
     background: transparent;
-    transition: color 0.2s ease;
+    transition: none;
 }
 
 #battery:hover,
@@ -65,19 +68,11 @@ window#waybar {
     color: @fg_bright;
 }
 
-/* CPU/RAM: the glyph itself morphs with load (config.jsonc format-icons), so it
-   reads at @fg_normal like every other indicator — it inherits that from the
-   rule above, deliberately. It used to be pinned to @fg_dim, which was right for
-   the old sparkline (dim, but eight blocks of ink); on a single glyph the same
-   colour just looked broken, at half the brightness of its neighbours.
-   Load BRIGHTENS it, and colour stays what it is everywhere else on this bar: an
-   alert. (@accent is not used for `busy`: in half the themes it is DARKER than
-   @fg_normal — default 36 vs 153 — so a working CPU would recede, not surface.
-   @fg_bright outranks @fg_normal in every shipped theme.)
-   Slower easing than the rest, so a load spike swells in rather than blinks. */
+/* CPU/RAM pair a morphing glyph with an exact value. Load brightens the module;
+   warning and critical colours reinforce the numeric state rather than replacing it. */
 #custom-cpu,
 #custom-memory,
-#custom-temp { transition: color 0.4s ease; }
+#custom-temp { transition: none; }
 #custom-cpu.busy,
 #custom-memory.busy,
 #custom-temp.busy       { color: @fg_bright; }
@@ -101,12 +96,10 @@ window#waybar {
     font-weight: 600;
 }
 
-/* Night light: state is the colour — accent while tinting, dim once off. Not
-   @fg_normal for "off": an inert toggle should recede, not sit as bright as
-   the live indicators beside it. */
+/* Night light stays glyph-only; its class carries colour and the tooltip names the state. */
 #custom-sunset {
     padding: 0 8px;
-    transition: color 0.4s ease;
+    transition: none;
 }
 #custom-sunset.on  { color: @accent; }
 #custom-sunset.off { color: @fg_dim; }

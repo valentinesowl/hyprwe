@@ -8,5 +8,7 @@ hl.window_rule({
 })
 
 hl.layer_rule({ match = { namespace = "rofi" }, blur = true, ignore_alpha = 0 })
-hl.layer_rule({ match = { namespace = "^(mako|notifications)$" }, blur = true })
+-- Notifications own their opaque, rounded mako surface. A compositor backdrop
+-- would show as a translucent square outside that surface.
+hl.layer_rule({ match = { namespace = "^(mako|notifications)$" }, no_anim = true })
 hl.layer_rule({ match = { namespace = "waybar" }, blur = true, ignore_alpha = 0 })

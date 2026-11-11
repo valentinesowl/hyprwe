@@ -19,6 +19,25 @@ warn()  { printf '%s\n' "${C_YELLOW}warn${C_RESET} $*" >&2; }
 err()   { printf '%s\n' "${C_RED}fail${C_RESET} $*" >&2; }
 die()   { err "$*"; exit 1; }
 
+# Best-effort graphical feedback through mako's themed, rounded notifications.
+# Never use Hyprland's built-in popup: its translucent rectangle obscures the UI.
+# A missing notification daemon is normal for CLI use and never changes the caller's rc.
+notify() {
+    local level="${1:-info}" title="${2:-HWE}" body="${3:-}"
+    local urgency=normal timeout=4000
+    case "$level" in
+        info) urgency=low; timeout=3000 ;;
+        success) ;;
+        warning) timeout=6000 ;;
+        error) urgency=critical; timeout=8000 ;;
+        *) level=info; urgency=low; timeout=3000 ;;
+    esac
+    command -v notify-send >/dev/null 2>&1 || return 0
+    notify-send --app-name=HWE --urgency="$urgency" --expire-time="$timeout" \
+        --hint="string:category:hwe-$level" "$title" "$body" >/dev/null 2>&1 || true
+    return 0
+}
+
 # Ask a yes/no question (default No). Auto-yes when HWE_ASSUME_YES=1.
 confirm() {
     local prompt="${1:-Proceed?}"

@@ -25,8 +25,8 @@ _hypr_config_errors() {
 }
 
 checkconfig_main() {
-    local notify=0
-    [[ "${1:-}" == "--notify" ]] && notify=1
+    local notify_flag=0
+    [[ "${1:-}" == "--notify" ]] && notify_flag=1
 
     if ! command -v Hyprland >/dev/null 2>&1 && ! command -v hyprctl >/dev/null 2>&1; then
         warn "Hyprland is not installed — cannot check its config"
@@ -41,10 +41,8 @@ checkconfig_main() {
 
     err "Hyprland reported config errors:"
     printf '%s\n' "$errs" >&2
-    # On-screen heads-up (built-in; needs no libnotify/mako). Best-effort.
-    if [[ "$notify" == 1 ]] && command -v hyprctl >/dev/null 2>&1 && _hypr_session_env; then
-        hyprctl notify 3 8000 "rgb(ff5555)" \
-            "HWE: Hyprland config errors — run 'hwe checkconfig'" >/dev/null 2>&1 || true
+    if [[ "$notify_flag" == 1 ]]; then
+        notify error "Hyprland config errors" "Run 'hwe checkconfig' for details"
     fi
     return 1
 }

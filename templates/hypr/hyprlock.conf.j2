@@ -3,20 +3,28 @@
 
 background {
     monitor =
-    # $HOME, NOT ~ — hyprlang expands env vars but not a leading ~ (same gotcha
-    # as hyprpaper), so `~/…` would fall back to the solid `color` below.
+    # $HOME, NOT ~ — hyprlang expands env vars but not a leading ~.
     path = $HOME/.config/hypr/assets/current.wall
     blur_passes = {{ params.blur_passes }}
     blur_size = {{ params.blur_size }}
     color = {{ sem.bg_normal|rgb }}
 }
 
-general {
-    hide_cursor = true
-    grace = 0        # no passwordless window after lock (incl. manual Super+L)
+# Explicit scheme-aware scrim: labels never depend on wallpaper brightness.
+shape {
+    monitor =
+    size = 100%, 100%
+    color = {{ sem.bg_dark|rgba('f0') }}
+    position = 0, 0
+    halign = center
+    valign = center
+    zindex = 0
 }
 
-# Password input field.
+general {
+    hide_cursor = true
+}
+
 input-field {
     monitor =
     size = 320, 52
@@ -28,29 +36,44 @@ input-field {
     outer_color = {{ sem.accent|rgb }}
     inner_color = {{ sem.bg_light|rgb }}
     font_color = {{ sem.fg_bright|rgb }}
-    placeholder_text = <span foreground="##{{ sem.fg_normal|noh }}">Enter password…</span>
-    fail_color = {{ sem.red|rgb }}
-    fail_text = <span foreground="##{{ sem.red|noh }}">$FAIL ($ATTEMPTS)</span>
+    font_family = {{ font.family }}, {{ font.fallback_family }}, {{ font.icon_family }}
+    placeholder_text = <span foreground="##{{ sem.fg_dim|noh }}">Enter password…</span>
+    fail_color = {{ sem.urgent|rgb }}
+    fail_text = <span foreground="##{{ sem.urgent|noh }}">$FAIL ($ATTEMPTS)</span>
+    capslock_color = {{ sem.orange|rgb }}
+    numlock_color = {{ sem.blue|rgb }}
+    bothlock_color = {{ sem.yellow|rgb }}
     position = 0, -40
     halign = center
     valign = center
+    zindex = 1
 }
 
-# Keyboard-layout indicator (live via $LAYOUT). Sits just below the input field
-# so you can confirm us/ru at a glance — Super+Space cycles it (bindl in
-# keybindings.lua, `locked = true` lets the bind fire while locked).
 label {
     monitor =
-    text = $LAYOUT
+    text = $LAYOUT[US,RU]
     font_size = 14
     font_family = {{ font.family }}, {{ font.fallback_family }}, {{ font.icon_family }}
     color = {{ sem.fg_normal|rgb }}
     position = 0, -104
     halign = center
     valign = center
+    zindex = 1
 }
 
-# Big clock.
+# Empty while Caps Lock is off; hyprctl reads the compositor's live keyboard state.
+label {
+    monitor =
+    text = cmd[update:500] python3 {{ scripts_dir }}/lockstate.py
+    font_size = 14
+    font_family = {{ font.family }}, {{ font.fallback_family }}, {{ font.icon_family }}
+    color = {{ sem.fg_bright|rgb }}
+    position = 0, -132
+    halign = center
+    valign = center
+    zindex = 1
+}
+
 label {
     monitor =
     text = cmd[update:1000] date +"%H:%M"
@@ -60,9 +83,9 @@ label {
     position = 0, 160
     halign = center
     valign = center
+    zindex = 1
 }
 
-# Date + user.
 label {
     monitor =
     text = cmd[update:60000] date +"%A, %d %B"
@@ -72,4 +95,5 @@ label {
     position = 0, 60
     halign = center
     valign = center
+    zindex = 1
 }

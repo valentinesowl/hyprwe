@@ -106,11 +106,11 @@ what it stated incorrectly.
 `good`←`green`, `warn`←`yellow`, `bad`←`red`, `info`←`blue`. Plus `transparent` = `#00000000`
 is injected.
 
-**Derived role `on_accent`** — readable "ink" for text or a glyph drawn **on top of** an accent
-fill (the solid pill of the active workspace, accent buttons). It's picked automatically from
-the two edges of the contract — `bg_dark` and `fg_white` — whichever contrasts more with
-`accent` (which is why it works the same in a dark and a light theme). You can pin it by hand
-in `[sem]`; it is **not** part of the 19-role contract.
+**Derived roles `on_accent` and `on_urgent`** — readable "ink" for text or a glyph drawn
+**on top of** the corresponding fill (selected rows, the active workspace pill, accent buttons).
+The renderer compares the theme's `bg_dark` and `fg_white`, with pure black/white as fallbacks
+for mid-luminance fills where neither theme extreme reaches 4.5:1. You can pin either role in
+`[sem]`; neither is part of the 19-role contract.
 
 ## `[params]` parameters
 
@@ -128,12 +128,13 @@ Every parameter has a default — you can omit all of `[params]`, and the theme 
 | `border_animate` | `100` | ds per revolution; higher = quieter, `0` = static |
 | `border_inactive` | `bg_lighter` | border of an inactive window |
 | `active_opacity` / `inactive_opacity` | `opacity` / `opacity-0.04` | alpha of whole windows |
-| `bar_height` | `26` | waybar height |
+| `bar_height` | `28` | quiet waybar height; shipped themes keep at least 28px |
 | `bar_float` | `false` | a "floating" island instead of a glued-on bar |
 | `bar_gap` / `bar_gap_x` / `bar_radius` | `6` / `8` / `14` | gaps and rounding of the floating bar |
-| `bar_opacity` | `0.62` | alpha of the bar backdrop over the wallpaper (how much "glass" is in the bar) |
-| `bar_ws_indicator` | `glow` | how the active tag is marked: `glow` `underline` `pill` `dot` |
-| `scheme` | `dark` | `dark`/`light` — lightness scheme (GTK prefer-dark, KDE, kitty ANSI swaps) |
+| `bar_opacity` | `0.94` | backing opacity that preserves text contrast on arbitrary wallpapers |
+| `bar_ws_indicator` | `underline` | active-tag marker: `glow` `underline` `pill` `dot` |
+| `bar_ws_speed` | `220` | calm transition duration; personal reduced motion forces `0` |
+| `scheme` | `dark` | `dark`/`light` — lightness scheme (GTK, Kvantum, kitty ANSI swaps, SDDM/hyprlock scrim) |
 | `anim_speed` | `1.0` | speed multiplier for window animations: higher = snappier, `0` = turn everything off |
 | `icon_theme` | `Adwaita` | GTK icon theme |
 | `cursor_theme` | `` (empty) | cursor theme; empty = don't touch the system/Hyprland cursor |
@@ -143,8 +144,9 @@ Every parameter has a default — you can omit all of `[params]`, and the theme 
 > The rofi window rounding is derived from `rounding` (`rounding + 6`); there is no separate key.
 
 **Every theme's signature is its animated border:** the gradient rotates forever, and the colors
-"flow" around the active window. `neon` and `amethyst` are a loud rainbow (`border_animate = 25`),
-the rest are a quiet single-color shimmer. To turn it off: `border_animate = 0`.
+"flow" around the active window. `neon` and `amethyst` use a slower rainbow (`border_animate = 60`),
+the rest are a quiet single-color shimmer. To turn it off: `border_animate = 0`, or use the
+persistent reduced-motion block in `~/.config/hwe/hypr.lua`.
 
 ## Typography `[font]`
 
@@ -161,7 +163,7 @@ be fractional.
 | `ui_family` | `Sans` | proportional UI font for GTK applications (size comes from `gtk`) |
 | `terminal` | `9.5` | kitty (starship inherits it — it has no size of its own) |
 | `bar` | `12` | waybar |
-| `launcher` | `11` | rofi menus — the **base**; pickers take ± from it (launcher +2, powermenu +1, keys +0, theme/wallpaper −1/−2) |
+| `launcher` | `12` | rofi menus — the **base**; derived surfaces adjust it where appropriate |
 | `notify` | `11` | mako |
 | `gtk` | `11` | font size of GTK applications (family comes from `ui_family`) |
 
@@ -191,12 +193,16 @@ the **most contrasting** text (nearly black in a light theme).
 
 There are two shipped examples: the sharp reference **`paper`** (full brightness — it proves
 the neutrality) and the soft, warm **`linen`** (low peak brightness, for a light theme in a
-dark room). All shipped themes pass the WCAG contrast threshold from
-`tests/test_theme_contrast.py`.
+dark room). Kvantum selects `KvArc` for light schemes and `KvArcDark` for dark ones, with the
+other installed Arc base as fallback. An explicit `HWE_KVANTUM_BASE` always wins. SDDM and
+hyprlock use a scheme-coloured 94% scrim so text does not depend on wallpaper brightness.
 
-> Limitation: Qt/Kvantum widgets take their geometry from the dark base `KvArcDark`
-> (`HWE_KVANTUM_BASE`), so under a light theme the borders of Qt applications may look a bit
-> dark. The palette is light nonetheless. GTK is the main target of light mode.
+All shipped themes clear **4.5:1 for meaningful small text**, including `fg_dim`, accent and
+urgent roles, and **3:1 for meaningful non-text UI**. Tests cover `on_accent`/`on_urgent`,
+selected states and actual alpha-composited bar/access-screen backgrounds over white, black
+and grey wallpapers. `fg_bright` retains a stricter 6:1 design target. The 3:1 large-text
+threshold is never used to excuse 12px labels. Custom themes receive non-fatal accessibility
+warnings instead of losing backward compatibility.
 
 ## Bar layout — outside the theme (`~/.config/hwe/waybar.jsonc`)
 
@@ -282,8 +288,11 @@ You don't have to edit a single template or a single config — only `theme.toml
   one in a different shade. `intensity` is for dark themes with a bright accent: `void` has a
   `#050508` background against a `#00ffd2` accent, and at full volume the wallpaper shouts over
   the desktop.
-- **`preview.png`** is generated by `scripts/genpreview.py` — a card over the wallpaper for the
-  rofi gallery (`hwe theme pick`). Regenerate: `just previews`.
+- **`preview.png`** is generated by `scripts/genpreview.py` — a graphic identity card built
+  from the theme palette, its typeface and a distinctive geometric motif. A softly blurred,
+  darkened wallpaper sits behind the artwork; fake desktop widgets are not used. The name is
+  part of the artwork; selection is only an outline. Enter applies, and Escape cancels without
+  changing the theme. Regenerate: `just previews`.
 - Your own photos: drop them into `themes/<name>/wallpapers/` (which is in `.gitignore`) — they
   show up in `hwe wall pick` next to the generated ones. The active choice is remembered
   in `~/.config/hwe/themes/<name>/wallpapers/.current_wallpaper` — outside the checkout,

@@ -49,12 +49,18 @@ hwe_sunset() {
     [[ "$stderr" == *"not installed"* ]]
 }
 
-@test "waybar status carries the state as the class" {
+@test "waybar status carries a glyph, a class and the click action" {
     FAKE_RUNNING=1 run hwe_sunset _sunset_status --waybar
     assert_success
     assert_output --partial '"class":"on"'
+    assert_output --partial '"text":"󰖔"'
+    refute_output --partial 'ON'
+    assert_output --partial 'Left click: turn off'
     FAKE_RUNNING=0 run hwe_sunset _sunset_status --waybar
     assert_output --partial '"class":"off"'
+    assert_output --partial '"text":"󰖔"'
+    refute_output --partial 'OFF'
+    assert_output --partial 'Left click: turn on'
 }
 
 @test "waybar status is EMPTY and ok without the binary — that is what hides the module" {
@@ -87,4 +93,13 @@ hwe_sunset() {
     run --separate-stderr "$HWE_ROOT/bin/hwe" sunset frobnicate
     assert_failure
     [[ "$stderr" == *"unknown sunset action: frobnicate"* ]]
+}
+
+
+@test "waybar status is one line of valid JSON" {
+    FAKE_RUNNING=1 run hwe_sunset _sunset_status --waybar
+    assert_success
+    [[ "$output" != *$'\n'* ]]
+    run python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["text"] == "󰖔"; assert "\n" in d["tooltip"]' <<< "$output"
+    assert_success
 }

@@ -96,7 +96,7 @@ element alternate.normal {
 
 element selected.normal {
     background-color: @accent;
-    text-color:       @bg-dark;
+    text-color:       @on-accent;
 }
 
 /* Running windows / urgent entries keep the same flat idle look. */
@@ -110,8 +110,8 @@ element alternate.urgent {
     background-color: transparent;
     text-color:       @urgent;
 }
-element selected.active { background-color: @accent; text-color: @bg-dark; }
-element selected.urgent { background-color: @urgent; text-color: @bg-dark; }
+element selected.active { background-color: @accent; text-color: @on-accent; }
+element selected.urgent { background-color: @urgent; text-color: @on-urgent; }
 
 element-icon {
     size:             28px;

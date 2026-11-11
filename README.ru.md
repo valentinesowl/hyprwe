@@ -1,4 +1,4 @@
-# Hyprland Workstation Environment (HWE)
+# HWE — Hyprland Workstation Environment
 
 [English](README.md) · **Русский**
 
@@ -6,13 +6,15 @@
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu_27.04_experimental-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
-[![Release](https://img.shields.io/badge/release-v2.0.2-blue)](../../releases/latest)
+[![Release](https://img.shields.io/badge/release-v2.0.3-blue)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
-**Рабочее окружение на Arch и Ubuntu — Hyprland и всё вокруг него: бар, лаунчер,
-уведомления, темы, экран входа.** Ставится одной командой и разворачивается
-одинаково на железе (`hwe install`) и на одноразовой виртуалке (`hwe vm up`) из
-одного источника.
+**Готовые dotfiles Hyprland для Arch Linux и Ubuntu: полноценный Wayland-рабочий стол
+с баром, лаунчером, уведомлениями, темами и экраном входа.** Ставится одной командой
+на машину (`hwe install`), а попробовать можно в одноразовой виртуалке с тем же сценарием
+развёртывания (`hwe vm up`).
+
+[Установка](#установка) · [Попробовать в VM](#песочница-и-разработка-vm) · [Темы](#темы) · [CLI](#cli-hwe)
 
 <p align="center">
   <img src="assets/hero.png" alt="Рабочий стол HWE: пикер тем поверх темы amethyst, htop, Dolphin и сам репозиторий" width="100%">
@@ -27,8 +29,15 @@
 
 - **Движок тем** — один `theme.toml` задаёт цвета всех компонентов сразу;
   `hwe theme apply` меняет вид рабочего стола живьём. Десять встроенных тем.
+- **Доступный и понятный UX** — контраст текста по AA, аскетичная панель 28 px с US/RU,
+  графические карточки идентичности тем, подтверждения скриншотов и защита
+  logout/reboot/shutdown от случайного выбора. Уведомления используют тему mako.
 - **Модульный конфиг Hyprland** — Lua-модули через `require` для Hyprland 0.57, рядом
   kitty, waybar, rofi, mako, hyprlock и hypridle.
+- **Безопасное внедрение и обновление** — прежние конфиги сохраняются, личные настройки
+  живут вне репозитория, а `hwe update --check` показывает расхождения без изменений.
+- **Именованные снимки сессий** — `hwe session` сохраняет и восстанавливает приложения,
+  рабочие столы и геометрию окон.
 - **Dev-VM одной командой** — `hwe vm up` поднимает Arch- или Ubuntu-виртуалку
   (`HWE_VM_DISTRO`) через `libvirt`/`virt-install` (видна в virt-manager), провижинит
   через `cloud-init` и разворачивает в ней выбранную локальную ветку git прямо из репозитория.
@@ -187,6 +196,11 @@ $EDITOR ~/.config/hwe/hypr.lua    # мониторы сюда, а не в config
 hyprctl reload                     # SUPER+SHIFT+R
 ```
 
+Для reduced motion раскомментируй `local reduced_motion = true`, перезагрузи Hyprland
+и один раз выполни `hwe theme apply`. Блок отключает оконные анимации, blur и `borderangle`,
+а рендерер убирает переходы Waybar. Без флага воркспейсы и индикаторы сохраняют спокойные
+переходы 220 ms. Настройка сохраняется при смене темы и обновлениях.
+
 Для ноутбука с доком мониторам лучше в `kanshi.conf`: профиль применяется, когда все его
 выходы подключены. Но у выхода один хозяин: не оставляй для него ещё и вызов `hl.monitor`
 в `hypr.lua`, иначе kanshi и Hyprland будут спорить после каждого reload.
@@ -225,11 +239,12 @@ hyprctl reload                     # SUPER+SHIFT+R
 | `hwe uninstall` | откатить симлинки конфигов и login-shell (пакеты/сервисы остаются) |
 | `hwe theme <list\|apply\|pick\|validate\|current\|sddm>` | сгенерировать цвета всех компонентов из темы |
 | `hwe wall <list\|set\|random\|pick\|current\|restore>` | обои (сгенерированные темой или свои фото) |
-| `hwe power` | rofi-меню сессии (lock/logout/suspend/reboot/shutdown) |
+| `hwe power` | rofi-меню сессии; logout/reboot/shutdown требуют подтверждения, по умолчанию Cancel |
 | `hwe keys` | шпаргалка по горячим клавишам (rofi, генерится из биндов; `SUPER+/`) |
 | `hwe clip <show\|wipe>` | история буфера обмена (cliphist, rofi; `SUPER+C`) |
 | `hwe record <toggle\|region>` | запись экрана (wf-recorder → `~/Videos`; индикатор в баре) |
-| `hwe sunset <toggle\|on\|off\|status>` | ночной свет (hyprsunset; луна в правом краю бара) |
+| `hwe screenshot <screen\|region\|file\|annotate>` | скриншоты с сообщениями об успехе, отмене и ошибке |
+| `hwe sunset <toggle\|on\|off\|status>` | ночной свет с иконкой в баре и состоянием в tooltip |
 | `hwe checkconfig [--notify]` | проверить Lua-конфиг и ошибки запущенного Hyprland |
 | `hwe vm <up\|ssh\|console\|status\|list\|down\|destroy\|rebuild>` | локальная dev-VM (libvirt + cloud-init) |
 | `hwe doctor [host\|vm\|--report]` | проверить эту машину (host, по умолчанию) или пред-условия для VM; `--report` = готовый блок для issue |
@@ -271,6 +286,12 @@ hwe theme apply mocha         # рендер + деплой + живой reload 
 hwe theme pick                # rofi-галерея с превью (SUPER+SHIFT+T)
 hwe theme validate <name>     # проверить тему на контракт (fail-loud)
 ```
+
+Picker показывает все десять тем спокойной галереей 5×2: графические карточки идентичности
+поверх слегка размытых и затемнённых обоев. Названия являются частью карточек, отметка текущей
+темы находится в строке состояния, а выделение — акцентный контур. **Enter** применяет выбранную
+тему, **Escape** отменяет выбор без изменений. Для своих тем без `preview.png` карточка создаётся
+в кеше; если генерация невозможна, остаётся явный текстовый fallback.
 
 Отдельная таблица `[font]` — тоже контракт: семейство шрифта и размеры под каждую
 поверхность (`terminal`/`bar`/`launcher`/`notify`/`gtk`), с дефолтами-fallback. Меняешь

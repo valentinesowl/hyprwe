@@ -47,6 +47,7 @@ _sunset_on() {
     (setsid hyprsunset >/dev/null 2>&1 &)
     _sunset_bar_refresh
     ok "night light on (schedule: ~/.config/hwe/hyprsunset.conf)"
+    notify success "Night light ON" "Left click the bar indicator to turn it off"
 }
 
 _sunset_off() {
@@ -66,9 +67,14 @@ _sunset_off() {
         _sunset_running || break
         sleep 0.05
     done
-    _sunset_running && { err "hyprsunset did not stop"; return 1; }
+    _sunset_running && {
+        err "hyprsunset did not stop"
+        notify error "Night light error" "hyprsunset did not stop · run 'hwe doctor'"
+        return 1
+    }
     _sunset_bar_refresh
     ok "night light off"
+    notify success "Night light OFF" "The normal colour profile is restored"
 }
 
 # Nudge the bar to re-read the module now rather than on the next poll. Both
@@ -88,8 +94,10 @@ _sunset_status() {
     fi
     local state; _sunset_running && state=on || state=off
     if [[ "${1:-}" == "--waybar" ]]; then
-        printf '{"text":"󰖔","class":"%s","tooltip":"night light %s — click to turn %s"}\n' \
-            "$state" "$state" "$([[ $state == on ]] && echo off || echo on)"
+        local label="󰖔" next
+        [[ "$state" == on ]] && next=off || next=on
+        printf '{"text":"%s","class":"%s","tooltip":"Night light: %s\\nLeft click: turn %s"}\n' \
+            "$label" "$state" "$state" "$next"
     else
         echo "$state"
     fi

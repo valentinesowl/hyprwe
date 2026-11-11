@@ -42,6 +42,7 @@ libisoburn	xorriso
 # carries the zwlr_layer_shell_v1 symbols, so the plain package is the Wayland one.
 rofi-wayland	rofi
 mako	mako-notifier
+libnotify	libnotify-bin
 networkmanager	network-manager
 lm_sensors	lm-sensors
 # Arch splits the daemon from the tools; Debian ships bluetoothctl inside bluez.

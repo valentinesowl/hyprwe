@@ -297,6 +297,18 @@ def test_temp_without_a_sensor_says_so_rather_than_reading_a_lie(
     assert out["text"] == "" and "no CPU temperature sensor" in out["tooltip"]
 
 
+@pytest.mark.parametrize(("milli", "visible"), [(60000, False), (80000, True), (95000, True)])
+def test_temp_text_appears_only_near_warning(wbstat, fake_hwmon, isolated_state, capsys, milli, visible):
+    fake_hwmon("coretemp", {
+        "temp1_input": str(milli), "temp1_label": "Package id 0", "temp1_crit": "100000",
+    })
+    wbstat.temp_json(["temp"])
+    out = json.loads(capsys.readouterr().out)
+    assert bool(out["text"]) is visible
+    if visible:
+        assert "°C" in out["text"]
+
+
 # ── The module contract waybar consumes ───────────────────────────────────
 @pytest.mark.parametrize("kind", ["cpu", "mem"])
 def test_module_emits_the_waybar_json_contract(wbstat, fake_proc, isolated_state, capsys, kind):

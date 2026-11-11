@@ -9,6 +9,7 @@
     fg-dim:       {{ sem.fg_dim }};
     fg-bright:    {{ sem.fg_bright }};
     accent:       {{ sem.accent }};
+    on-accent:    {{ sem.on_accent }};
     urgent:       {{ sem.urgent }};
     transparent:  #00000000;
 
@@ -63,7 +64,7 @@ element {
 
 element selected.normal {
     background-color: @accent;
-    text-color:       @bg-dark;
+    text-color:       @on-accent;
 }
 
 element-text {

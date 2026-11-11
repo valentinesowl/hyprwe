@@ -20,18 +20,16 @@ bg_normal  = "#222328"
 bg_light   = "#2c2d34"
 bg_lighter = "#363740"
 # text (dim -> max contrast)
-fg_dim     = "#6f7382"
+fg_dim     = "#8e929f"
 fg_normal  = "#9399ad"
 fg_bright  = "#c8cdd8"
 fg_white   = "#e8eaf0"
-# accent — deep crimson. Lifted from #a70000 so it reads as a GLYPH (active
-# workspace number, rofi prompt) on the near-black bar/menu: #a70000 on bg_dark
-# was 2.16:1, below the 3.0 UI floor. #ca2626 is the deepest crimson that clears
-# it (3.12:1) while staying unmistakably deep-red, not coral.
-accent      = "#ca2626"
+# accent — crimson lifted far enough for small text on graphite and for dark
+# on-accent text on a selected row. The deeper decorative red remains accent_soft.
+accent      = "#e46e6e"
 accent_soft = "#c43e3e"
 # raw colours
-red     = "#e04040"
+red     = "#e56262"
 green   = "#5f8700"
 yellow  = "#d4a843"
 orange  = "#d08770"
@@ -40,7 +38,7 @@ magenta = "#8b5583"
 cyan    = "#3e8f8f"
 # service — quiet dim border (accent lives in the animated col.active_border)
 border = "#3a3b44"
-urgent = "#e04040"
+urgent = "#e66b6b"
 
 # ── Non-colour parameters ─────────────────────────────────────────────────
 [params]
@@ -52,7 +50,8 @@ border_size   = 1
 blur_passes   = 2
 blur_size     = 3
 # ── Waybar geometry (glued & flat by default; set bar_float = true to float) ──
-bar_height  = 26
+bar_height  = 28
+bar_opacity = 0.94
 bar_float   = false
 bar_gap     = 6      # top gap when floating
 bar_gap_x   = 8      # side gap when floating
@@ -61,8 +60,8 @@ bar_radius  = 14     # corner radius when floating
 # glow: accent halo on the number | underline: rule growing from the centre
 # pill: the tag widens into a chip | dot: a mark rising from below.
 # (No style slides between tags — GTK3 CSS has no transform; see theme.css.j2.)
-bar_ws_indicator = "glow"
-bar_ws_speed     = 220   # ms for the indicator to settle
+bar_ws_indicator = "underline"
+bar_ws_speed     = 220   # calm default; personal reduced_motion forces 0
 
 
 # Translucency (rendered by `hwe theme` into hypr/theme.conf + kitty/colors.conf).
@@ -82,7 +81,7 @@ fallback_family = "JetBrains Mono"           # used where `family` is not instal
 ui_family = "Sans"   # GTK/UI apps (size from `gtk`)
 terminal = 9.5    # kitty
 bar      = 12     # waybar
-launcher = 11     # rofi menus (base; pickers scale ± from this)
+launcher = 12     # rofi menus (base; pickers scale ± from this)
 notify   = 11     # mako
 gtk      = 11     # GTK apps (family stays Sans)
 

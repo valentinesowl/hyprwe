@@ -20,6 +20,11 @@ session_main() {
     [[ $# -eq 0 ]] || shift
     case "$action" in
         help|-h|--help|"") _session_usage; return 0 ;;
+        mode)
+            notify info "Session mode" "1–9 save · Shift+1–9 restore · Esc cancel"
+            _hyprctl dispatch 'hl.dsp.submap("session")'
+            return
+            ;;
         save|restore|list|clear) ;;
         *) err "unknown session action: $action"; _session_usage; return 1 ;;
     esac
@@ -28,7 +33,17 @@ session_main() {
     case "$action" in
         save|restore)
             [[ $# -eq 1 ]] || { err "hwe session $action requires exactly one name"; _session_usage; return 1; }
-            python3 "$HWE_ROOT/scripts/session.py" "$action" "$1"
+            if python3 "$HWE_ROOT/scripts/session.py" "$action" "$1"; then
+                if [[ "$action" == save ]]; then
+                    notify success "Session saved" "Snapshot '$1'"
+                else
+                    notify success "Session restored" "Snapshot '$1'"
+                fi
+            else
+                local rc=$?
+                notify error "Session $action failed" "Snapshot '$1' · run 'hwe doctor'"
+                return "$rc"
+            fi
             ;;
         list)
             [[ $# -eq 0 ]] || { err "hwe session list takes no arguments"; _session_usage; return 1; }
