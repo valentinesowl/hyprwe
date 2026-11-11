@@ -432,6 +432,12 @@ hwe_theme_pick() {
 kvantum_with_scheme() {
     bash -c '
         set -euo pipefail
+        HWE_KVANTUM_ROOT="$BATS_TEST_TMPDIR/kvantum-root"
+        for bn in KvArc KvArcDark; do
+            mkdir -p "$HWE_KVANTUM_ROOT/$bn"
+            printf "<svg/>\n" > "$HWE_KVANTUM_ROOT/$bn/$bn.svg"
+            printf "[General]\ntransparent=false\n" > "$HWE_KVANTUM_ROOT/$bn/$bn.kvconfig"
+        done
         source "$HWE_ROOT/lib/common.sh"
         source "$HWE_ROOT/lib/theme.sh"
         HOME="$BATS_TEST_TMPDIR/home"

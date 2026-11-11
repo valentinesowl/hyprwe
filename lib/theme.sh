@@ -236,14 +236,15 @@ _theme_deploy_links() {
 # widget from a single palette (Fusion+KColorScheme left Dolphin labels black).
 # An explicit base always wins; otherwise match the generated light/dark scheme.
 : "${HWE_KVANTUM_BASE:=}"
+: "${HWE_KVANTUM_ROOT:=/usr/share/Kvantum}"
 
 _theme_kvantum() {
     command -v kvantummanager >/dev/null 2>&1 || return 0     # kvantum not installed
     local base="$HWE_KVANTUM_BASE" bn candidate
     if [[ -z "$base" ]]; then
-        local -a candidates=(/usr/share/Kvantum/KvArcDark /usr/share/Kvantum/KvArc)
+        local -a candidates=("$HWE_KVANTUM_ROOT/KvArcDark" "$HWE_KVANTUM_ROOT/KvArc")
         grep -qs '^gtk-application-prefer-dark-theme=0' "$HWE_THEME_OUT/gtk-4.0/settings.ini" \
-            && candidates=(/usr/share/Kvantum/KvArc /usr/share/Kvantum/KvArcDark)
+            && candidates=("$HWE_KVANTUM_ROOT/KvArc" "$HWE_KVANTUM_ROOT/KvArcDark")
         for candidate in "${candidates[@]}"; do
             bn="$(basename "$candidate")"
             if [[ -f "$candidate/$bn.svg" && -f "$candidate/$bn.kvconfig" ]]; then
