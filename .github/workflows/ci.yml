@@ -74,6 +74,7 @@ jobs:
         run: >
           pacman -Syu --noconfirm --needed
           git just bats bats-assert bats-support python python-jinja
+          imagemagick fontconfig ttf-dejavu
       - uses: actions/checkout@v5
       # The suite runs `hwe theme validate` against every shipped theme, which
       # shells out to the Python renderer — hence python-jinja above.
@@ -102,7 +103,8 @@ jobs:
           apt-get update -qq
           apt-get install -y -q --no-install-recommends \
             ca-certificates git just bats bats-assert bats-support \
-            python3 python3-jinja2 gnupg curl xz-utils
+            python3 python3-jinja2 gnupg curl xz-utils \
+            imagemagick fontconfig fonts-dejavu-core
       - uses: actions/checkout@v5
       - run: git config --global --add safe.directory '*'
       - run: just test-sh
