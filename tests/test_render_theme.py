@@ -536,6 +536,30 @@ def test_bar_opacity_threads_into_the_bar_backdrop(render_theme, minimal_theme, 
     assert "alpha(@bg_dark, 0.5)" in (out / "waybar" / "theme.css").read_text()
 
 
+def test_light_scheme_gives_status_icons_a_contrasting_tray_chip(
+    render_theme, minimal_theme, templates_dir, tmp_path
+):
+    minimal_theme["params"]["scheme"] = "light"
+    out = _render(render_theme, minimal_theme, templates_dir, tmp_path)
+    css = (out / "waybar" / "theme.css").read_text()
+    tray = css.split("#tray {", 1)[1].split("}", 1)[0]
+    assert "color: @on_accent" in tray
+    assert "background: @accent" in tray
+    assert "border-radius: 6px" in tray
+    assert "color: @on_accent" in css.split("#tray image {", 1)[1].split("}", 1)[0]
+
+
+def test_dark_scheme_keeps_the_tray_on_the_bar_backdrop(
+    render_theme, minimal_theme, templates_dir, tmp_path
+):
+    out = _render(render_theme, minimal_theme, templates_dir, tmp_path)
+    css = (out / "waybar" / "theme.css").read_text()
+    tray = css.split("#tray {", 1)[1].split("}", 1)[0]
+    assert "color: @fg_normal" in tray
+    assert "background: transparent" in tray
+    assert "border-radius: 0px" in tray
+
+
 def test_waybar_motion_defaults_to_a_calm_transition(render_theme, minimal_theme, templates_dir, tmp_path, monkeypatch):
     monkeypatch.delenv("HWE_REDUCED_MOTION", raising=False)
     params = render_theme.build_context(minimal_theme, lenient=False)["params"]

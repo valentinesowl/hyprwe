@@ -436,7 +436,7 @@ theme_sddm_sync() {
 
     # Background = the active wallpaper (resolve the current.wall symlink) copied
     # in next to Main.qml, since the sddm user can't read the user's $HOME.
-    local wall; wall="$(readlink -f "$HWE_ROOT/config/hypr/assets/current.wall" 2>/dev/null || true)"
+    local wall; wall="$(readlink -f "$HWE_ROOT/config/hypr/assets/current.lock.wall" 2>/dev/null || true)"
     if [[ -f "$wall" ]]; then
         run sudo install -m644 "$wall" "$HWE_SDDM_THEME_DIR/background.png"
     else
@@ -466,7 +466,7 @@ theme_sddm_sync() {
 _sddm_refresh_if_free() {
     [[ -d "$HWE_SDDM_THEME_DIR" ]] || return 0     # greeter not installed → nothing to do
     local gen="$HWE_THEME_OUT/sddm/theme.conf"
-    local wall; wall="$(readlink -f "$HWE_ROOT/config/hypr/assets/current.wall" 2>/dev/null || true)"
+    local wall; wall="$(readlink -f "$HWE_ROOT/config/hypr/assets/current.lock.wall" 2>/dev/null || true)"
     if sudo -n true 2>/dev/null; then
         [[ -f "$wall" ]] && sudo -n install -m644 "$wall" "$HWE_SDDM_THEME_DIR/background.png" 2>/dev/null
         [[ -f "$gen"  ]] && sudo -n install -m644 "$gen"  "$HWE_SDDM_THEME_DIR/theme.conf"     2>/dev/null

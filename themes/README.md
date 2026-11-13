@@ -30,8 +30,9 @@ for yourself without touching the repo. The path to your own root is overridden 
 <root>/<name>/
 ├── theme.toml            # THE single source of truth: [palette] + [sem] + [params] + [font]
 ├── wallpaper.png         # generated wallpaper (genwall.py) — tracked in git for shipped themes
+├── wallpaper.gif         # (opt.) animated mesh wallpaper for awww
 ├── preview.png           # preview card for the rofi gallery (genpreview.py)
-└── wallpapers/           # (opt.) your own photos — in .gitignore, not shipped
+└── wallpapers/           # (opt.) your own photos/GIFs — in .gitignore, not shipped
 ```
 
 Only `theme.toml` is required. `wallpaper.png`/`preview.png` are generated (see below).
@@ -189,7 +190,9 @@ the **most contrasting** text (nearly black in a light theme).
 
 - GTK/libadwaita `prefer-dark` → off, and `gsettings color-scheme` → `prefer-light`;
 - in kitty the ANSI "black"/"white" (0/7/8/15) swap ends, so that "black" text stays dark on
-  light paper instead of being painted the color of the surface.
+  light paper instead of being painted the color of the surface;
+- Waybar's StatusNotifier tray gets an accent chip behind applications' icons, which CSS
+  cannot reliably recolour like text; symbolic tray icons use the matching `on_accent` ink.
 
 There are two shipped examples: the sharp reference **`paper`** (full brightness — it proves
 the neutrality) and the soft, warm **`linen`** (low peak brightness, for a light theme in a
@@ -268,13 +271,19 @@ You don't have to edit a single template or a single config — only `theme.toml
   style     = "aurora"   # see the table below; "mesh" by default
   seed      = 42         # (opt.) reroll the composition without renaming the theme
   intensity = 0.65       # (opt.) accent volume, 1.0 by default
+  animated  = true       # (opt.) also generate wallpaper.gif; mesh only
   ```
+
+  For `animated = true`, `just walls` also generates a seamless 144-frame, 24fps GIF at
+  1280×720 using `ffmpeg` from `pkg/dev.lst`. `awww` displays it on the desktop while
+  hyprlock/SDDM retain `wallpaper.png`; without `awww`, the static PNG is used instead.
 
   | style     | what it draws                             | who it suits          |
   |-----------|-------------------------------------------|-----------------------|
   | `mesh`    | soft cloudy gradient + glows              | restrained themes     |
   | `aurora`  | ribbons of light (domain-warped noise)    | organic, flowing ones |
   | `voronoi` | crystalline facets with glowing edges     | icy, low-poly ones |
+  | `rust`    | brushed steel, oxidation and dark pitting   | industrial, corroded ones |
   | `grid`    | synthwave: a sun in stripes + a grid in perspective | loud, retro ones |
   | `signal`  | a barely smoldering phosphor trail in the void | near-black, empty ones |
   | `skyline` | neon night city: rooftop silhouettes + pink/cyan windows | dark, cinematic ones |
@@ -293,10 +302,10 @@ You don't have to edit a single template or a single config — only `theme.toml
   darkened wallpaper sits behind the artwork; fake desktop widgets are not used. The name is
   part of the artwork; selection is only an outline. Enter applies, and Escape cancels without
   changing the theme. Regenerate: `just previews`.
-- Your own photos: drop them into `themes/<name>/wallpapers/` (which is in `.gitignore`) — they
-  show up in `hwe wall pick` next to the generated ones. The active choice is remembered
-  in `~/.config/hwe/themes/<name>/wallpapers/.current_wallpaper` — outside the checkout,
-  with your other settings.
+- Your own photos/GIFs: drop them into `~/.config/hwe/themes/<name>/wallpapers/` — they show
+  up in `hwe wall pick` next to the generated ones and stay outside the checkout. The legacy
+  `themes/<name>/wallpapers/` directory is still supported. The active choice is remembered
+  beside them in `.current_wallpaper`.
 
 ## How it works under the hood
 

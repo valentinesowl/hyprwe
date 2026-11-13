@@ -7,6 +7,7 @@
 # What `scheme = "light"` actually flips (everything else is just the palette):
 #   * GTK/libadwaita prefer-dark -> off, and `gsettings color-scheme` -> prefer-light
 #   * kitty's ANSI black/white swap ends so "black" text stays dark on paper
+#   * Waybar's StatusNotifier tray gets an accent chip behind application icons
 # The role ORDER never changes: bg_dark is still the darkest surface (here a soft
 # grey), fg_white still the max-contrast ink (here near-black).
 
@@ -30,15 +31,15 @@ fg_bright  = "#232833"
 fg_white   = "#12151b"
 # accent — ink blue (dark enough to read as a glyph on the pale bar)
 accent      = "#245b98"
-accent_soft = "#3f82c8"
+accent_soft = "#2b5f96"
 # raw colours — darkened so they read on paper, not just on black
 red     = "#c33025"
-green   = "#3d8a3d"
-yellow  = "#a6791a"
-orange  = "#c26a2c"
-blue    = "#2f6fb0"
+green   = "#367936"
+yellow  = "#8a6516"
+orange  = "#884a1f"
+blue    = "#2e6eae"
 magenta = "#9a4593"
-cyan    = "#227f7f"
+cyan    = "#207676"
 # service
 border = "#c6cbd4"
 urgent = "#a82920"

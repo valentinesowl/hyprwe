@@ -46,12 +46,12 @@ window#waybar {
 #pulseaudio,
 #backlight,
 #language,
+#custom-updates,
 #custom-cpu,
 #custom-memory,
 #custom-temp,
 #custom-record,
-#custom-sunset,
-#tray {
+#custom-sunset {
     min-height: 28px;
     padding: 0 6px;
     color: @fg_normal;
@@ -59,14 +59,23 @@ window#waybar {
     transition: none;
 }
 
+#tray {
+    min-height: 28px;
+    padding: 0 6px;
+    transition: none;
+}
+
 #battery:hover,
 #pulseaudio:hover,
 #backlight:hover,
+#custom-updates:hover,
 #custom-cpu:hover,
 #custom-memory:hover,
 #custom-temp:hover {
     color: @fg_bright;
 }
+
+#custom-updates.error { color: @urgent; }
 
 /* CPU/RAM pair a morphing glyph with an exact value. Load brightens the module;
    warning and critical colours reinforce the numeric state rather than replacing it. */

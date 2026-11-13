@@ -6,7 +6,7 @@
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu_27.04_experimental-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
-[![Release](https://img.shields.io/badge/release-v2.0.3-blue)](../../releases/latest)
+[![Release](https://img.shields.io/badge/release-v2.0.4-blue)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 **Готовые dotfiles Hyprland для Arch Linux и Ubuntu: полноценный Wayland-рабочий стол
@@ -28,9 +28,9 @@
 воспроизводимость, держит весь стек в одном тоне.
 
 - **Движок тем** — один `theme.toml` задаёт цвета всех компонентов сразу;
-  `hwe theme apply` меняет вид рабочего стола живьём. Десять встроенных тем.
+  `hwe theme apply` меняет вид рабочего стола живьём. Двенадцать встроенных тем.
 - **Доступный и понятный UX** — контраст текста по AA, аскетичная панель 28 px с US/RU,
-  графические карточки идентичности тем, подтверждения скриншотов и защита
+  ежечасный индикатор обновлений пакетов, графические карточки тем, подтверждения скриншотов и защита
   logout/reboot/shutdown от случайного выбора. Уведомления используют тему mako.
 - **Модульный конфиг Hyprland** — Lua-модули через `require` для Hyprland 0.57, рядом
   kitty, waybar, rofi, mako, hyprlock и hypridle.
@@ -287,7 +287,7 @@ hwe theme pick                # rofi-галерея с превью (SUPER+SHIFT
 hwe theme validate <name>     # проверить тему на контракт (fail-loud)
 ```
 
-Picker показывает все десять тем спокойной галереей 5×2: графические карточки идентичности
+Picker показывает все двенадцать тем спокойной галереей 4×3: графические карточки идентичности
 поверх слегка размытых и затемнённых обоев. Названия являются частью карточек, отметка текущей
 темы находится в строке состояния, а выделение — акцентный контур. **Enter** применяет выбранную
 тему, **Escape** отменяет выбор без изменений. Для своих тем без `preview.png` карточка создаётся
@@ -302,7 +302,9 @@ starship, kdeglobals и hyprlock; затем перечитывает запущ
 Гритер SDDM синхронизируется отдельно (нужен root): `hwe theme sddm`.
 
 **Готовые темы:** `amethyst` · `default` · `ember` · `frost` · `garden` · `mocha` (по
-умолчанию) · `neon` · `paper` (светлая) · `linen` (мягкая светлая) · `void`. Добавить свою — см.
+умолчанию) · `mono` (монохромная) · `neon` · `paper` (светлая) · `linen` (мягкая светлая) · `rust`
+(индустриальный постапокалипсис) · `void`.
+Добавить свою — см.
 [`themes/README.ru.md`](themes/README.ru.md).
 
 ### Обои
@@ -314,8 +316,14 @@ hwe wall set <path|name>      # конкретный файл или имя из
 ```
 
 Каждая тема несёт **сгенерированные обои** `wallpaper.png` (собственные, без лицензий):
-процедурный арт в одном из шести стилей — см. `themes/README.ru.md`.
-Свои фото клади в `themes/<name>/wallpapers/` (в `.gitignore`) — они появятся рядом с ними.
+процедурный арт в одном из семи стилей — см. `themes/README.ru.md`.
+Свои фото/GIF клади в `~/.config/hwe/themes/<name>/wallpapers/` — они появятся рядом с ними;
+старый путь `themes/<name>/wallpapers/` тоже поддерживается.
+
+`awww` показывает и статические изображения, и анимированные GIF. В `mono` есть бесшовный
+шестисекундный `wallpaper.gif` с поднимающимся дымом. В Ubuntu, где `awww` не упакован,
+HWE использует `hyprpaper` и статические обои. Hyprlock и SDDM всегда получают отдельное
+статическое изображение, даже когда на рабочем столе включена анимация.
 
 ---
 

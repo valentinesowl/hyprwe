@@ -6,7 +6,9 @@ stops producing byte-identical pixels, `just walls` silently dirties the working
 tree on every run. The rest is the maths — clamping, ranges, the hand-rolled PNG
 encoder — where a mistake yields a plausible-looking but wrong image.
 """
+import shutil
 import struct
+import subprocess
 import zlib
 
 import numpy as np
@@ -14,7 +16,7 @@ import pytest
 
 from conftest import theme_ids, theme_paths
 
-STYLES = ["mesh", "aurora", "voronoi", "grid", "signal", "skyline"]
+STYLES = ["mesh", "aurora", "voronoi", "rust", "grid", "signal", "skyline"]
 
 
 @pytest.fixture
@@ -298,6 +300,31 @@ def test_intensity_scales_how_hard_the_accent_is_laid_on(genwall, small_grid):
     quiet = genwall.STYLES["mesh"](small_grid, np.random.default_rng(3), pal, 0.2)
     loud = genwall.STYLES["mesh"](small_grid, np.random.default_rng(3), pal, 1.0)
     assert quiet.mean() < loud.mean()
+
+
+def test_mesh_animation_moves_and_wraps_without_a_seam(genwall, small_grid):
+    pal = genwall._palette({"accent": "#f5f5f5", "accent_soft": "#bcbcbc"})
+    first = genwall.st_mesh(small_grid, np.random.default_rng(7), pal, 0.35, phase=0.0)
+    moved = genwall.st_mesh(small_grid, np.random.default_rng(7), pal, 0.35, phase=0.25)
+    wrapped = genwall.st_mesh(small_grid, np.random.default_rng(7), pal, 0.35, phase=1.0)
+    assert not np.array_equal(first, moved)
+    assert np.allclose(first, wrapped, atol=1e-4)
+
+
+@pytest.mark.skipif(not shutil.which("ffmpeg"), reason="FFmpeg not installed")
+def test_main_writes_a_looping_animated_gif(genwall, tmp_path):
+    out = tmp_path / "wall.gif"
+    assert genwall.main([
+        "--size", "64x36", "--seed", "5", "--gif", "--frames", "2", "--fps", "2", str(out),
+    ]) == 0
+    assert out.read_bytes()[:6] == b"GIF89a"
+    assert b"NETSCAPE2.0" in out.read_bytes()
+    probe = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "stream=nb_frames",
+         "-of", "default=noprint_wrappers=1:nokey=1", str(out)],
+        capture_output=True, text=True, check=True,
+    )
+    assert probe.stdout.strip() == "2"
 
 
 # ── end-to-end, against the shipped themes ────────────────────────────────

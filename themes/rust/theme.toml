@@ -1,0 +1,69 @@
+# themes/rust/theme.toml — post-apocalyptic industrial metal.
+# Brown-black steel, oxidised orange edges and dusty, desaturated supporting hues.
+
+name = "Rust"
+
+[palette]
+oxide = "#c77542"
+steel = "#7d94a0"
+iron  = "#17110e"
+
+[sem]
+# surfaces (dark -> light): soot and brown-black industrial steel
+bg_dark    = "#100c0a"
+bg_normal  = "#17110e"
+bg_light   = "#211812"
+bg_lighter = "#2d2118"
+# text (dim -> max contrast): dusty khaki and warm steel, never stark white
+fg_dim     = "#9a846f"
+fg_normal  = "#c4ad96"
+fg_bright  = "#e6d4bf"
+fg_white   = "#fff1df"
+# accent — oxidised metal; active selections take dark ink automatically
+accent      = "#c77542"
+accent_soft = "#c96e48"
+# raw colours — muted rust, olive, sand, steel and verdigris
+red     = "#d95f4b"
+green   = "#9da85c"
+yellow  = "#d2a24c"
+orange  = "#c77542"
+blue    = "#7d94a0"
+magenta = "#a87975"
+cyan    = "#6f9b96"
+# service
+border = "#493225"
+urgent = "#e05d45"
+
+[params]
+scheme        = "dark"
+font          = "IntoneMono Nerd Font"
+rounding      = 4
+gaps_in       = 5
+gaps_out      = 10
+border_size   = 1
+opacity       = 0.90
+bar_opacity   = 0.94
+blur_passes   = 2
+blur_size     = 4
+bar_height    = 28
+bar_float     = false
+bar_gap       = 6
+bar_gap_x     = 8
+bar_radius    = 8
+bar_ws_indicator = "underline"
+bar_ws_speed     = 220
+
+[font]
+family          = "IntoneMono Nerd Font"
+icon_family     = "Symbols Nerd Font Mono"
+fallback_family = "JetBrains Mono"
+ui_family       = "Noto Sans"
+terminal        = 9.5
+bar             = 12
+launcher        = 12
+notify          = 11
+gtk             = 11
+
+[wallpaper]
+style     = "rust"
+intensity = 0.65

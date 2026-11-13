@@ -51,6 +51,13 @@ def _sem(theme_path) -> dict:
     return _theme(theme_path)["sem"]
 
 
+def _light_theme_paths() -> list:
+    return [
+        path for path in theme_paths()
+        if _theme(path).get("params", {}).get("scheme") == "light"
+    ]
+
+
 def _context(theme_path, render_theme) -> dict:
     return render_theme.build_context(_theme(theme_path), lenient=False)
 
@@ -112,7 +119,7 @@ def test_selected_rows_have_legible_ink(theme_path, role, render_theme):
 
 
 @pytest.mark.parametrize("theme_path", theme_paths(), ids=theme_ids())
-@pytest.mark.parametrize("role", ["fg_normal", "fg_dim", "accent"])
+@pytest.mark.parametrize("role", ["fg_normal", "fg_dim", "accent", "orange"])
 @pytest.mark.parametrize("wallpaper", CONTROL_WALLPAPERS)
 def test_bar_text_survives_compositing(theme_path, role, wallpaper):
     theme = _theme(theme_path)
@@ -124,6 +131,33 @@ def test_bar_text_survives_compositing(theme_path, role, wallpaper):
         f"{role} on the bar over {wallpaper} is {ratio:.2f}:1 "
         f"(alpha={alpha}, composite={actual_background}), below {TEXT_MIN}"
     )
+
+
+@pytest.mark.parametrize("theme_path", _light_theme_paths(), ids=lambda path: path.parent.name)
+def test_light_theme_terminal_colours_are_legible(theme_path):
+    sem = _sem(theme_path)
+    for role in ("red", "green", "yellow", "orange", "blue", "magenta", "cyan"):
+        ratio = contrast_ratio(sem[role], sem["bg_normal"])
+        assert ratio >= TEXT_MIN, f"{role} on the terminal is {ratio:.2f}:1, below {TEXT_MIN}"
+
+
+@pytest.mark.parametrize("theme_path", _light_theme_paths(), ids=lambda path: path.parent.name)
+def test_light_theme_soft_accent_text_is_legible(theme_path):
+    sem = _sem(theme_path)
+    backgrounds = [sem["bg_normal"], sem["bg_dark"]]
+    backgrounds += [composite(sem["bg_dark"], wallpaper, 0.96) for wallpaper in CONTROL_WALLPAPERS]
+    for background in backgrounds:
+        ratio = contrast_ratio(sem["accent_soft"], background)
+        assert ratio >= TEXT_MIN, (
+            f"accent_soft on {background} is {ratio:.2f}:1, below {TEXT_MIN}"
+        )
+
+
+@pytest.mark.parametrize("theme_path", _light_theme_paths(), ids=lambda path: path.parent.name)
+def test_light_tray_chip_has_legible_symbolic_icon_ink(theme_path, render_theme):
+    sem = _context(theme_path, render_theme)["sem"]
+    ratio = contrast_ratio(sem["on_accent"], sem["accent"])
+    assert ratio >= TEXT_MIN, f"tray icon contrast is {ratio:.2f}:1, below {TEXT_MIN}"
 
 
 @pytest.mark.parametrize("theme_path", theme_paths(), ids=theme_ids())

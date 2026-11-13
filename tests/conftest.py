@@ -68,6 +68,11 @@ def wbmerge():
 
 
 @pytest.fixture(scope="session")
+def wbupdates():
+    return _load("wbupdates")
+
+
+@pytest.fixture(scope="session")
 def fontlock():
     return _load("fontlock")
 

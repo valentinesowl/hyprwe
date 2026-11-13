@@ -956,7 +956,7 @@ uninstall_main() {
     [[ -L "$sch" ]] && { rm -f "$sch"; info "unlinked color-schemes/HWE.colors"; }
 
     [[ -L /usr/local/bin/hwe ]] && run sudo rm -f /usr/local/bin/hwe
-    rm -f "$HWE_ROOT/config/hypr/assets/current.wall"
+    rm -f "$HWE_ROOT/config/hypr/assets/current.wall" "$HWE_ROOT/config/hypr/assets/current.lock.wall"
     warn "packages + enabled services (SDDM/NetworkManager/bluetooth) were left as-is"
     info "remove them manually if you want a full teardown"
     # The personal layer is not ours to delete: it is the one thing here that

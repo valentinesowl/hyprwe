@@ -11,6 +11,7 @@ Styles:
     mesh     soft warped gradient lit by accent glows  — restrained, the default
     aurora   domain-warped ribbons of light            — organic, flowing
     voronoi  crystalline facets with lit edges         — icy, low-poly
+    rust     brushed steel with oxidation and pitting   — industrial, corroded
     grid     synthwave horizon: sun + perspective grid — loud, retro
     signal   a faint phosphor trace across emptiness   — near-black, sparse
     skyline  neon-noir city at night: rooflines + lit  — dark, atmospheric
@@ -26,6 +27,7 @@ A theme tunes its wallpaper through [wallpaper] alone, never by editing this fil
 
 Usage:
     genwall.py --theme <theme.toml> <out.png> [--size WxH] [--style S] [--seed N]
+    genwall.py --theme <theme.toml> --gif --size 1280x720 <out.gif>
     genwall.py <out.png>                        # standalone Catppuccin-Mocha default
 
 MAINTAINER TOOL. Run via `just walls`; the PNGs it writes are committed, so a fresh
@@ -37,8 +39,11 @@ from __future__ import annotations
 
 import argparse
 import math
+import shutil
 import struct
+import subprocess
 import sys
+import tempfile
 import zlib
 from pathlib import Path
 
@@ -241,12 +246,14 @@ def add_glows(
 
 
 # ── styles ─────────────────────────────────────────────────────────────────
-def st_mesh(g: Grid, rng: np.random.Generator, pal: dict, k: float) -> np.ndarray:
-    """Soft warped gradient + accent glows. The restrained one."""
+def st_mesh(
+    g: Grid, rng: np.random.Generator, pal: dict, k: float, phase: float = 0.0
+) -> np.ndarray:
+    """Soft warped gradient + accent glows. Positive phase moves clouds upward."""
     img, _ = base_surface(g, rng, pal)
-    # Soft cloud structure. Restrained is the brief, but a pure radial falloff reads
-    # as an out-of-focus placeholder — there has to be something to look at.
-    warp = stretch(fbm(g, rng, octaves=5, base=2.0))
+    # Sampling one full lattice period further down moves features up and wraps
+    # seamlessly: fbm's noise lattice is periodic at every octave.
+    warp = stretch(fbm(g, rng, octaves=5, base=2.0, y=g.y + phase))
     img = mix(img, pal["bg_light"], smoothstep((warp - 0.52) * 2.4) * 0.60 * k)
     img = mix(img, pal["bg_dark"], smoothstep((0.48 - warp) * 2.4) * 0.40)
     return add_glows(img, g, rng, pal, k, n=int(rng.integers(2, 4)), warp=warp)
@@ -310,6 +317,40 @@ def st_voronoi(g: Grid, rng: np.random.Generator, pal: dict, k: float) -> np.nda
     edge = np.clip(1.0 - (f2 - f1) / 0.014, 0.0, 1.0) ** 1.6
     img = mix(img, pal["accent"], edge * 0.62 * k)
     return add_glows(img, g, rng, pal, k, n=1)
+
+
+def st_rust(g: Grid, rng: np.random.Generator, pal: dict, k: float) -> np.ndarray:
+    """Brushed steel with domain-warped oxidation and dark pitting."""
+    neutral = np.full(3, float(np.mean(pal["blue"])), dtype=F32)
+    steel = pal["blue"] * 0.35 + neutral * 0.65
+    img = ramp(g.v, [(0.0, steel * 0.38), (0.48, steel * 0.72), (1.0, steel * 0.32)])
+    brush = fbm(g, rng, octaves=3, base=8.0, x=g.x * 0.06, y=g.y * 6.0)
+    img *= (0.78 + 0.32 * brush)[..., None]
+
+    wx = fbm(g, rng, octaves=3, base=3.0)
+    wy = fbm(g, rng, octaves=3, base=3.0)
+    clouds = fbm(
+        g, rng, octaves=5, base=2.5,
+        x=g.x + (wx - 0.5) * 0.22, y=g.y + (wy - 0.5) * 0.22,
+    )
+    grain = fbm(g, rng, octaves=3, base=12.0)
+    field = stretch(clouds + (grain - 0.5) * 0.16)
+    threshold = 0.68 - 0.08 * k
+    oxide = smoothstep((field - threshold) * 7.0)
+    rust = ramp(
+        np.clip(field * 0.65 + grain * 0.35, 0.0, 1.0),
+        [
+            (0.0, pal["bg_dark"] + pal["accent"] * 0.20),
+            (0.35, pal["accent_soft"] * 0.72),
+            (0.72, pal["accent"]),
+            (1.0, pal["accent_soft"] * 0.95),
+        ],
+    )
+    img = mix(img, rust, oxide * 0.96)
+    edge = np.clip(1.0 - np.abs(field - threshold) / 0.045, 0.0, 1.0)
+    img = mix(img, pal["bg_dark"], edge * 0.38)
+    pits = smoothstep((grain - 0.62) * 8.0) * oxide
+    return mix(img, pal["bg_dark"], pits * 0.55)
 
 
 def _lines(phase: np.ndarray, dphase_px: np.ndarray) -> np.ndarray:
@@ -550,6 +591,7 @@ STYLES = {
     "mesh": st_mesh,
     "aurora": st_aurora,
     "voronoi": st_voronoi,
+    "rust": st_rust,
     "grid": st_grid,
     "signal": st_signal,
     "skyline": st_skyline,
@@ -603,6 +645,35 @@ def to_png(img: np.ndarray, g: Grid) -> bytes:
     return out
 
 
+def encode_mesh_gif(
+    out: Path, g: Grid, pal: dict, seed: int, k: float, frames: int, fps: int
+) -> None:
+    if not shutil.which("ffmpeg"):
+        sys.exit("genwall --gif: missing dependency 'ffmpeg'")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=".genwall-", dir=out.parent) as tmp:
+        raw_path = Path(tmp) / "frames.rgb"
+        with raw_path.open("wb") as fh:
+            for frame in range(frames):
+                rng = np.random.default_rng(seed)
+                img = st_mesh(g, rng, pal, k, phase=frame / frames)
+                img = vignette(img, g, rng)
+                fh.write(np.clip(img, 0.0, 255.0).astype(np.uint8).tobytes())
+        cmd = [
+            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            "-f", "rawvideo", "-pixel_format", "rgb24",
+            "-video_size", f"{g.w}x{g.h}", "-framerate", str(fps),
+            "-i", str(raw_path), "-filter_complex",
+            "[0:v]split[a][b];[a]palettegen=max_colors=64:stats_mode=full[p];"
+            "[b][p]paletteuse=dither=bayer:bayer_scale=3",
+            "-loop", "0", str(out),
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        if result.returncode:
+            sys.exit(f"genwall --gif: ffmpeg failed:\n{result.stderr.strip()}")
+    print(f"wrote {out} ({out.stat().st_size} bytes, {frames} frames at {fps} fps)")
+
+
 # ── theme input ────────────────────────────────────────────────────────────
 MOCHA_SEM = {
     "bg_dark": "#181825",
@@ -621,6 +692,7 @@ _ROLES = {
     "fg_bright": "#cdd6f4",
     "accent": "#cba6f7",
     "accent_soft": "#89b4fa",
+    "blue": "#89b4fa",
     "cyan": "#89dceb",
 }
 
@@ -683,13 +755,18 @@ def read_theme(path: Path) -> tuple[dict, str, int, float]:
 
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("out", help="output PNG path")
+    ap.add_argument("out", help="output PNG or GIF path")
     ap.add_argument("--theme", type=Path, help="theme.toml to read [sem] + [wallpaper] from")
     ap.add_argument("--size", default="2560x1440", metavar="WxH")
     ap.add_argument("--style", choices=sorted(STYLES), help="override the theme's style")
     ap.add_argument("--seed", type=int, help="override the theme's seed")
     ap.add_argument("--intensity", type=float, help="override the theme's accent intensity")
+    ap.add_argument("--gif", action="store_true", help="encode a seamless animated mesh GIF")
+    ap.add_argument("--frames", type=int, default=144, help="GIF frame count (default: 144)")
+    ap.add_argument("--fps", type=int, default=24, help="GIF frames per second (default: 24)")
     a = ap.parse_args(argv)
+    if a.frames < 2 or a.fps < 1:
+        sys.exit("genwall --gif: --frames must be >= 2 and --fps >= 1")
 
     if a.theme:
         pal, style, seed, k = read_theme(a.theme)
@@ -705,12 +782,18 @@ def main(argv: list[str]) -> int:
         sys.exit(f"bad --size {a.size!r}, want WxH e.g. 2560x1440")
 
     g = Grid(w, h)
+    out = Path(a.out)
+    if a.gif:
+        if style != "mesh":
+            sys.exit("genwall --gif: only the mesh style supports animation")
+        encode_mesh_gif(out, g, pal, seed, k, a.frames, a.fps)
+        return 0
+
     # One generator drawn in a fixed order = a stable composition per (seed, style).
     rng = np.random.default_rng(seed)
     img = vignette(STYLES[style](g, rng, pal, k), g, rng)
     png = to_png(img, g)
 
-    out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_bytes(png)
     print(f"wrote {out} ({len(png)} bytes, {w}x{h}, {style}/{seed}/k={k:g})")

@@ -6,7 +6,7 @@
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu_27.04_experimental-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
-[![Release](https://img.shields.io/badge/release-v2.0.3-blue)](../../releases/latest)
+[![Release](https://img.shields.io/badge/release-v2.0.4-blue)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 **Preconfigured Hyprland dotfiles for Arch Linux and Ubuntu: a complete Wayland desktop
@@ -28,9 +28,10 @@ single palette file (`themes/<name>/theme.toml`) — the same mechanism that giv
 reproducibility keeps the whole stack in one tone.
 
 - **Theme engine** — one `theme.toml` sets the colours of every component at once;
-  `hwe theme apply` changes the desktop live. Ten themes included.
+  `hwe theme apply` changes the desktop live. Twelve themes included.
 - **Accessible, visible UX** — AA-checked text contrast, a quiet 28px glyph bar with US/RU,
-  palette-driven theme identity cards, screenshot feedback, and confirmations for
+  an hourly package-update badge, palette-driven theme identity cards, screenshot feedback,
+  and confirmations for
   logout/reboot/shutdown. Notifications use the active mako theme.
 - **Modular Hyprland config** — Lua `require` modules for Hyprland 0.57, alongside
   kitty, waybar, rofi, mako, hyprlock and hypridle.
@@ -290,7 +291,7 @@ hwe theme pick                # rofi gallery with previews (SUPER+SHIFT+T)
 hwe theme validate <name>     # check a theme against the contract (fail-loud)
 ```
 
-The picker shows all ten themes in a quiet 5×2 gallery of graphic identity cards over softly
+The picker shows all twelve themes in a quiet 4×3 gallery of graphic identity cards over softly
 blurred, darkened wallpapers. Names are part of the artwork, the current marker sits in the
 status line, and selection is an accent outline. **Enter** applies the selected theme, and
 **Escape** cancels without changing anything. Custom themes without `preview.png` get a cached
@@ -306,7 +307,9 @@ them and sets the theme's wallpaper. The SDDM greeter is synced separately (need
 `hwe theme sddm`.
 
 **Themes included:** `amethyst` · `default` · `ember` · `frost` · `garden` · `mocha` (the
-default) · `neon` · `paper` (light) · `linen` (soft light) · `void`. To add your own, see
+default) · `mono` (monochrome) · `neon` · `paper` (light) · `linen` (soft light) · `rust`
+(industrial post-apocalypse) · `void`.
+To add your own, see
 [`themes/README.md`](themes/README.md).
 
 ### Wallpapers
@@ -318,8 +321,14 @@ hwe wall set <path|name>      # a specific file, or a name from `wall list`
 ```
 
 Every theme carries a **generated** `wallpaper.png` (our own, no licences attached):
-procedural art in one of six styles — see `themes/README.md`. Put your own photos into
-`themes/<name>/wallpapers/` (it is in `.gitignore`) and they show up next to it.
+procedural art in one of seven styles — see `themes/README.md`. Put your own photos/GIFs into
+`~/.config/hwe/themes/<name>/wallpapers/` and they show up next to it; the legacy
+`themes/<name>/wallpapers/` path is supported too.
+
+`awww` renders both static images and animated GIFs. `mono` includes a seamless six-second
+`wallpaper.gif` whose smoke rises through the mesh field. On Ubuntu, where `awww` is not
+packaged, HWE falls back to `hyprpaper` and static wallpapers. Hyprlock and SDDM always use
+a separate static image, including when the desktop wallpaper is animated.
 
 ---
 

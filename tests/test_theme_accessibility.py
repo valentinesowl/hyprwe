@@ -78,11 +78,13 @@ def test_custom_theme_accessibility_warnings_do_not_break_loading(render_theme, 
 def test_waybar_exposes_layout_values_and_mouse_actions(repo):
     template = (repo / "templates/waybar/config.jsonc.j2").read_text()
     right = [
-        "tray", "custom/cpu", "custom/memory", "custom/temp", "custom/record",
+        "tray", "custom/updates", "custom/cpu", "custom/memory", "custom/temp", "custom/record",
         "pulseaudio", "backlight", "battery", "hyprland/language", "custom/sunset",
     ]
     expected = ", ".join(f'"{module}"' for module in right)
     assert f'"modules-right": [{expected}]' in template
+    assert '"custom/updates"' in template
+    assert 'wbupdates.py --watch' in template
     assert '"hyprland/language"' in template
     assert '"format-en": "US"' in template
     assert '"format-ru": "RU"' in template
@@ -100,21 +102,21 @@ def _rasi_px(template: str, block: str, prop: str) -> int:
     return int(re.search(rf"{prop}:\s*(\d+)px", body).group(1))
 
 
-def test_theme_picker_is_a_ten_card_identity_grid(repo):
+def test_theme_picker_identity_grid_fits_twelve_cards(repo):
     template = (repo / "templates/rofi/theme.rasi.j2").read_text()
     picker = (repo / "lib/theme.sh").read_text()
     assert "_HWE_PICK_PREVIEW" not in picker
     assert "-kb-custom" not in picker
     assert "-kb-accept-alt" not in picker
-    assert "columns:          5" in template
-    assert "lines:            2" in template
-    assert "width:            1100px" in template
+    assert "columns:          4" in template
+    assert "lines:            3" in template
+    assert "width:            876px" in template
     assert 'children:         [ "element-icon" ]' in template
     assert "background-color: @bg-light" not in template
     assert 'children: [ "element-icon", "element-text" ]' in picker
     assert "text-color:       @fg-bright" in template
 
-    columns = 5
+    columns = 4
     window = _rasi_px(template, "window", "width")
     main_padding = _rasi_px(template, "mainbox", "padding")
     list_spacing = _rasi_px(template, "listview", "spacing")

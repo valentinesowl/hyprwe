@@ -25,8 +25,10 @@ MOTIFS = {
     "garden": "branch",
     "linen": "weave",
     "mocha": "palette",
+    "mono": "monogram",
     "neon": "bolt",
     "paper": "fold",
+    "rust": "hazard",
     "void": "signal",
 }
 
@@ -220,6 +222,28 @@ def motif_layers(kind: str, sem: dict) -> list[str]:
             "-draw", "line 179,227 263,227",
         ])
         return shadow + paper
+
+    if kind == "monogram":
+        monogram = (
+            "path 'M 124,284 L 124,58 L 172,58 L 240,181 L 308,58 "
+            "L 356,58 L 356,284 L 312,284 L 312,139 L 258,236 L 222,236 "
+            "L 168,139 L 168,284 Z'"
+        )
+        return _layer([
+            "-fill", accent, "-stroke", "none", "-draw", monogram,
+            "-fill", soft, "-draw", "rectangle 124,310 356,316",
+        ])
+
+    if kind == "hazard":
+        stripes = [
+            (accent, "polygon 46,86 78,58 290,270 258,298"),
+            (soft, "polygon 118,86 150,58 362,270 330,298"),
+            (accent, "polygon 190,86 222,58 434,270 402,298"),
+        ]
+        draw = []
+        for colour, stripe in stripes:
+            draw += ["-fill", colour, "-stroke", "none", "-draw", stripe]
+        return _layer(draw)
 
     if kind == "signal":
         signal = "polyline 58,173 143,173 171,129 202,231 239,79 275,228 307,139 334,173 422,173"

@@ -9,6 +9,36 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+## [2.0.4] — 2026-11-13
+
+### Added
+
+- **Two new complete themes.** `mono` is a neutral black-and-white grotesque with a
+  six-second rising-smoke animation; `rust` combines an industrial post-apocalyptic palette
+  with a new brushed-steel, oxidation and pitting wallpaper generator and hazard identity card.
+- **Animated wallpapers through awww.** Static images and looping GIFs share one backend on Arch;
+  Ubuntu retains the static hyprpaper fallback. Hyprlock and SDDM always receive a static poster.
+- **Hourly package-update badge in Waybar.** Arch uses `checkupdates`, Ubuntu uses a read-only
+  APT simulation. The badge hides at zero, lists updates in its tooltip and refreshes within
+  ten seconds after a local package-database change instead of waiting for the next hourly check.
+- **User-layer wallpaper libraries.** Photos and GIFs in
+  `~/.config/hwe/themes/<name>/wallpapers/` appear beside generated wallpapers; the legacy
+  in-checkout directory remains supported.
+
+### Changed
+
+- **The theme gallery now holds all twelve themes in a compact 4×3 grid.** Selection outlines
+  use uniform padding without clipping the cards.
+- **Light themes are more legible.** Their tray uses the theme accent with contrasting
+  `on_accent` icons, while soft accents, terminal colours and warning indicators clear the
+  required contrast thresholds.
+
+### Fixed
+
+- **Animated wallpapers no longer stall theme and wallpaper pickers.** Thumbnails decode only
+  the first GIF frame, and awww's animation cache is invalidated only when the GIF changes.
+  Regenerating a GIF at the same path still refreshes the running animation correctly.
+
 ## [2.0.3] — 2026-11-11
 
 ### Added

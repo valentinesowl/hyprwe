@@ -12,7 +12,7 @@
 
     "modules-left": ["hyprland/workspaces"],
     "modules-center": ["clock"],
-    "modules-right": ["tray", "custom/cpu", "custom/memory", "custom/temp", "custom/record", "pulseaudio", "backlight", "battery", "hyprland/language", "custom/sunset"],
+    "modules-right": ["tray", "custom/updates", "custom/cpu", "custom/memory", "custom/temp", "custom/record", "pulseaudio", "backlight", "battery", "hyprland/language", "custom/sunset"],
 
     "hyprland/workspaces": {
         "format": "{name}",
@@ -68,6 +68,13 @@
         "format-plugged": "󰚥",
         "format-icons": ["󰂎", "󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"],
         "tooltip-format": "Battery: {capacity}% — {timeTo} ({power}W)"
+    },
+
+    // Read-only package update check; the badge hides when the system is current.
+    "custom/updates": {
+        "format": "{}",
+        "return-type": "json",
+        "exec": "python3 {{ scripts_dir }}/wbupdates.py --watch"
     },
 
     // Quiet glyphs; exact percentages, sparklines and actions stay in tooltips.

@@ -1,23 +1,22 @@
 #!/usr/bin/env bash
 # lib/wall.sh — `hwe wall`: manage the desktop wallpaper.
 #
-# Wallpaper sources per theme, in precedence: (1) local photos in
-# themes/<name>/wallpapers/ (gitignored, never ship); (2) the generated wallpaper
-# themes/<name>/wallpaper.png (always present). The active wallpaper is a symlink
-# config/hypr/assets/current.wall that hyprpaper and hyprlock read; retarget it +
-# a hyprctl IPC and it swaps live, no restart. Per-theme choice remembered in
-# the user layer, ~/.config/hwe/themes/<name>/wallpapers — user state does not
-# live in the checkout (installs that predate the move are migrated on read).
+# awww displays static images and animated GIFs. hyprpaper remains the static-only
+# fallback on distributions without awww. current.wall tracks the desktop image;
+# current.lock.wall always points to a static image for hyprlock and SDDM. Per-theme
+# choices live in ~/.config/hwe/themes/<name>/wallpapers, outside the checkout.
 #
 # Sourced by bin/hwe and lib/theme.sh; relies on lib/common.sh helpers.
 
 # Theme roots (HWE_THEMES / HWE_THEMES_USER), HWE_THEME_CURRENT and the
 # _theme_dir resolver come from lib/common.sh — a theme of your own carries its
 # wallpapers exactly like a shipped one.
-# The link lives at the REPO path (config/hypr is whole-dir symlinked into
-# ~/.config), so it resolves both before and after deploy.
+# The links live at the REPO path (config/hypr is whole-dir symlinked into
+# ~/.config), so they resolve both before and after deploy.
 HWE_WALL_LINK="$HWE_ROOT/config/hypr/assets/current.wall"
+HWE_LOCK_WALL_LINK="$HWE_ROOT/config/hypr/assets/current.lock.wall"
 HWE_WALL_THUMBS="$HWE_CACHE/wallpaper-thumbs"
+HWE_WALL_LOG="$HWE_CACHE/wallpaper.log"
 
 wall_usage() {
     cat >&2 <<EOF
@@ -31,10 +30,10 @@ ${C_BOLD}Actions:${C_RESET}
   ${C_CYAN}random${C_RESET} [theme]   Set a random wallpaper for the theme
   ${C_CYAN}pick${C_RESET}             Pick a wallpaper interactively via rofi (SUPER+SHIFT+W)
   ${C_CYAN}current${C_RESET}          Print the path of the active wallpaper
-  ${C_CYAN}restore${C_RESET}          Start hyprpaper + apply the active wallpaper (session autostart)
+  ${C_CYAN}restore${C_RESET}          Start awww/hyprpaper + apply the active wallpaper (autostart)
 
-Drop your own photos into ${C_DIM}themes/<name>/wallpapers/${C_RESET} (gitignored) and they
-appear here alongside the theme's generated wallpaper.
+Drop your own photos/GIFs into ${C_DIM}~/.config/hwe/themes/<name>/wallpapers/${C_RESET}
+and they appear here alongside the theme's generated wallpaper.
 EOF
 }
 
@@ -61,15 +60,18 @@ _wall_theme() {
     printf '%s\n' "$n"
 }
 
-# Candidate wallpaper files for a theme (absolute paths): local photos first
-# (sorted), then the generated wallpaper as the always-present fallback.
+# Candidate wallpaper files for a theme (absolute paths): user-layer images,
+# then the theme's local images, then generated static and animated variants.
 _wall_candidates() {
     local dir; dir="$(_theme_dir "$1")" || return 0    # unknown theme: no candidates
-    local d="$dir/wallpapers" grad="$dir/wallpaper.png"
-    if [[ -d "$d" ]]; then
-        find "$d" -maxdepth 1 -type f \( -iname '*.jpg' -o -iname '*.jpeg' \
-            -o -iname '*.png' -o -iname '*.webp' -o -iname '*.bmp' \) | sort
-    fi
+    local d grad="$dir/wallpaper.png" gif="$dir/wallpaper.gif"
+    for d in "$HWE_USER_CONFIG/themes/$1/wallpapers" "$dir/wallpapers"; do
+        if [[ -d "$d" ]]; then
+            find "$d" -maxdepth 1 -type f \( -iname '*.jpg' -o -iname '*.jpeg' \
+                -o -iname '*.png' -o -iname '*.webp' -o -iname '*.bmp' -o -iname '*.gif' \) | sort
+        fi
+    done
+    [[ -f "$gif" ]] && printf '%s\n' "$gif"
     [[ -f "$grad" ]] && printf '%s\n' "$grad"
 }
 
@@ -95,13 +97,21 @@ _wall_remembered() {
     cat "$marker" 2>/dev/null || true
 }
 
-# The wallpaper a fresh `theme apply` should use: the remembered choice if it
-# still exists, otherwise the generated wallpaper (always present, always ours).
+# Prefer a theme's animated default only when its renderer is available.
 _wall_default() {
     local dir; dir="$(_theme_dir "$1")" || return 1
     local p; p="$(_wall_remembered "$1")"
-    [[ -n "$p" && -f "$p" ]] && { printf '%s\n' "$p"; return 0; }
-    printf '%s\n' "$dir/wallpaper.png"
+    if [[ -n "$p" && -f "$p" ]]; then
+        if [[ "${p,,}" != *.gif ]] || command -v awww >/dev/null 2>&1; then
+            printf '%s\n' "$p"
+            return 0
+        fi
+    fi
+    if command -v awww >/dev/null 2>&1 && [[ -f "$dir/wallpaper.gif" ]]; then
+        printf '%s\n' "$dir/wallpaper.gif"
+    else
+        printf '%s\n' "$dir/wallpaper.png"
+    fi
 }
 
 # A friendly label for a wallpaper path (the generated one reads as such, in
@@ -110,6 +120,7 @@ _wall_label() {
     local p="$1"
     case "$p" in
         "$HWE_THEMES"/*/wallpaper.png|"$HWE_THEMES_USER"/*/wallpaper.png) echo "generated" ;;
+        "$HWE_THEMES"/*/wallpaper.gif|"$HWE_THEMES_USER"/*/wallpaper.gif) echo "animated" ;;
         *) basename "${p%.*}" ;;
     esac
 }
@@ -124,24 +135,74 @@ _wall_remember() {
     printf '%s\n' "$(readlink -f "$2")" > "$marker" 2>/dev/null || true
 }
 
-# Point current.wall at $1 and swap it live if hyprpaper is reachable.
+# Resolve the static image used by access screens. Generated GIFs already have a
+# full-resolution PNG beside them; custom GIFs get a cached first-frame poster.
+_wall_lock_image() {
+    local path="$1" poster
+    if [[ "${path,,}" != *.gif ]]; then
+        printf '%s\n' "$path"
+        return 0
+    fi
+    if [[ "$path" == */wallpaper.gif && -f "${path%.gif}.png" ]]; then
+        printf '%s\n' "${path%.gif}.png"
+        return 0
+    fi
+    need convert imagemagick || return 1
+    poster="$HWE_CACHE/wallpaper-posters/$(printf '%s' "$path" | cksum | cut -d' ' -f1).png"
+    if [[ ! -f "$poster" || "$path" -nt "$poster" ]]; then
+        mkdir -p "$(dirname "$poster")"
+        convert "${path}[0]" "$poster" >/dev/null 2>&1 || {
+            err "could not make a lock-screen poster from $path"
+            return 1
+        }
+    fi
+    printf '%s\n' "$poster"
+}
+
+# Point the desktop and lock-screen links at their respective images, then swap live.
 _wall_activate() {
-    local path="$1"
+    local path="$1" lock
     [[ -f "$path" ]] || { err "wallpaper not found: $path"; return 1; }
     path="$(readlink -f "$path")"
+    if [[ "${path,,}" == *.gif ]] && ! command -v awww >/dev/null 2>&1; then
+        err "animated wallpapers need awww (install the awww package)"
+        return 1
+    fi
+    lock="$(_wall_lock_image "$path")" || return 1
     mkdir -p "$(dirname "$HWE_WALL_LINK")"
+    ln -sfn "$lock" "$HWE_LOCK_WALL_LINK"
     ln -sfn "$path" "$HWE_WALL_LINK"
     _wall_apply "$path"
 }
 
+# Start the preferred backend and wait until awww's socket answers. hyprpaper is
+# retained for static-only installations where awww is not packaged.
+_wall_start() {
+    mkdir -p "$(dirname "$HWE_WALL_LOG")" 2>/dev/null || true
+    if command -v awww >/dev/null 2>&1; then
+        awww query >/dev/null 2>&1 && return 0
+        if ! pgrep -x awww-daemon >/dev/null 2>&1; then
+            awww-daemon --format xrgb >> "$HWE_WALL_LOG" 2>&1 &
+            disown
+        fi
+        local i
+        for i in $(seq 1 25); do
+            awww query >/dev/null 2>&1 && return 0
+            sleep 0.1
+        done
+        return 1
+    fi
+    if ! pgrep -x hyprpaper >/dev/null 2>&1; then
+        hyprpaper >> "$HWE_WALL_LOG" 2>&1 &
+        disown
+    fi
+}
+
 # The raw live swap, and it tells the truth. Locates the Hyprland instance
-# itself so it works from a keybind/ssh/terminal. Returns 0 when the apply
-# landed OR there is nothing to talk to (no hyprctl / no compositor — a
-# legitimate no-op at install time); returns 1 when hyprpaper was asked and
-# refused. That rc is the ONLY readiness signal worth trusting: a stale socket
-# file from a dead daemon exists on disk and still refuses the connection.
+# itself so it works from a keybind/ssh/terminal. No compositor is a legitimate
+# no-op at install time; a refused backend apply is an error.
 _wall_apply() {
-    local path="$1"
+    local path="$1" stamp="" marker=""
     command -v hyprctl >/dev/null 2>&1 || return 0
     export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
     local sig="${HYPRLAND_INSTANCE_SIGNATURE:-}"
@@ -152,9 +213,30 @@ _wall_apply() {
     fi
     [[ -n "$sig" ]] || return 0
     export HYPRLAND_INSTANCE_SIGNATURE="$sig"
-    # Set on every monitor (empty monitor field), no restart. hyprpaper 0.8+ dropped
-    # the preload/reload/unload IPC verbs (wallpaper now loads on demand); older
-    # versions REQUIRE preload before wallpaper. Do both defensively across versions.
+    if command -v awww >/dev/null 2>&1; then
+        _wall_start || return 1
+        # awww caches decoded GIF frames by path, not by file contents/mtime.
+        # Invalidate only a changed GIF; clearing on every apply re-decodes the
+        # whole animation and makes theme/wallpaper selection visibly stall.
+        if [[ "${path,,}" == *.gif ]]; then
+            stamp="$(stat -c '%y:%s' "$path")"
+            marker="$HWE_CACHE/wallpaper-gif-stamps/$(printf '%s' "$path" | cksum | cut -d' ' -f1)"
+            if [[ "$(cat "$marker" 2>/dev/null || true)" != "$stamp" ]]; then
+                mkdir -p "$(dirname "$marker")"
+                awww clear-cache >/dev/null 2>&1 || true
+            fi
+        fi
+        if awww img --transition-type none "$path" >/dev/null 2>&1; then
+            [[ -z "$marker" ]] || printf '%s\n' "$stamp" > "$marker"
+            pkill -x hyprpaper 2>/dev/null || true
+            info "wallpaper set (awww)"
+            return 0
+        fi
+        return 1
+    fi
+    [[ "${path,,}" != *.gif ]] || { err "animated wallpapers need awww"; return 1; }
+    _wall_start || return 1
+    # hyprpaper 0.8+ loads on demand; older versions require a preload first.
     hyprctl hyprpaper preload "$path" >/dev/null 2>&1 || true
     if hyprctl hyprpaper wallpaper ",$path" >/dev/null 2>&1; then
         info "wallpaper set (hyprpaper)"
@@ -172,32 +254,28 @@ wall_current() {
 }
 
 # Session-autostart entry point (autostart.lua: hwe wall restore).
-# hyprpaper 0.8.4 config-file directives don't expand ~/$HOME, so a symlink path
-# in hyprpaper.conf loads NOTHING at boot -> grey screen. Instead: start
-# hyprpaper, wait for its IPC socket, then set a RESOLVED absolute path.
 wall_restore() {
     export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-    # Keep hyprpaper's own words: when the desktop is black, its EGL/GBM errors
-    # are the whole diagnosis, and >/dev/null was how they went missing.
-    local paperlog="${XDG_CACHE_HOME:-$HOME/.cache}/hwe/hyprpaper.log"
-    if ! pgrep -x hyprpaper >/dev/null 2>&1; then
-        mkdir -p "$(dirname "$paperlog")" 2>/dev/null || true
-        hyprpaper > "$paperlog" 2>&1 &
-        disown
-    fi
-
     local target; target="$(readlink -f "$HWE_WALL_LINK" 2>/dev/null || true)"
     [[ -f "$target" ]] || { warn "no active wallpaper to restore ($HWE_WALL_LINK)"; return 0; }
+    if [[ "${target,,}" == *.gif ]] && ! command -v awww >/dev/null 2>&1; then
+        local fallback="${target%.gif}.png"
+        [[ -f "$fallback" ]] || {
+            err "animated wallpapers need awww; no static fallback found for $target"
+            return 1
+        }
+        warn "awww is unavailable — restoring the static wallpaper instead"
+        target="$fallback"
+        ln -sfn "$target" "$HWE_WALL_LINK"
+    fi
 
-    # Retry the APPLY, not a socket-file wait: the file may be a previous
-    # daemon's corpse, and a slow (software-rendering) hyprpaper takes seconds
-    # before its IPC answers. _wall_apply asks the only real question.
+    # Retry the apply itself: a stale socket may exist after its daemon has died.
     local i
     for i in $(seq 1 50); do
         if _wall_apply "$target"; then return 0; fi
         sleep 0.2
     done
-    warn "hyprpaper did not take the wallpaper after 10s — its log: $paperlog"
+    warn "wallpaper backend did not take the wallpaper after 10s — its log: $HWE_WALL_LOG"
     return 1
 }
 
@@ -252,7 +330,7 @@ wall_set() {
         return 1
     }
     _wall_activate "$path" || {
-        notify error "Wallpaper failed" "hyprpaper refused the image · run 'hwe wall restore'"
+        notify error "Wallpaper failed" "wallpaper backend refused the image · run 'hwe wall restore'"
         return 1
     }
     _wall_remember "$theme" "$path"
@@ -271,7 +349,7 @@ wall_random() {
     }
     local pick="${files[RANDOM % ${#files[@]}]}"
     _wall_activate "$pick" || {
-        notify error "Wallpaper failed" "hyprpaper refused the image · run 'hwe wall restore'"
+        notify error "Wallpaper failed" "wallpaper backend refused the image · run 'hwe wall restore'"
         return 1
     }
     _wall_remember "$theme" "$pick"
@@ -294,7 +372,7 @@ wall_pick() {
     local have_convert=0
     command -v convert >/dev/null 2>&1 && have_convert=1
 
-    local files=() labels=() displays=() thumbs=() p label thumb marker
+    local files=() labels=() displays=() thumbs=() p label thumb marker input
     # First pass: count labels. `sunset.jpg` and `sunset.png` share the stem
     # "sunset" — two identical rows, and the picker resolves whichever comes
     # first. Where the stem is ambiguous, the row shows the full filename.
@@ -315,7 +393,9 @@ wall_pick() {
         thumb="$cache/$(basename "${p%.*}").$(printf '%s' "$p" | cksum | cut -d' ' -f1).thumb.png"
         if [[ "$have_convert" == 1 ]]; then
             if [[ ! -f "$thumb" || "$p" -nt "$thumb" ]]; then
-                convert "$p" -resize 400x225^ -gravity center -extent 400x225 \
+                input="$p"
+                [[ "${p,,}" != *.gif ]] || input="${p}[0]"   # never decode all frames for a thumbnail
+                convert "$input" -resize 400x225^ -gravity center -extent 400x225 \
                     -quality 85 "$thumb" 2>/dev/null || thumb="$p"
             fi
         else

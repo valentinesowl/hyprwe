@@ -118,16 +118,21 @@ fonts-lock *ARGS:
 apt-map-check:
     docker run --rm -v "$PWD:/hwe:ro" -w /hwe ubuntu:27.04 bash scripts/aptmapcheck.sh
 
-# Regenerate every theme's wallpaper gradient
+# Regenerate every static wallpaper and each animated = true theme's GIF
 walls:
-    for t in themes/*/theme.toml; do python3 scripts/genwall.py --theme "$t" "$(dirname "$t")/wallpaper.png"; done
+    for t in themes/*/theme.toml; do \
+        python3 scripts/genwall.py --theme "$t" "$(dirname "$t")/wallpaper.png"; \
+        if grep -q '^animated[[:space:]]*=[[:space:]]*true' "$t"; then \
+            python3 scripts/genwall.py --theme "$t" --gif --size 1280x720 "$(dirname "$t")/wallpaper.gif"; \
+        fi; \
+    done
 
 # Regenerate every theme's preview thumbnail (rofi picker / gallery)
 previews:
     for t in themes/*/theme.toml; do python3 scripts/genpreview.py "$t" "$(dirname "$t")/preview.png"; done
 
 # Rebuild the README theme gallery (assets/themes.png) from every preview.png.
-# 5 columns, alphabetical (the glob's order); 480px cards in 536px cells on #0d0d12.
+# 4 columns, alphabetical (the glob's order); 480px cards in 536px cells on #0d0d12.
 # Append any missing current-skeleton hashes to provision/userlayer.sums (the
 # append-only history that lets `hwe update` recognise untouched defaults).
 # Run after editing anything in provision/userlayer/; a test pins this.
@@ -136,7 +141,7 @@ skel-sums:
     tail -n5 provision/userlayer.sums
 
 gallery:
-    montage themes/*/preview.png -tile 5x -geometry 480x480+28+28 \
+    montage themes/*/preview.png -tile 4x -geometry 480x480+28+28 \
         -background '#0d0d12' -depth 8 assets/themes.png
     # Branded 2:1 card for GitHub's social preview (it crops anything else; ≤1MB)
     magick -size 1280x640 xc:'#0d0d12' \
@@ -147,6 +152,6 @@ gallery:
         -annotate +60+240 'Environment' \
         -fill '#9c96aa' -pointsize 25 -annotate +60+334 'A complete Wayland desktop' \
         -annotate +60+372 'for Arch Linux & Ubuntu' \
-        -font "$(fc-match -f '%{file}' 'JetBrains Mono')" -fill '#b89cff' -pointsize 20 -annotate +60+458 '10 themes • Lua config • Dev VM' \
+        -font "$(fc-match -f '%{file}' 'JetBrains Mono')" -fill '#b89cff' -pointsize 20 -annotate +60+458 '12 themes • Lua config • Dev VM' \
         -fill '#9c96aa' -pointsize 18 -annotate +60+558 'github.com/valentinesowl/hyprwe' \
         -strip -depth 8 assets/social-preview.png

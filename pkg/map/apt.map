@@ -52,6 +52,9 @@ lm_sensors	lm-sensors
 bluez-utils	bluez
 
 # --- absent, with no equivalent in the archive ---
+# Animated wallpapers. Ubuntu 26.04 has neither awww nor swww (verified with
+# apt-get install -s in a clean image). hyprpaper remains the static fallback.
+awww	-
 # Screenshot annotation. Two keybinds use it; they degrade to a plain screenshot.
 satty	-
 # Night light. Not in the archive; the PPA (HWE_HYPR_SOURCE=ppa) carries it and

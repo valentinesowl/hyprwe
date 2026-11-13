@@ -45,6 +45,7 @@ yamllint                     # YAML linter        (just lint-ci)
 # --- Theme asset generation (maintainer-only; outputs are committed) ---
 python-numpy                 # scripts/genwall.py — procedural wallpapers
 imagemagick                  # scripts/genpreview.py — theme preview cards
+ffmpeg                       # scripts/genwall.py --gif — animated wallpaper encoding
 
 # --- Task runner & docs ---
 just                         # command runner (see justfile)

@@ -3,7 +3,8 @@
 
 # --- Compositor & Hyprland ecosystem ---
 hyprland                     # the Wayland compositor
-hyprpaper                    # wallpaper daemon
+awww                         # static + animated GIF wallpaper daemon (Ubuntu: static fallback)
+hyprpaper                    # static wallpaper fallback where awww is not packaged
 hypridle                     # idle management
 hyprlock                     # screen locker
 hyprsunset                   # night light (hwe sunset; schedule in ~/.config/hwe)

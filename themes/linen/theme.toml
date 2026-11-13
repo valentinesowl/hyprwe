@@ -30,15 +30,15 @@ fg_white   = "#1c1a14"
 # accent — calm indigo (linen + blue thread); dark enough for small text and
 # for near-black on-accent text on selected rows.
 accent      = "#304b6c"
-accent_soft = "#5b7da6"
+accent_soft = "#394e69"
 # raw colours — muted and warm so they sit on paper, not shout
 red     = "#983e35"
-green   = "#5c7a3f"
-yellow  = "#8a7020"
-orange  = "#a86436"
-blue    = "#4a6b93"
-magenta = "#875073"
-cyan    = "#3d7a72"
+green   = "#4a6233"
+yellow  = "#6e591a"
+orange  = "#6b4023"
+blue    = "#415d80"
+magenta = "#7e4b6c"
+cyan    = "#32645d"
 # service
 border = "#c4bda8"
 urgent = "#7c322b"

@@ -22,6 +22,17 @@ window#waybar {
     background: alpha(@bg_dark, {{ params.bar_opacity }});
 }
 
+/* StatusNotifier pixmaps cannot be recoloured like text. Light themes use the
+   same accent chip and contrasting ink as a pill-shaped active workspace. */
+#tray {
+    color: {{ "@on_accent" if params.is_light else "@fg_normal" }};
+    background: {{ "@accent" if params.is_light else "transparent" }};
+    border-radius: {{ 6 if params.is_light else 0 }}px;
+}
+#tray image {
+    color: {{ "@on_accent" if params.is_light else "@fg_normal" }};
+}
+
 {% if params.bar_float %}
 /* Floating frosted island: rounded, hairline-bordered, gently shadowed. */
 window#waybar {

@@ -12,6 +12,7 @@ wallpaper is a real leak of whatever else was on screen, not a tidiness issue.
 Those tests exist to fail loudly in CI before a push, so keep them strict.
 """
 import subprocess
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -123,6 +124,17 @@ def test_every_theme_asset_is_a_real_png(theme_path):
     for asset in ("wallpaper.png", "preview.png"):
         blob = (theme_path.parent / asset).read_bytes()
         assert blob[:8] == b"\x89PNG\r\n\x1a\n", f"{theme_path.parent.name}/{asset} is not a PNG"
+
+
+@pytest.mark.parametrize("theme_path", theme_paths(), ids=theme_ids())
+def test_animated_themes_ship_a_real_gif(theme_path):
+    with theme_path.open("rb") as fh:
+        animated = tomllib.load(fh).get("wallpaper", {}).get("animated", False)
+    if not animated:
+        return
+    blob = (theme_path.parent / "wallpaper.gif").read_bytes()
+    assert blob[:6] == b"GIF89a"
+    assert b"NETSCAPE2.0" in blob
 
 
 # ── the package lists ─────────────────────────────────────────────────────

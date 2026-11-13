@@ -85,4 +85,5 @@ themes/.current
 # Active-wallpaper pointer + per-theme remembered choice — machine-local runtime
 # state written by `hwe wall` / `hwe theme apply`, never tracked.
 config/hypr/assets/current.wall
+config/hypr/assets/current.lock.wall
 themes/*/.current_wallpaper
