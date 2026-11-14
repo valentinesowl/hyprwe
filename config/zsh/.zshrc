@@ -37,7 +37,8 @@ bindkey '^[[1;5C' forward-word
 bindkey '^[[1;3D' backward-word
 bindkey '^[[1;3C' forward-word
 bindkey '^[[3;5~' kill-word
-bindkey '^H'      backward-kill-word                        # Ctrl+Backspace
+bindkey '^[[127;5u' backward-kill-word                      # Ctrl+Backspace (Kitty CSI-u)
+bindkey '^H'      backward-kill-word                        # Ctrl+Backspace (legacy)
 
 # --- Completion (compdump kept in XDG cache, not in the repo) --------------
 autoload -Uz compinit
