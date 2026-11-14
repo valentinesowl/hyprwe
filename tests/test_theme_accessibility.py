@@ -84,7 +84,8 @@ def test_waybar_exposes_layout_values_and_mouse_actions(repo):
     expected = ", ".join(f'"{module}"' for module in right)
     assert f'"modules-right": [{expected}]' in template
     assert '"custom/updates"' in template
-    assert 'wbupdates.py --watch' in template
+    assert 'wbupdates.py"' in template
+    assert '"interval": 10' in template
     assert '"hyprland/language"' in template
     assert '"format-en": "US"' in template
     assert '"format-ru": "RU"' in template

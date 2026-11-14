@@ -9,6 +9,14 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+## [2.0.5] — 2026-11-14
+
+### Fixed
+
+- **The package-update badge reliably reappears after a zero-update state.** Valid Pango
+  markup lets Waybar display the available count, while native polling with an hourly cache
+  preserves prompt package-database refreshes without a long-running helper.
+
 ## [2.0.4] — 2026-11-13
 
 ### Added

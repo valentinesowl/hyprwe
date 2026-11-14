@@ -3,6 +3,7 @@
 import contextlib
 import html
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -11,10 +12,9 @@ import time
 from pathlib import Path
 
 ICON = "󰮯"
-ICON_MARKUP = f"<span size='11px'>{ICON}</span>"
+ICON_MARKUP = f"<span size='8448'>{ICON}</span>"
 TOOLTIP_LIMIT = 20
 CHECK_INTERVAL = 3600
-WATCH_INTERVAL = 10
 PACKAGE_DATABASES = (Path("/var/lib/pacman/local"), Path("/var/lib/dpkg/status"))
 
 
@@ -75,36 +75,65 @@ def package_database_stamp(paths=PACKAGE_DATABASES) -> tuple[tuple[str, int], ..
     return tuple(stamps)
 
 
-def emit() -> None:
+def state_path() -> Path:
+    runtime = os.environ.get("XDG_RUNTIME_DIR")
+    base = Path(runtime) if runtime else Path.home() / ".cache"
+    return base / "hwe" / "updates.json"
+
+
+def cached_payload(path: Path, stamp: list[list], now: float):
     try:
-        result = payload(collect())
-    except Exception as exc:
-        result = {
-            "text": f"{ICON_MARKUP} !",
-            "tooltip": html.escape(f"Update check failed: {exc}"),
-            "class": "error",
-        }
+        state = json.loads(path.read_text(encoding="utf-8"))
+        age = now - state["checked_at"]
+        if (
+            state["database_stamp"] == stamp
+            and 0 <= age < CHECK_INTERVAL
+            and isinstance(state["payload"], dict)
+        ):
+            return state["payload"]
+    except (OSError, ValueError, TypeError, KeyError):
+        pass
+    return None
+
+
+def save_payload(path: Path, stamp: list[list], now: float, result: dict) -> None:
+    temporary = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        state = {"checked_at": now, "database_stamp": stamp, "payload": result}
+        temporary.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
+        temporary.replace(path)
+    except OSError:
+        pass
+    finally:
+        with contextlib.suppress(OSError):
+            temporary.unlink()
+
+
+def emit() -> None:
+    now = time.time()
+    stamp = [list(item) for item in package_database_stamp()]
+    path = state_path()
+    result = cached_payload(path, stamp, now)
+    if result is None:
+        try:
+            result = payload(collect())
+        except Exception as exc:
+            result = {
+                "text": f"{ICON_MARKUP} !",
+                "tooltip": html.escape(f"Update check failed: {exc}"),
+                "class": "error",
+            }
+        save_payload(path, stamp, now, result)
     print(json.dumps(result, ensure_ascii=False), flush=True)
 
 
 def main(argv=None) -> int:
     argv = [] if argv is None else argv
-    if any(arg != "--watch" for arg in argv):
-        sys.exit("usage: wbupdates.py [--watch]")
+    if argv:
+        sys.exit("usage: wbupdates.py")
     emit()
-    if "--watch" not in argv:
-        return 0
-
-    checked = time.monotonic()
-    previous_stamp = package_database_stamp()
-    while True:
-        time.sleep(WATCH_INTERVAL)
-        stamp = package_database_stamp()
-        now = time.monotonic()
-        if stamp != previous_stamp or now - checked >= CHECK_INTERVAL:
-            emit()
-            previous_stamp = stamp
-            checked = now
+    return 0
 
 
 if __name__ == "__main__":

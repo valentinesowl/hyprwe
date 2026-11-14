@@ -2,8 +2,6 @@
 import json
 from types import SimpleNamespace
 
-import pytest
-
 
 def completed(stdout="", stderr="", code=0):
     return SimpleNamespace(stdout=stdout, stderr=stderr, returncode=code)
@@ -66,6 +64,10 @@ def test_zero_updates_hide_the_badge(wbupdates):
     assert wbupdates.payload([])["class"] == "empty"
 
 
+def test_icon_size_uses_pango_units_instead_of_invalid_css_pixels(wbupdates):
+    assert wbupdates.ICON_MARKUP == "<span size='8448'>󰮯</span>"
+
+
 def test_badge_counts_updates_and_escapes_tooltip(wbupdates):
     updates = [("a&b", "1", "2"), ("c<d", "3", "4")]
     result = wbupdates.payload(updates)
@@ -82,10 +84,13 @@ def test_tooltip_truncates_a_long_package_list(wbupdates):
     assert "and 5 more" in result["tooltip"]
 
 
-def test_collection_errors_become_a_visible_error_payload(wbupdates, monkeypatch, capsys):
+def test_collection_errors_become_a_visible_error_payload(
+    wbupdates, monkeypatch, capsys, tmp_path,
+):
     def fail():
         raise RuntimeError("mirror unavailable")
 
+    monkeypatch.setattr(wbupdates, "state_path", lambda: tmp_path / "updates.json")
     monkeypatch.setattr(wbupdates, "collect", fail)
     assert wbupdates.main() == 0
     result = json.loads(capsys.readouterr().out)
@@ -94,20 +99,42 @@ def test_collection_errors_become_a_visible_error_payload(wbupdates, monkeypatch
     assert "mirror unavailable" in result["tooltip"]
 
 
-def test_watch_rechecks_as_soon_as_the_package_database_changes(wbupdates, monkeypatch):
-    emits = []
+def test_poll_reuses_the_cached_result_for_an_hour(wbupdates, monkeypatch, capsys, tmp_path):
+    checks = []
 
-    def emit():
-        emits.append("check")
-        if len(emits) == 2:
-            raise StopIteration
+    monkeypatch.setattr(wbupdates, "state_path", lambda: tmp_path / "updates.json")
+    monkeypatch.setattr(wbupdates, "package_database_stamp", lambda: (("db", 1),))
+    monkeypatch.setattr(wbupdates, "collect", lambda: checks.append("check") or [("a", "1", "2")])
+    monkeypatch.setattr(wbupdates.time, "time", lambda: 100.0)
+    wbupdates.main()
+    monkeypatch.setattr(wbupdates.time, "time", lambda: 100.0 + wbupdates.CHECK_INTERVAL - 1)
+    wbupdates.main()
+    assert checks == ["check"]
+    assert len(capsys.readouterr().out.splitlines()) == 2
 
-    monkeypatch.setattr(wbupdates, "emit", emit)
-    monkeypatch.setattr(wbupdates.time, "sleep", lambda _seconds: None)
-    monkeypatch.setattr(wbupdates, "package_database_stamp", iter([("old", 1), ("new", 2)]).__next__)
-    with pytest.raises(StopIteration):
-        wbupdates.main(["--watch"])
-    assert emits == ["check", "check"]
+    monkeypatch.setattr(wbupdates.time, "time", lambda: 100.0 + wbupdates.CHECK_INTERVAL)
+    wbupdates.main()
+    assert checks == ["check", "check"]
+
+
+def test_poll_rechecks_as_soon_as_the_package_database_changes(
+    wbupdates, monkeypatch, capsys, tmp_path,
+):
+    checks = []
+    stamp = {"value": ("db", 1)}
+
+    monkeypatch.setattr(wbupdates, "state_path", lambda: tmp_path / "updates.json")
+    monkeypatch.setattr(wbupdates, "package_database_stamp", lambda: (stamp["value"],))
+    monkeypatch.setattr(wbupdates, "collect", lambda: checks.append("check") or [])
+    monkeypatch.setattr(wbupdates.time, "time", lambda: 100.0)
+    wbupdates.main()
+    wbupdates.main()
+    assert checks == ["check"]
+
+    stamp["value"] = ("db", 2)
+    wbupdates.main()
+    assert checks == ["check", "check"]
+    assert len(capsys.readouterr().out.splitlines()) == 3
 
 
 def test_package_database_stamp_uses_file_mtime(wbupdates, tmp_path):

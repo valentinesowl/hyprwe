@@ -70,11 +70,12 @@
         "tooltip-format": "Battery: {capacity}% — {timeTo} ({power}W)"
     },
 
-    // Read-only package update check; the badge hides when the system is current.
+    // Cached hourly check; frequent polls also notice package DB changes promptly.
     "custom/updates": {
         "format": "{}",
         "return-type": "json",
-        "exec": "python3 {{ scripts_dir }}/wbupdates.py --watch"
+        "exec": "python3 {{ scripts_dir }}/wbupdates.py",
+        "interval": 10
     },
 
     // Quiet glyphs; exact percentages, sparklines and actions stay in tooltips.
