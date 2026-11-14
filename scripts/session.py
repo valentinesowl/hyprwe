@@ -341,6 +341,8 @@ def restore_session(
 ) -> dict[str, Any]:
     saved = snapshot["windows"]
     current_monitors = hypr.query("monitors")
+    if not current_monitors:
+        raise SessionError("no monitor is available for the restore")
     matches = match_windows(saved, hypr.query("clients"))
     missing_commands = []
     for index, window in enumerate(saved):

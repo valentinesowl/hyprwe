@@ -180,8 +180,12 @@ def test_restore_launches_missing_applications_and_applies_layout(session, tmp_p
 def test_restore_requires_an_available_monitor(session, tmp_path):
     saved = snapshot(session)
     hypr = FakeHypr([], [])
+
+    def spawn(command):
+        pytest.fail(f"restore launched an application without a monitor: {command}")
+
     with pytest.raises(session.SessionError, match="no monitor"):
-        session.restore_session(saved, hypr, tmp_path / "restore.lua", timeout=0)
+        session.restore_session(saved, hypr, tmp_path / "restore.lua", spawn=spawn, timeout=0)
 
 
 def test_lua_provider_is_registered_without_automatic_floating(session, repo):
