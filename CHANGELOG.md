@@ -9,6 +9,52 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+## [2.1.0] — 2026-11-15
+
+### Added
+
+- **Ubuntu 27.04 joins the disposable VM workflow as an experimental target.** The new
+  `bin/build-ubuntu-cloud` builds a local NoCloud-ready qcow2 image from Canonical's signed
+  Ubuntu Base, verifies it against the pinned CD-image signing key, records provenance and
+  installs it into HWE's image cache. `HWE_VM_DISTRO=ubuntu hwe vm up --uncommitted` then
+  rehearses the current working tree through the normal `hwe install` path.
+- **More portable VM execution.** HWE selects KVM with host CPU passthrough only when it is
+  actually usable and otherwise falls back to QEMU/TCG with a compatible CPU model. Ubuntu
+  guests log the kernel and cloud-init to both graphical and serial consoles.
+
+### Changed
+
+- **Ubuntu VM provisioning now preserves working APT sources and fails honestly.** cloud-init
+  uses the current `apt.preserve_sources_list` schema, leaves Netplan to HWE and reboots only
+  after the installer creates a success marker. After packages arrive, Netplan hands the guest
+  to NetworkManager instead of leaving two competing network managers.
+- **VM applications prefer compatibility over driver-specific OpenGL paths.** Virtual machines
+  export `LIBGL_ALWAYS_SOFTWARE=1` to session applications, avoiding broken EGL setups such as
+  Kitty under virgl. Bare-metal graphics configuration is unchanged.
+
+### Fixed
+
+- **The custom Ubuntu image boots reliably.** It includes initramfs-tools, validates the BIOS
+  GRUB modules, kernel, initramfs and configuration, and settles the ext4 journal before the
+  qcow2 export so GRUB can see the files it installed.
+- **A failed `virt-install` removes its temporary VM disk and seed.** Cleanup now covers both
+  normal returns and error exits.
+- **Session restore refuses to spawn applications without an available monitor.** This turns a
+  headless or transitional compositor state into an explicit error instead of invalid geometry.
+- **Ctrl+Backspace deletes a word in Kitty/Zsh with both CSI-u and legacy encodings.**
+- **Mako notification spacing no longer doubles the last card's outer margin.**
+- **Release metadata stays consistent.** README Status sections, release badges, CHANGELOG
+  comparison targets and per-release links are pinned to `HWE_VERSION` by tests.
+
+### Verification
+
+- Clean Ubuntu 27.04 x86_64 deployment verified end-to-end through `build-ubuntu-cloud` and
+  `hwe vm rebuild --uncommitted`: cloud-init completes without errors, `hwe doctor` reports no
+  drift, NetworkManager reconnects after reboot, DNS/HTTP work, and Kitty opens through
+  Hyprland with software GL. Ubuntu 27.04 remains experimental; this is one validated VM
+  configuration, not the full release matrix or an NVIDIA verification.
+- The full `just check` Python, Bats and lint suite passes.
+
 ## [2.0.5] — 2026-11-14
 
 ### Fixed
@@ -635,7 +681,11 @@ to it only ship in 2.0.0.
   that environment's uninstaller. If the login screen looks foreign after
   `hwe theme sddm`, look at what is in that directory.
 
-[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v2.0.2...HEAD
+[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/valentinesowl/hyprwe/releases/tag/v2.1.0
+[2.0.5]: https://github.com/valentinesowl/hyprwe/releases/tag/v2.0.5
+[2.0.4]: https://github.com/valentinesowl/hyprwe/releases/tag/v2.0.4
+[2.0.3]: https://github.com/valentinesowl/hyprwe/releases/tag/v2.0.3
 [2.0.2]: https://github.com/valentinesowl/hyprwe/releases/tag/v2.0.2
 [2.0.1]: https://github.com/valentinesowl/hyprwe/releases/tag/v2.0.1
 [2.0.0]: https://github.com/valentinesowl/hyprwe/releases/tag/v2.0.0

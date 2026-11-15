@@ -1,12 +1,9 @@
 """Release consistency — the version must mean the same thing everywhere.
 
-Four places claim the version: `HWE_VERSION` in bin/hwe, the newest CHANGELOG
-heading, the release badge in both READMEs, and the git tag a release is cut from.
-Nothing forces them to agree, and the failure is quiet: `hwe version` reports one
-number while the release page shows another, and nobody notices until a user pastes
-the wrong one into a bug report. These tests make the disagreement loud instead. The
-tag half of it is enforced by .github/workflows/release.yml, which refuses to publish
-a mismatch.
+`HWE_VERSION` in bin/hwe is the canonical value. The newest CHANGELOG heading,
+release badges and Status paragraphs in both READMEs, and the CHANGELOG's link
+targets must agree with it. The release workflow applies the same rule to git tags.
+These tests make a quiet documentation drift visible before it reaches users.
 """
 import re
 
@@ -91,6 +88,34 @@ def test_the_readme_badge_states_the_declared_version(repo, declared_version, re
     assert found == [declared_version], (
         f"{readme} badge says {found}, bin/hwe says {declared_version} — bump the badge"
     )
+
+
+@pytest.mark.parametrize(
+    ("readme", "pattern"),
+    [
+        ("README.md", r"`v([\d.]+)` is the current release\."),
+        ("README.ru.md", r"`v([\d.]+)` — текущий релиз\."),
+    ],
+)
+def test_the_readme_status_states_the_declared_version(repo, declared_version, readme, pattern):
+    found = re.findall(pattern, (repo / readme).read_text())
+    assert found == [declared_version], (
+        f"{readme} Status says {found}, bin/hwe says {declared_version}"
+    )
+
+
+def test_changelog_links_match_their_releases(declared_version, changelog):
+    unreleased = re.search(
+        r"^\[Unreleased\]: \S+/compare/v([\d.]+)\.\.\.HEAD$", changelog, re.MULTILINE
+    )
+    assert unreleased, "CHANGELOG has no Unreleased comparison link"
+    assert unreleased.group(1) == declared_version
+
+    for version in released_versions(changelog):
+        expected = (
+            f"[{version}]: https://github.com/valentinesowl/hyprwe/releases/tag/v{version}"
+        )
+        assert expected in changelog, f"missing or stale CHANGELOG link for {version}"
 
 
 def test_the_cli_reports_the_declared_version(repo, declared_version):

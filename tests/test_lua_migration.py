@@ -19,6 +19,14 @@ def test_system_modules_have_no_legacy_hyprlang(repo, module):
         assert directive not in text
 
 
+def test_software_gl_is_scoped_to_virtual_machines(repo):
+    text = (repo / "config/hypr/environment.lua").read_text()
+    assert 'io.popen("systemd-detect-virt 2>/dev/null")' in text
+    assert 'virt ~= "none"' in text
+    assert 'variables.LIBGL_ALWAYS_SOFTWARE = "1"' in text
+    assert text.index("systemd-detect-virt") < text.index("for name, value in pairs(variables)")
+
+
 def test_windows_open_tiled_and_kitty_does_not_maximize(repo):
     rules = (repo / "config/hypr/windowrules.lua").read_text()
     assert 'hl.window_rule({ match = { class = ".*" }, tile = true })' in rules

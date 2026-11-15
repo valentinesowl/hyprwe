@@ -142,3 +142,22 @@ load_install() {
     [[ "$output" == *"nvidia-open-dkms"* ]]
     [[ "$output" != *"SHOULD-NOT-BE-CALLED"* ]]
 }
+
+@test "Ubuntu VM networking moves from networkd to NetworkManager" {
+    local netplan="$BATS_TEST_TMPDIR/50-hwe.yaml"
+    printf 'network:\n  version: 2\n' > "$netplan"
+    run bash -c '
+        set -euo pipefail
+        HWE_ROOT="'"$HWE_ROOT"'"
+        source "$HWE_ROOT/lib/common.sh"
+        source "$HWE_ROOT/provision/guest-install.sh"
+        run() { printf "%s\n" "$*"; }
+        _setup_ubuntu_vm_network "$1"
+    ' _ "$netplan"
+    assert_success
+    assert_output --partial 'sudo netplan set network.ethernets.all.renderer=NetworkManager'
+    assert_output --partial 'sudo systemctl disable --now systemd-networkd.service'
+    assert_output --partial 'sudo systemctl enable --now NetworkManager.service'
+    assert_output --partial 'sudo nmcli networking on'
+    assert_output --partial 'sudo netplan apply'
+}

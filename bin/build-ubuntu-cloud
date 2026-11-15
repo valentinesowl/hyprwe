@@ -1,0 +1,247 @@
+#!/usr/bin/env bash
+# Build a local Ubuntu 27.04 cloud image from Canonical's signed Ubuntu Base.
+# The result is a VM base, not an official Ubuntu cloud image.
+set -euo pipefail
+
+_self="$(readlink -f "${BASH_SOURCE[0]}")"
+HWE_ROOT="$(cd "$(dirname "$_self")/.." && pwd)"
+export HWE_ROOT HWE_VM_DISTRO=ubuntu
+# shellcheck source=lib/common.sh
+source "$HWE_ROOT/lib/common.sh"
+# Reuse the VM's pinned-key and signed-SHA256SUMS verification.
+# shellcheck source=lib/vm.sh
+source "$HWE_ROOT/lib/vm.sh"
+
+RELEASE=27.04
+CODENAME=tenacious
+ARCHIVE="$CODENAME-base-amd64.tar.gz"
+IMAGE_NAME="ubuntu-$RELEASE-server-cloudimg-amd64.img"
+BASE_URL="https://cdimage.ubuntu.com/ubuntu-base/$CODENAME/daily/current"
+HWE_IMAGE_URL="$BASE_URL/$ARCHIVE"
+HWE_VM_KEY_FP=843938DF228D22F7B3742BC0D94AA3F0EFE21092
+HWE_VM_KEY_FILE="$HWE_ROOT/provision/ubuntu-cdimage.asc"
+HWE_VM_KEY_NAME="Ubuntu CD image"
+
+BUILD_DIR="$HWE_ROOT/build/ubuntu-cloud"
+DOWNLOAD_DIR="$BUILD_DIR/downloads"
+WORK_DIR="$BUILD_DIR/work"
+ROOTFS="$WORK_DIR/rootfs"
+OUTPUT="$BUILD_DIR/$IMAGE_NAME"
+CACHE_IMAGE="$HWE_CACHE/$IMAGE_NAME"
+RAW="$WORK_DIR/ubuntu-$RELEASE.raw"
+ROOT_PART="$WORK_DIR/root-partition.raw"
+LOOP=""
+
+usage() {
+    cat >&2 <<EOF
+Usage: bin/build-ubuntu-cloud
+
+Build a local Ubuntu $RELEASE NoCloud-ready qcow2 image from Ubuntu Base.
+All downloads, intermediate files and images stay under build/ubuntu-cloud/.
+The signed upstream rootfs is verified with a pinned Canonical CD-image key.
+The build uses sudo for loop devices, mounts and the guest chroot.
+The finished image is also installed into HWE's VM cache, ready for vm up.
+
+Output: build/ubuntu-cloud/$IMAGE_NAME
+Cache:  $CACHE_IMAGE
+EOF
+}
+
+if [[ $# -gt 0 ]]; then
+    case "$1" in
+        help|-h|--help)
+            [[ $# -eq 1 ]] || die "help takes no arguments"
+            usage
+            exit 0
+            ;;
+        *) usage; die "unknown argument: $1" ;;
+    esac
+fi
+
+need curl curl
+need gpg gnupg
+need qemu-img qemu-base
+need sfdisk util-linux
+need losetup util-linux
+need mkfs.ext4 e2fsprogs
+need e2fsck e2fsprogs
+need debugfs e2fsprogs
+need blkid util-linux
+need mount util-linux
+need findmnt util-linux
+need sha256sum coreutils
+need tar tar
+
+mkdir -p "$DOWNLOAD_DIR"
+if [[ -e "$WORK_DIR" ]]; then
+    run sudo rm -rf "$WORK_DIR"
+fi
+mkdir -p "$ROOTFS"
+HWE_GNUPGHOME="$WORK_DIR/gnupg"
+
+cleanup() {
+    local rc=$?
+    trap - EXIT
+    set +e
+    if mountpoint -q "$ROOTFS"; then
+        sudo umount -R "$ROOTFS"
+    fi
+    if [[ -n "$LOOP" ]] && findmnt -rn -S "${LOOP}p2" >/dev/null 2>&1; then
+        sudo umount -A "${LOOP}p2"
+    fi
+    if [[ -n "$LOOP" ]]; then
+        sudo losetup -d "$LOOP"
+    fi
+    sudo rm -rf "$WORK_DIR"
+    exit "$rc"
+}
+trap cleanup EXIT
+
+log "Downloading and verifying Ubuntu Base $RELEASE"
+for file in "$ARCHIVE" SHA256SUMS SHA256SUMS.gpg; do
+    curl -fL --retry 3 --progress-bar "$BASE_URL/$file" -o "$DOWNLOAD_DIR/$file.part"
+    mv -f "$DOWNLOAD_DIR/$file.part" "$DOWNLOAD_DIR/$file"
+done
+_vm_verify_sums \
+    "$DOWNLOAD_DIR/$ARCHIVE" "$DOWNLOAD_DIR/SHA256SUMS" "$DOWNLOAD_DIR/SHA256SUMS.gpg" \
+    || die "Ubuntu Base failed authenticity verification"
+
+log "Creating the raw disk and extracting the verified rootfs"
+qemu-img create -f raw "$RAW" 4G >/dev/null
+printf '%s\n' \
+    'label: gpt' \
+    'size=1MiB, type=21686148-6449-6E6F-744E-656564454649, name="BIOS boot"' \
+    'type=0FC63DAF-8483-4772-8E79-3D69D8477DE4, name="Linux root"' \
+    | sfdisk "$RAW" >/dev/null
+LOOP="$(run sudo losetup --show -fP "$RAW")"
+run sudo mkfs.ext4 -q "${LOOP}p2"
+run sudo mount "${LOOP}p2" "$ROOTFS"
+run sudo tar --numeric-owner -xpf "$DOWNLOAD_DIR/$ARCHIVE" -C "$ROOTFS"
+
+run sudo mount --rbind /dev "$ROOTFS/dev"
+run sudo mount --make-rslave "$ROOTFS/dev"
+run sudo mount --rbind /run "$ROOTFS/run"
+run sudo mount --make-rslave "$ROOTFS/run"
+run sudo mount -t proc proc "$ROOTFS/proc"
+run sudo mount -t sysfs sysfs "$ROOTFS/sys"
+run sudo cp --remove-destination /etc/resolv.conf "$ROOTFS/etc/resolv.conf"
+
+chroot_run() {
+    run sudo chroot "$ROOTFS" /usr/bin/env -i \
+        HOME=/root LC_ALL=C DEBIAN_FRONTEND=noninteractive \
+        PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin "$@"
+}
+
+log "Installing the kernel, bootloader and NoCloud services"
+chroot_run /bin/bash -euo pipefail -c '
+    printf "grub-pc grub-pc/install_devices_empty boolean true\n" | debconf-set-selections
+    apt-get update
+    apt-get install -y --no-install-recommends \
+        systemd-sysv linux-virtual initramfs-tools grub-pc cloud-init cloud-guest-utils \
+        openssh-server sudo qemu-guest-agent netplan.io locales systemd-resolved
+'
+
+ROOT_UUID="$(run sudo blkid -s UUID -o value "${LOOP}p2")"
+[[ "$ROOT_UUID" =~ ^[A-Za-z0-9-]+$ ]] || die "could not read the root filesystem UUID"
+printf 'UUID=%s / ext4 defaults 0 1\n' "$ROOT_UUID" \
+    | run sudo tee "$ROOTFS/etc/fstab" >/dev/null
+printf '%s\n' \
+    'network:' \
+    '  version: 2' \
+    '  ethernets:' \
+    '    all:' \
+    '      match:' \
+    '        name: "en*"' \
+    '      dhcp4: true' \
+    | run sudo tee "$ROOTFS/etc/netplan/50-hwe.yaml" >/dev/null
+run sudo chmod 600 "$ROOTFS/etc/netplan/50-hwe.yaml"
+printf '%s\n' \
+    'datasource_list: [ NoCloud ]' \
+    'network:' \
+    '  config: disabled' \
+    'growpart:' \
+    '  mode: auto' \
+    '  devices: [ "/" ]' \
+    'resize_rootfs: true' \
+    | run sudo tee "$ROOTFS/etc/cloud/cloud.cfg.d/99-hwe-nocloud.cfg" >/dev/null
+
+log "Preparing a clean first boot"
+chroot_run /bin/bash -euo pipefail -c '
+    passwd -l root
+    systemctl enable ssh.service qemu-guest-agent.service systemd-networkd.service systemd-resolved.service
+    cloud-init clean --logs --machine-id
+    apt-get clean
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*.deb /tmp/* /var/tmp/*
+    rm -f /etc/ssh/ssh_host_*
+'
+run sudo ln -sf ../run/systemd/resolve/stub-resolv.conf "$ROOTFS/etc/resolv.conf"
+
+log "Installing GRUB and validating the boot files"
+chroot_run grub-install --target=i386-pc --recheck "$LOOP"
+KERNEL="$(readlink "$ROOTFS/boot/vmlinuz")"
+INITRD="$(readlink "$ROOTFS/boot/initrd.img")"
+[[ "$KERNEL" =~ ^vmlinuz-[A-Za-z0-9._-]+$ ]] || die "could not resolve the guest kernel"
+[[ "$INITRD" =~ ^initrd\.img-[A-Za-z0-9._-]+$ ]] || die "could not resolve the guest initrd"
+[[ -s "$ROOTFS/boot/$KERNEL" ]] || die "guest kernel is missing: /boot/$KERNEL"
+[[ -s "$ROOTFS/boot/$INITRD" ]] || die "guest initramfs is missing: /boot/$INITRD"
+[[ -s "$ROOTFS/boot/grub/i386-pc/normal.mod" ]] \
+    || die "GRUB BIOS modules are missing from /boot/grub/i386-pc"
+printf '%s\n' \
+    'set default=0' \
+    'set timeout=1' \
+    "menuentry 'Ubuntu $RELEASE' {" \
+    "    search --no-floppy --fs-uuid --set=root $ROOT_UUID" \
+    "    linux /boot/$KERNEL root=UUID=$ROOT_UUID ro console=tty0 console=ttyS0,115200n8" \
+    "    initrd /boot/$INITRD" \
+    '}' \
+    | run sudo tee "$ROOTFS/boot/grub/grub.cfg" >/dev/null
+[[ -s "$ROOTFS/boot/grub/grub.cfg" ]] || die "generated grub.cfg is empty"
+chroot_run grub-script-check /boot/grub/grub.cfg
+
+run sudo sync -f "$ROOTFS"
+run sudo umount -R "$ROOTFS"
+if findmnt -rn -S "${LOOP}p2" >/dev/null 2>&1; then
+    run sudo umount -A "${LOOP}p2"
+fi
+if findmnt -rn -S "${LOOP}p2" >/dev/null 2>&1; then
+    findmnt -S "${LOOP}p2" >&2
+    die "guest root filesystem is still mounted"
+fi
+run sudo losetup -d "$LOOP"
+LOOP=""
+
+dd if="$RAW" of="$ROOT_PART" bs=1M skip=2 conv=sparse status=none
+fsck_rc=0
+e2fsck -fy "$ROOT_PART" || fsck_rc=$?
+[[ "$fsck_rc" -le 1 ]] || die "e2fsck failed on the guest root filesystem"
+
+normal_stat="$(debugfs -R 'stat /boot/grub/i386-pc/normal.mod' "$ROOT_PART" 2>/dev/null)" \
+    || die "GRUB BIOS modules are absent from the exported root filesystem"
+[[ "$normal_stat" =~ Size:\ +[1-9][0-9]* ]] \
+    || die "GRUB normal.mod is empty in the exported root filesystem"
+debugfs -R 'cat /boot/grub/grub.cfg' "$ROOT_PART" 2>/dev/null \
+    | grep -qF "menuentry 'Ubuntu $RELEASE'" \
+    || die "GRUB config is absent from the exported root filesystem"
+dd if="$ROOT_PART" of="$RAW" bs=1M seek=2 conv=notrunc,sparse status=none
+
+log "Converting to qcow2 and recording provenance"
+qemu-img convert -f raw -O qcow2 -c "$RAW" "$OUTPUT.part"
+mv -f "$OUTPUT.part" "$OUTPUT"
+BASE_SHA256="$(sha256sum "$DOWNLOAD_DIR/$ARCHIVE" | awk '{print $1}')"
+OUTPUT_SHA256="$(sha256sum "$OUTPUT" | awk '{print $1}')"
+{
+    printf 'format=qcow2\n'
+    printf 'ubuntu_release=%s\n' "$RELEASE"
+    printf 'ubuntu_codename=%s\n' "$CODENAME"
+    printf 'base_url=%s\n' "$HWE_IMAGE_URL"
+    printf 'base_sha256=%s\n' "$BASE_SHA256"
+    printf 'cd_image_key=%s\n' "$HWE_VM_KEY_FP"
+    printf 'built_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    printf 'image_sha256=%s\n' "$OUTPUT_SHA256"
+} > "$OUTPUT.manifest"
+run install -Dm644 "$OUTPUT" "$CACHE_IMAGE"
+ok "image built and installed: $CACHE_IMAGE"
+info "build artifact: $OUTPUT"
+info "SHA-256: $OUTPUT_SHA256"
+info "provenance: $OUTPUT.manifest"
+info "start the VM: HWE_VM_DISTRO=ubuntu hwe vm up"

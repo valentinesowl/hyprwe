@@ -713,6 +713,13 @@ def test_mako_uses_the_current_icon_radius_option(render_theme, minimal_theme, t
     assert "\nicon-radius=" not in config
 
 
+def test_mako_separates_block_margins_from_notification_gaps(render_theme, minimal_theme, templates_dir, tmp_path):
+    out = _render(render_theme, minimal_theme, templates_dir, tmp_path)
+    config = (out / "mako" / "config").read_text()
+    assert "outer-margin=15,15,0,10" in config
+    assert "margin=0,0,10,0" in config
+
+
 def test_render_failure_leaves_every_live_file_unchanged(render_theme, minimal_theme, tmp_path):
     templates = tmp_path / "templates"
     templates.mkdir()

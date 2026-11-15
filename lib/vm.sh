@@ -592,6 +592,23 @@ _pool_prepare() { run sudo install -d -m 0711 "$HWE_POOL_DIR"; }
 _pool_put()     { run sudo install -m "${3:-0644}" "$1" "$2"; }
 
 # --- Create & boot --------------------------------------------------------
+_vm_kvm_accessible() {
+    [[ -r /dev/kvm && -w /dev/kvm ]] && return 0
+    id libvirt-qemu >/dev/null 2>&1 || return 1
+    sudo -u libvirt-qemu test -r /dev/kvm && sudo -u libvirt-qemu test -w /dev/kvm
+}
+
+_vm_acceleration() {
+    local capabilities
+    capabilities="$(_virsh capabilities 2>/dev/null)" || capabilities=""
+    if grep -qE "<domain type=['\"]kvm['\"]" <<<"$capabilities" && _vm_kvm_accessible; then
+        printf 'kvm host-passthrough\n'
+    else
+        # qemu64 advertises AMD svm even on Intel; disable it for portable TCG.
+        printf 'qemu qemu64,disable=svm\n'
+    fi
+}
+
 vm_up() {
     local branch="" uncommitted=0 arg
     for arg in "$@"; do
@@ -628,9 +645,10 @@ vm_up() {
     _vm_download_base
 
     local work; work="$(mktemp -d "${TMPDIR:-/tmp}/hwe-vm.XXXXXX")"
-    # Unbound-safe: this RETURN trap can fire again as outer functions return,
-    # by which point `work` is out of scope (set -u would otherwise abort).
-    trap 'rm -rf "${work:-}"' RETURN
+    # The path must outlive the function's locals: on a set -e failure EXIT runs
+    # after they are gone. Repeating the removal on outer RETURNs is harmless.
+    HWE_VM_WORK="$work"
+    trap 'rm -rf -- "${HWE_VM_WORK:-}"' RETURN EXIT
     local seed; seed="$(_vm_render_seed "$branch" "$work" "$uncommitted")"
 
     local what="branch: $branch"
@@ -647,8 +665,9 @@ vm_up() {
     _pool_put "$tmpdisk" "$disk"
     _pool_put "$seed" "$seed_dst" 0600
 
-    local cpu_arg=host-passthrough
-    [[ -r /dev/kvm ]] || cpu_arg=qemu64
+    local acceleration; acceleration="$(_vm_acceleration)"
+    local virt_type="${acceleration%% *}" cpu_arg="${acceleration#* }"
+    [[ "$virt_type" == kvm ]] || warn "KVM is unavailable to QEMU — using slower software emulation"
 
     info "defining libvirt domain (virt-manager will see it as '$HWE_VM_NAME')"
     virt-install \
@@ -656,6 +675,7 @@ vm_up() {
         --name "$HWE_VM_NAME" \
         --memory "$HWE_VM_MEMORY" \
         --vcpus "$HWE_VM_VCPUS" \
+        --virt-type "$virt_type" \
         --cpu "$cpu_arg" \
         --import \
         --disk "path=$disk,format=qcow2,bus=virtio" \

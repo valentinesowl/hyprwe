@@ -15,6 +15,15 @@ local variables = {
     HYPRCURSOR_SIZE = "24",
 }
 
+local detection = io.popen("systemd-detect-virt 2>/dev/null")
+if detection then
+    local virt = detection:read("*l")
+    detection:close()
+    if virt and virt ~= "" and virt ~= "none" then
+        variables.LIBGL_ALWAYS_SOFTWARE = "1"
+    end
+end
+
 for name, value in pairs(variables) do
     hl.env(name, value)
 end

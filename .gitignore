@@ -8,6 +8,15 @@
 # Claude Code — session state, worktrees, scratch (never part of the project).
 /.claude/
 
+# Local Reddit OAuth credentials and unpublished outreach tooling.
+/praw.ini
+/requirements-outreach.txt
+/scripts/outreach.py
+/tests/test_outreach.py
+
+# Local VM base-image builds: downloads, loop-device workdir and qcow2 output.
+/build/
+
 # Local design and migration notes, not release documentation.
 docs/
 

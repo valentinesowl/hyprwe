@@ -4,6 +4,8 @@
 
 hostname: @@HOSTNAME@@
 manage_etc_hosts: true
+apt:
+  preserve_sources_list: true
 
 # Only the ADMIN group — `wheel` on Arch, `sudo` on Ubuntu.
 #
@@ -58,8 +60,9 @@ runcmd:
     sudo -u @@USER@@ env HWE_ASSUME_YES=1 HWE_UNATTENDED=1 \
       HWE_HYPR_SOURCE='@@HYPR_SOURCE@@' \
       /home/@@USER@@/hwe/bin/hwe install
+    install -m 0644 /dev/null /var/lib/hwe-provisioned
 
-final_message: "HWE provisioned after $UPTIME s — rebooting into the Hyprland session"
+final_message: "HWE cloud-init finished after $UPTIME s"
 
 # Reboot once after provisioning. The tty1 autologin drop-in the installer writes
 # only takes effect on a fresh getty, so the FIRST boot otherwise leaves a bare
@@ -69,4 +72,4 @@ final_message: "HWE provisioned after $UPTIME s — rebooting into the Hyprland 
 power_state:
   mode: reboot
   message: "HWE provisioned — rebooting into the Hyprland session"
-  condition: true
+  condition: test -f /var/lib/hwe-provisioned

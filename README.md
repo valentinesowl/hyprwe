@@ -1,4 +1,4 @@
-# HWE — Hyprland Workstation Environment
+# hyprwe — Hyprland Workstation Environment
 
 **English** · [Русский](README.ru.md)
 
@@ -6,7 +6,7 @@
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu_27.04_experimental-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
-[![Release](https://img.shields.io/badge/release-v2.0.5-blue)](../../releases/latest)
+[![Release](https://img.shields.io/badge/release-v2.1.0-blue)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 **Preconfigured Hyprland dotfiles for Arch Linux and Ubuntu: a complete Wayland desktop
@@ -17,7 +17,7 @@ on your machine (`hwe install`), or rehearse the same deployment in a disposable
 [Install](#installation) · [Try in a VM](#sandbox-and-development-vm) · [Themes](#themes) · [CLI](#cli-hwe)
 
 <p align="center">
-  <img src="assets/hero.png" alt="HWE desktop: theme picker over the amethyst theme, htop, Dolphin and the repository itself" width="100%">
+  <img src="assets/hero.png" alt="hyprwe desktop: theme picker over the amethyst theme, htop, Dolphin and the repository itself" width="100%">
   <br>
   <em>A stock install, minutes old — the <code>amethyst</code> theme colouring every component at once: bar, terminal, Qt file manager, and the theme picker choosing what comes next.</em>
 </p>
@@ -44,7 +44,7 @@ reproducibility keeps the whole stack in one tone.
   and deploys your chosen local git branch straight from your own repository.
 
 <p align="center">
-  <img src="assets/themes.png" alt="HWE built-in themes" width="100%">
+  <img src="assets/themes.png" alt="hyprwe built-in themes" width="100%">
   <br>
   <em>Ten built-in themes (eight dark + two light: <code>paper</code> and the softer <code>linen</code>) — each one is a single <code>theme.toml</code> the whole stack is rendered from.</em>
 </p>
@@ -76,7 +76,7 @@ whatever is already on the machine.
 git clone https://github.com/valentinesowl/hyprwe.git ~/hwe
 cd ~/hwe
 
-# 2. Switch to a TTY (Ctrl+Alt+F2) and roll HWE out onto this machine.
+# 2. Switch to a TTY (Ctrl+Alt+F2) and roll hyprwe out onto this machine.
 #    The installer refuses to start from a graphical session: it touches the
 #    compositor, the bar and the login shell — not something to do under a running Hyprland.
 ./bin/hwe install
@@ -127,13 +127,13 @@ After the install `hwe` is linked into `/usr/local/bin/hwe` — from then on you
 
 ### On Ubuntu
 
-Lua-only HWE 2.0 targets **Ubuntu 27.04 experimentally** and requires
+Lua-only hyprwe 2.0 targets **Ubuntu 27.04 experimentally** and requires
 **Hyprland 0.57.0 or newer** (0.57.2 is recommended). This target has not yet passed the
-release VM matrix. **Ubuntu 26.04 is not supported by HWE 2.0**: its archive candidate is
+release VM matrix. **Ubuntu 26.04 is not supported by hyprwe 2.0**: its archive candidate is
 0.53.3, so installation stops before packages, configs, shell or services are changed.
-For Hyprland 0.53–0.56, use the HWE 1.4.x `legacy-conf` line instead.
+For Hyprland 0.53–0.56, use the hyprwe 1.4.x `legacy-conf` line instead.
 
-**Where the compositor comes from is your decision, and HWE will not make it quietly.**
+**Where the compositor comes from is your decision, and hyprwe will not make it quietly.**
 
 | `HWE_HYPR_SOURCE` | Requirement | What you grant |
 |---|---|---|
@@ -145,14 +145,14 @@ hwe install                        # use Ubuntu's candidate, after the version g
 HWE_HYPR_SOURCE=ppa hwe install    # explicitly opt in to the third-party archive
 ```
 
-A PPA is not assumed to contain a suitable release: HWE checks its candidate after updating
+A PPA is not assumed to contain a suitable release: hyprwe checks its candidate after updating
 the package metadata and refuses it if it is too old. Adding a third-party archive ordinarily
-hands its key the right to install *any* package; HWE pins it to the compositor stack alone.
+hands its key the right to install *any* package; hyprwe pins it to the compositor stack alone.
 Setting `HWE_HYPR_SOURCE=ppa` **is** the consent and is not covered by `HWE_ASSUME_YES`.
-Building the compositor from source is not offered, and HWE never switches sources to make
+Building the compositor from source is not offered, and hyprwe never switches sources to make
 the version check pass.
 
-Ubuntu packages can enable systemd *user* units on installation. HWE starts the session
+Ubuntu packages can enable systemd *user* units on installation. hyprwe starts the session
 programs from `config/hypr/autostart.lua`, so duplicate packaged units are stood down.
 Other package availability differences are recorded in `pkg/map/apt.map`; the map must be
 revalidated against Ubuntu 27.04 before that target is declared stable.
@@ -187,13 +187,13 @@ never rewritten afterwards.
 
 | File | What it holds |
 |---|---|
-| `hypr.lua` | displays, input, keybinds — required **last**, so it overrides what HWE ships |
+| `hypr.lua` | displays, input, keybinds — required **last**, so it overrides what hyprwe ships |
 | `packages.lst` | extra packages for this machine (the distribution's own) |
 | `packages-aur.lst` | the same, from the AUR (Arch; skipped on Ubuntu) |
 | `waybar.jsonc` | your bar's composition — merged over the generated config on every theme apply |
 | `hyprsunset.conf` | your night-light schedule (when and how warm) — `hwe sunset` toggles it |
 | `kanshi.conf` | your monitor profiles — dock and the layout follows, undock and it snaps back |
-| `themes/` | HWE's own notes per theme — which theme is applied, which wallpaper each one uses. Written by `hwe`, so replacing the checkout forgets nothing |
+| `themes/` | hyprwe's own notes per theme — which theme is applied, which wallpaper each one uses. Written by `hwe`, so replacing the checkout forgets nothing |
 
 ```bash
 $EDITOR ~/.config/hwe/hypr.lua    # your monitors go here, not in config/hypr/monitors.lua
@@ -209,10 +209,10 @@ For a laptop that meets a dock, `kanshi.conf` is the better home for the monitor
 profile applies the moment its outputs are all connected. One owner per output though —
 a display managed by kanshi should not also have an `hl.monitor` call in `hypr.lua`.
 
-**Upgrading from HWE 1.4:** an untouched legacy `hypr.conf` gains a new `hypr.lua`
+**Upgrading from hyprwe 1.4:** an untouched legacy `hypr.conf` gains a new `hypr.lua`
 automatically. If you changed `hypr.conf`, `hwe update` stops before deployment until you
 create `hypr.lua` yourself. The old file is preserved for reference and is never executed
-or deleted by HWE. See the skeleton for `hl.monitor`, `hl.config`, `hl.bind` and
+or deleted by hyprwe. See the skeleton for `hl.monitor`, `hl.config`, `hl.bind` and
 `hyprland.start` examples. The other Hypr* tools (`hypridle`, `hyprlock`, `hyprpaper` and
 `hyprsunset`) still use their `.conf` files.
 
@@ -227,7 +227,7 @@ The same rule holds one level up: a theme of your own goes in
 
 `hwe doctor` states what you have made your own and never calls it drift. The one thing it
 does report is a **missing** file — `hwe update` puts it back. A file you have edited is
-never rewritten; one you have *not* quietly keeps up with the shipped defaults (HWE knows
+never rewritten; one you have *not* quietly keeps up with the shipped defaults (hyprwe knows
 every default it ever shipped, so it can tell the two apart). And if you want the defaults
 back after all: `hwe update --reset-defaults` restores them, keeping your versions beside
 them as `*.hwe-bak`.
@@ -327,7 +327,7 @@ procedural art in one of seven styles — see `themes/README.md`. Put your own p
 
 `awww` renders both static images and animated GIFs. `mono` includes a seamless six-second
 `wallpaper.gif` whose smoke rises through the mesh field. On Ubuntu, where `awww` is not
-packaged, HWE falls back to `hyprpaper` and static wallpapers. Hyprlock and SDDM always use
+packaged, hyprwe falls back to `hyprpaper` and static wallpapers. Hyprlock and SDDM always use
 a separate static image, including when the desktop wallpaper is animated.
 
 ---
@@ -371,7 +371,7 @@ Plus `hypridle.conf` (idle → lock/DPMS) and `hyprlock.conf` (generated). On ev
 
 ## Sandbox and development (VM)
 
-Want to try HWE on a separate, disposable machine — or to develop HWE itself? `hwe vm up`
+Want to try hyprwe on a separate, disposable machine — or to develop hyprwe itself? `hwe vm up`
 brings up a **disposable** Arch **or Ubuntu** VM (`HWE_VM_DISTRO`, visible in virt-manager)
 and deploys **your local git branch** into it, straight from your own repository. Inside, the
 very same `hwe install` runs as on bare metal, so it is an honest rehearsal of the installation.
@@ -386,6 +386,10 @@ very same `hwe install` runs as on bare metal, so it is an honest rehearsal of t
 
 # 1b. Or deploy the working tree as it is, before committing anything
 ./bin/hwe vm up --uncommitted
+
+# 1c. Ubuntu 27.04 (experimental): build the local base image first
+./bin/build-ubuntu-cloud
+HWE_VM_DISTRO=ubuntu ./bin/hwe vm up --uncommitted
 
 # 2. Get inside (once cloud-init has finished)
 ./bin/hwe vm ssh
@@ -408,14 +412,14 @@ Your `~/.ssh/id_*.pub` keys are passed into the guest automatically — normally
 by key, and the password is left for the console only.
 
 Configs inside the VM are deployed as **symlinks** into the repository, so edits in
-`~/hwe/config/...` are visible immediately — handy when developing HWE itself.
+`~/hwe/config/...` are visible immediately — handy when developing hyprwe itself.
 
 ### How it works
 
-1. `hwe vm up <branch>` downloads the guest's cloud image into `~/.cache/hwe/` (once, a few
-   hundred MB) and **verifies its GPG signature** — against the pinned arch-boxes fingerprint
-   for Arch, or the Ubuntu cloud-image signing key (a signed `SHA256SUMS`) for Ubuntu. An image
-   HWE cannot authenticate is refused, never used.
+1. Arch's cloud image is downloaded into `~/.cache/hwe/` and verified against the pinned
+   arch-boxes fingerprint. For Ubuntu 27.04, `bin/build-ubuntu-cloud` verifies Canonical's
+   signed Ubuntu Base `SHA256SUMS` with a pinned CD-image key, builds the local NoCloud-ready
+   image and installs it into the same cache. An input hyprwe cannot authenticate is refused.
 2. It makes a `git bundle` of the chosen branch — or, with `--uncommitted`, of a throwaway
    snapshot of your working tree — and puts it on a **NoCloud seed ISO** (`xorriso`).
 3. `virt-install --import` creates a **libvirt domain** (visible in virt-manager).
@@ -446,6 +450,7 @@ Configs inside the VM are deployed as **symlinks** into the repository, so edits
 ```
 hyprwe/
 ├── bin/hwe                 # the one CLI: vm · install · update · theme · wall · power · keys · clip · record · checkconfig · doctor
+├── bin/build-ubuntu-cloud  # verified Ubuntu Base -> local NoCloud qcow2 image
 ├── lib/
 │   ├── common.sh           # logging, confirm, need, run
 │   ├── vm.sh               # virt-install + cloud-init + git bundle
@@ -505,7 +510,7 @@ pipeline. How to contribute — [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Status
 
-`v2.0.2` is the current release. HWE is Lua-only on Hyprland 0.57+ and no longer ships
+`v2.1.0` is the current release. hyprwe is Lua-only on Hyprland 0.57+ and no longer ships
 legacy compositor configs. Arch with Hyprland 0.57.2 is the verified reference target;
 Ubuntu 27.04 remains experimental and has not passed the full release VM matrix.
 NVIDIA setup is still unverified on real hardware.

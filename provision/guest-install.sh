@@ -513,6 +513,17 @@ _setup_nvidia() {
     rm -f "$tmp"
 }
 
+_setup_ubuntu_vm_network() {
+    local netplan_file="${1:-/etc/netplan/50-hwe.yaml}"
+    [[ -f "$netplan_file" ]] || return 0
+    log "Switching the Ubuntu VM to NetworkManager"
+    run sudo netplan set network.ethernets.all.renderer=NetworkManager
+    run sudo systemctl disable --now systemd-networkd.service
+    run sudo systemctl enable --now NetworkManager.service
+    run sudo nmcli networking on
+    run sudo netplan apply
+}
+
 _enable_services() {
     log "Enabling system services"
     if systemd-detect-virt --quiet 2>/dev/null; then
@@ -520,8 +531,7 @@ _enable_services() {
         run sudo systemctl enable --now sshd.service 2>/dev/null || true
         run sudo systemctl enable qemu-guest-agent.service 2>/dev/null || true
         run sudo systemctl enable --now spice-vdagentd.service 2>/dev/null || true
-        # In a VM the cloud image already manages networking (systemd-networkd);
-        # don't enable NetworkManager here to avoid a two-manager conflict.
+        [[ "$(_distro_family)" != apt ]] || _setup_ubuntu_vm_network
     elif [[ "${HWE_NO_NM:-0}" == 1 ]]; then
         info "HWE_NO_NM=1: leaving networking untouched"
     else

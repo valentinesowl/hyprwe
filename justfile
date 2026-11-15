@@ -51,7 +51,7 @@ check: lint lint-py lint-ci test
 # instead of being reported as SC1091. Severity stays at the default (info) —
 # the few info findings we consider wrong carry a justified inline disable.
 lint:
-    shellcheck -x bin/hwe lib/*.sh provision/*.sh scripts/*.sh
+    shellcheck -x bin/* lib/*.sh provision/*.sh scripts/*.sh
 
 # Ruff comes from the distro where it is packaged (Arch); Ubuntu's archive has
 # neither ruff nor uv, so there it runs through uv — `pipx install uv` once

@@ -276,3 +276,87 @@ dirty_the_tree() {
     assert_failure
     [[ "$output" == *"HEAD is detached"* ]]
 }
+
+vm_acceleration_from() {
+    bash -c '
+        set -euo pipefail
+        HWE_ROOT="$HWE_REPO_ROOT"
+        source "$HWE_ROOT/lib/common.sh"
+        source "$HWE_ROOT/lib/vm.sh"
+        CAPS="$1"
+        KVM_ACCESS="$2"
+        _virsh() { cat "$CAPS"; }
+        _vm_kvm_accessible() { [[ "$KVM_ACCESS" == 1 ]]; }
+        _vm_acceleration
+    ' _ "$1" "$2"
+}
+
+@test "usable KVM selects host CPU passthrough and the KVM domain" {
+    local caps="$BATS_TEST_TMPDIR/capabilities.xml"
+    printf "<domain type='kvm'/>\n" > "$caps"
+    run vm_acceleration_from "$caps" 1
+    assert_success
+    assert_output "kvm host-passthrough"
+}
+
+@test "TCG fallback disables qemu64's AMD-only svm on Intel" {
+    local caps="$BATS_TEST_TMPDIR/capabilities.xml"
+    printf "<domain type='qemu'/>\n" > "$caps"
+    run vm_acceleration_from "$caps" 0
+    assert_success
+    assert_output "qemu qemu64,disable=svm"
+}
+
+@test "a KVM capability without device access still selects the QEMU domain" {
+    local caps="$BATS_TEST_TMPDIR/capabilities.xml"
+    printf "<domain type='kvm'/>\n" > "$caps"
+    run vm_acceleration_from "$caps" 0
+    assert_success
+    assert_output "qemu qemu64,disable=svm"
+}
+
+@test "vm up passes the selected virtualization type to virt-install" {
+    run grep -F -- '--virt-type "$virt_type"' "$HWE_ROOT/lib/vm.sh"
+    assert_success
+}
+
+vm_failed_up() {
+    bash -c '
+        set -euo pipefail
+        HWE_ROOT="$HWE_REPO_ROOT"
+        source "$HWE_ROOT/lib/common.sh"
+        source "$HWE_ROOT/lib/vm.sh"
+        HWE_ROOT="$REPO"
+        TMPDIR="$1"
+        _virsh() { return 1; }
+        _vm_ensure_ready() { :; }
+        _vm_download_base() { :; }
+        _vm_render_seed() { : > "$2/seed.iso"; printf "%s\n" "$2/seed.iso"; }
+        _pool_prepare() { :; }
+        _pool_put() { :; }
+        qemu-img() { :; }
+        virt-install() { return 1; }
+        vm_up main
+    ' _ "$1"
+}
+
+@test "a virt-install failure removes the temporary VM disk on EXIT" {
+    run vm_failed_up "$BATS_TEST_TMPDIR"
+    assert_failure
+    run bash -c 'compgen -G "$1/hwe-vm.*"' _ "$BATS_TEST_TMPDIR"
+    assert_failure
+}
+
+@test "cloud-init reboots only after the HWE installer succeeds" {
+    local template="$HWE_ROOT/provision/cloud-init/user-data.tmpl"
+    local install_line marker_line
+    install_line="$(grep -nF '/home/@@USER@@/hwe/bin/hwe install' "$template" | cut -d: -f1)"
+    marker_line="$(grep -nF 'install -m 0644 /dev/null /var/lib/hwe-provisioned' "$template" | cut -d: -f1)"
+    [ -n "$install_line" ]
+    [ -n "$marker_line" ]
+    [ "$install_line" -lt "$marker_line" ]
+    run grep -F 'condition: test -f /var/lib/hwe-provisioned' "$template"
+    assert_success
+    run grep -F 'condition: true' "$template"
+    assert_failure
+}

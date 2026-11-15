@@ -41,7 +41,7 @@ known-first-party = ["conftest"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 # -q: the signal is which test failed, not a 200-line collection banner.
-addopts = "-q --strict-markers"
+addopts = "-q --strict-markers --ignore=tests/test_outreach.py"
 markers = [
     "slow: renders every theme through the full template tree (a few seconds)",
 ]
