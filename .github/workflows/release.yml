@@ -109,7 +109,7 @@ jobs:
           prerelease=()
           [[ "${GITHUB_REF_NAME}" == *-* ]] && prerelease=(--prerelease)
           gh release create "${GITHUB_REF_NAME}" \
-            --title "HWE $VERSION" \
+            --title "hyprwe $VERSION" \
             --notes-file release-notes.md \
             --verify-tag \
             "${prerelease[@]}"
