@@ -76,6 +76,7 @@ jobs:
           git just bats bats-assert bats-support python python-jinja
           imagemagick fontconfig ttf-dejavu
       - uses: actions/checkout@v5
+      - run: git config --global --add safe.directory '*'
       # The suite runs `hwe theme validate` against every shipped theme, which
       # shells out to the Python renderer — hence python-jinja above.
       - run: just test-sh
