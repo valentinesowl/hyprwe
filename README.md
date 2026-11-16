@@ -14,7 +14,7 @@
 A complete Wayland desktop for Arch and Ubuntu, together with the tooling to install,
 inspect, personalize and test it — on a real machine or in a disposable VM.
 
-[Install](#install) · [Try in a VM](#try-in-a-vm) · [Documentation](#documentation)
+[Install](#install) · [Try in a VM](#try-in-a-vm) · [Documentation](#documentation) · [Watch the demo (1:47)](https://github.com/valentinesowl/hyprwe/releases/download/v2.2.0/rec_2026-11-16_16-59-05.mp4)
 
 <p align="center">
   <img src="assets/hero.png" alt="hyprwe desktop with the theme picker, terminal, file manager and browser sharing one palette" width="100%">
