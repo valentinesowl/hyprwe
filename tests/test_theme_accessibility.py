@@ -46,6 +46,7 @@ def test_rofi_selected_rows_use_semantic_ink(repo):
         repo / "config/rofi/config.rasi",
         repo / "templates/rofi/powermenu.rasi.j2",
         repo / "templates/rofi/wallpaper.rasi.j2",
+        repo / "templates/rofi/center.rasi.j2",
     ]
     for path in files:
         selected = "\n".join(

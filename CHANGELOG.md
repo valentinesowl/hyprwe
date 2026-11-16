@@ -9,6 +9,47 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+## [2.2.0] — 2026-11-16
+
+### Added
+
+- **The bottom Control Shelf brings hyprwe workstation controls into one place.** `SUPER+SHIFT+Up`
+  or `hwe control` shows appearance and compiler coverage, current window geometry, session
+  snapshots with direct actions, configuration layers, health and updates. All controls remain
+  visible together. General system controls belong to a separate upper shelf.
+- **The workstation has one keyboard-driven command center.** `SUPER+A` or `hwe center`
+  opens Themes, Sessions, System, VM rehearsal and desktop Utilities through the existing CLI
+  commands. Reports stay in the menu, long operations retain a visible terminal, and snapshot
+  replacement and destructive VM actions use Cancel-first graphical confirmations.
+- **The theme compiler now exposes interaction design tokens.** The optional `[ui]` table
+  controls command-center geometry, spacing, radii and type hierarchy, with defaults derived
+  from the existing `[params]` and `[font]` contracts.
+
+### Changed
+
+- **The Control Shelf presents window geometry, session snapshots and configuration sources
+  clearly.** Outlined windows, a snapshot timeline, aligned source actions and quiet buttons
+  keep the workstation controls readable. Source files open in `$EDITOR` with Nano as the
+  packaged default; GUI editors launch directly without a spare terminal.
+- **Session mode stays visible in Waybar.** A quiet text indicator with an accent underline
+  keeps `1–9 save · Shift+1–9 restore · Esc` on screen for the entire mode.
+
+### Fixed
+
+- **Session hotkey mode is visible and always has an exit.** Waybar shows its keys while active;
+  save/restore, repeated `SUPER+S`, Escape, unrelated input and clicking the indicator return
+  to normal bindings. `SUPER+SPACE` switches keyboard layouts even inside the submap.
+- **Applications launched by session restore no longer inherit the Control Shelf's GTK4
+  layer-shell preload.** Other explicit preload entries are preserved.
+
+### Verification
+
+- The full `just check` suite passes: 982 Python tests, 321 Bats tests and all linters.
+- Live Arch / Hyprland 0.57.2 spot checks cover Control Shelf opening and closing, its complete
+  layout, quiet session-mode display and automatic submap reset.
+- All newly added GTK, GObject introspection, pkg-config and Nano package mappings resolve
+  in a clean Ubuntu resolute APT installation simulation.
+
 ## [2.1.1] — 2026-11-16
 
 ### Changed
@@ -703,7 +744,8 @@ to it only ship in 2.0.0.
   that environment's uninstaller. If the login screen looks foreign after
   `hwe theme sddm`, look at what is in that directory.
 
-[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v2.1.1...HEAD
+[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/valentinesowl/hyprwe/releases/tag/v2.2.0
 [2.1.1]: https://github.com/valentinesowl/hyprwe/releases/tag/v2.1.1
 [2.1.0]: https://github.com/valentinesowl/hyprwe/releases/tag/v2.1.0
 [2.0.5]: https://github.com/valentinesowl/hyprwe/releases/tag/v2.0.5

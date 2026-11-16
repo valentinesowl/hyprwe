@@ -6,7 +6,7 @@
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu_27.04_experimental-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
-[![Release](https://img.shields.io/badge/release-v2.1.1-blue)](../../releases/latest)
+[![Release](https://img.shields.io/badge/release-v2.2.0-blue)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 **Рабочая станция Hyprland, которую можно репетировать, воспроизводить и безопасно обновлять.**
@@ -55,7 +55,8 @@ cd ~/hwe
 Прежние конфиги сохраняются как `*.hwe-bak`. Изменения login-shell, сети и настройки NVIDIA
 можно отключить.
 
-После установки войди в сессию и нажми `SUPER + /` для шпаргалки по горячим клавишам.
+После установки войди в сессию и нажми `SUPER + SHIFT + Up` для Control Shelf,
+`SUPER + A` для командного центра или `SUPER + /` для шпаргалки по горячим клавишам.
 
 [Опции установки, источники Ubuntu, GPU и откат →](docs/INSTALL.ru.md)
 
@@ -83,6 +84,8 @@ HWE_VM_DISTRO=ubuntu ./bin/hwe vm up --uncommitted
 
 | Команда | Что делает |
 |---|---|
+| `hwe control` | открыть живую Control Shelf для внешнего вида, сессий и состояния системы |
+| `hwe center` | открыть темы, сессии, диагностику, VM и утилиты рабочего стола |
 | `hwe theme pick` | выбрать и применить тему |
 | `hwe session save 1` / `hwe session restore 1` | сохранить или восстановить сессию |
 | `hwe update` | подтянуть репозиторий и привести машину в соответствие |
@@ -114,11 +117,11 @@ HWE_VM_DISTRO=ubuntu ./bin/hwe vm up --uncommitted
 
 ## Статус
 
-`v2.1.1` — текущий релиз. Эталонная проверенная цель — Arch с Hyprland 0.57.2;
+`v2.2.0` — текущий релиз. Эталонная проверенная цель — Arch с Hyprland 0.57.2;
 Ubuntu 27.04 остаётся экспериментальной и не прошла полную релизную VM-матрицу.
 Настройка NVIDIA по-прежнему не проверена на реальном оборудовании.
 
-Полный набор включает **961 Python-тест и 303 Bats-теста**. Чистые развёртывания Arch и Ubuntu
+Полный набор включает **982 Python-теста и 321 Bats-тест**. Чистые развёртывания Arch и Ubuntu
 проверены end-to-end в протестированных конфигурациях x86_64 libvirt/QEMU.
 
 ## Лицензия

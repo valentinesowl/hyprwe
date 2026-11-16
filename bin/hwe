@@ -14,7 +14,7 @@ set -euo pipefail
 # The single source of truth for the version. The release workflow refuses to
 # publish a tag that disagrees with it, and tests/test_release.py pins it to the
 # newest CHANGELOG entry — so these three can never drift apart.
-HWE_VERSION="2.1.1"
+HWE_VERSION="2.2.0"
 
 # Resolve the repo root from this script's location (bin/hwe -> repo root).
 _self="$(readlink -f "${BASH_SOURCE[0]}")"
@@ -37,6 +37,9 @@ ${C_BOLD}Commands:${C_RESET}
   ${C_CYAN}update${C_RESET} [--check]
               Pull the repo and reconcile this machine (configs, theme, packages)
   ${C_CYAN}uninstall${C_RESET} Revert config symlinks + login shell (leaves packages/services)
+  ${C_CYAN}control${C_RESET}   Toggle the bottom Control Shelf (SUPER+SHIFT+Up)
+  ${C_CYAN}center${C_RESET} [themes|sessions|system|vm|tools]
+              Keyboard-driven command center for the workstation (SUPER+A)
   ${C_CYAN}theme${C_RESET} <list|apply|pick|validate|current|sddm>
               Generate every component's colours from a theme's parameters
   ${C_CYAN}wall${C_RESET} <list|set|random|pick|current|restore>
@@ -95,6 +98,16 @@ case "$cmd" in
         # shellcheck source=lib/update.sh
         source "$HWE_ROOT/lib/update.sh"
         update_main "$@"
+        ;;
+    control)
+        # shellcheck source=lib/control.sh
+        source "$HWE_ROOT/lib/control.sh"
+        control_main "$@"
+        ;;
+    center)
+        # shellcheck source=lib/center.sh
+        source "$HWE_ROOT/lib/center.sh"
+        center_main "$@"
         ;;
     theme)
         # shellcheck source=lib/theme.sh

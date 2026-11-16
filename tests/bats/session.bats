@@ -47,17 +47,19 @@ setup() {
     [[ "$stderr" == *"session not found: missing"* ]]
 }
 
-@test "session mode shows the key hint before entering the submap" {
+@test "session mode enters the visible submap without a transient notification" {
     run bash -c '
         source "$HWE_ROOT/lib/common.sh"
         source "$HWE_ROOT/lib/session.sh"
-        notify() { printf "notify:%s|%s|%s\n" "$1" "$2" "$3"; }
+        notify() { printf "unexpected-notify:%s|%s|%s\n" "$1" "$2" "$3"; }
         _hyprctl() { printf "hyprctl:%s\n" "$*"; }
         session_main mode
     '
     assert_success
-    assert_output --partial "1–9 save · Shift+1–9 restore · Esc cancel"
+    refute_output --partial "unexpected-notify"
     assert_output --partial 'hl.dsp.submap("session")'
+    run grep -F '"hyprland/submap"' "$HWE_ROOT/templates/waybar/config.jsonc.j2"
+    assert_success
 }
 
 @test "a failed session save reports an error rather than success" {

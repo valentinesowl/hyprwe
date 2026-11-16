@@ -14,6 +14,8 @@ bind("SUPER + T", hl.dsp.exec_cmd(terminal), "Terminal (kitty)")
 bind("SUPER + N", hl.dsp.exec_cmd(file_manager), "File manager (Dolphin)")
 bind("SUPER + B", hl.dsp.exec_cmd(browser), "Web browser")
 bind("SUPER + R", hl.dsp.exec_cmd(launcher), "Application launcher")
+bind("SUPER + A", hl.dsp.exec_cmd("hwe center"), "hyprwe command center")
+bind("SUPER + SHIFT + Up", hl.dsp.exec_cmd("hwe control"), "Bottom Control Shelf")
 bind("SUPER + Q", hl.dsp.window.close(), "Close window")
 bind("SUPER + V", hl.dsp.window.float(), "Toggle floating")
 bind("SUPER + F", hl.dsp.window.fullscreen(), "Fullscreen")
@@ -31,7 +33,7 @@ bind("SUPER + SHIFT + C", hl.dsp.exec_cmd("hyprpicker -a -f hex"), "Pick a scree
 bind("SUPER + ALT + R", hl.dsp.exec_cmd("hwe record"), "Record the whole screen")
 bind("SUPER + ALT + S", hl.dsp.exec_cmd("hwe record region"), "Record a selected region")
 bind("SUPER + SHIFT + Q", hl.dsp.exit(), "Exit Hyprland session")
-bind("SUPER + SPACE", hl.dsp.exec_cmd("hyprctl switchxkblayout current next"), "Cycle keyboard layout", { locked = true })
+bind("SUPER + SPACE", hl.dsp.exec_cmd("hyprctl switchxkblayout current next"), "Cycle keyboard layout", { locked = true, submap_universal = true })
 
 -- Screenshots.
 bind("Print", hl.dsp.exec_cmd("hwe screenshot screen"), "Whole screen to clipboard")
@@ -56,7 +58,7 @@ bind("XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"), "Previous media tra
 local directions = { left = "left", right = "right", up = "up", down = "down" }
 for key, direction in pairs(directions) do
     bind("SUPER + " .. key, hl.dsp.focus({ direction = direction }), "Move focus " .. direction)
-    bind("SUPER + SHIFT + " .. key, hl.dsp.window.move({ direction = direction }), "Move window " .. direction)
+    bind("SUPER + CTRL + " .. key, hl.dsp.window.move({ direction = direction }), "Move window " .. direction)
 end
 
 for workspace = 1, 10 do
@@ -76,13 +78,15 @@ local function session_command(action, slot)
 end
 
 bind("SUPER + S", hl.dsp.exec_cmd("hwe session mode"), "Session save/restore mode")
-hl.define_submap("session", function()
+hl.define_submap("session", "reset", function()
     for slot = 1, 9 do
         bind(tostring(slot), hl.dsp.exec_cmd(session_command("save", slot)), "Save session slot " .. slot)
         bind("SHIFT + " .. slot, hl.dsp.exec_cmd(session_command("restore", slot)), "Restore session slot " .. slot)
     end
+    bind("SUPER + S", hl.dsp.submap("reset"), "Finish session mode")
     bind("Escape", hl.dsp.submap("reset"), "Cancel session mode")
-end, "reset")
+    bind("catchall", hl.dsp.submap("reset"), "Cancel session mode on unrelated input")
+end)
 
 bind("SUPER + mouse:272", hl.dsp.window.drag(), "Drag window", { mouse = true })
 bind("SUPER + mouse:273", hl.dsp.window.resize(), "Resize window", { mouse = true })

@@ -79,6 +79,8 @@ puts syntax errors on screen, should Hyprland change its grammar.
 `SUPER+Q` close · `SUPER+V` floating · `SUPER+F` fullscreen · `SUPER+←↑↓→` focus ·
 `SUPER+SHIFT+←↑↓→` move the window · `SUPER+1..0` workspaces · `SUPER+X` scratchpad ·
 `SUPER+S` then `1..9` save session · `SUPER+S` then `SHIFT+1..9` restore session ·
+a persistent Waybar indicator shows the active mode; an operation, repeated `SUPER+S`, Escape,
+unrelated input or clicking the indicator returns to normal bindings ·
 `SUPER+L` / `SUPER+Escape` lock · `SUPER+Space` us↔ru layout ·
 `SUPER+SHIFT+T` theme · `SUPER+SHIFT+W` wallpaper · `SUPER+SHIFT+E` power menu ·
 `SUPER+/` bind cheatsheet · `SUPER+C` clipboard · `SUPER+SHIFT+C` colour picker ·

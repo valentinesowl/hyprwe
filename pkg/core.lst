@@ -19,6 +19,10 @@ sddm                         # graphical greeter (bare metal); VM uses tty autol
 # --- Session plumbing ---
 polkit
 python-jinja                 # theme generator (hwe theme) — Jinja2 templates
+python-gobject               # Control Shelf — Python GObject introspection bindings
+gtk4                         # Control Shelf UI toolkit
+gtk4-layer-shell             # bottom layer-shell surface for hwe control
+pkgconf                      # locate the Gtk4LayerShell runtime before launch
 qt5-wayland
 qt6-wayland
 qt6ct                        # Qt app theming (Dolphin, SDDM, …) — QT_QPA_PLATFORMTHEME
@@ -29,6 +33,7 @@ xdg-utils
 
 # --- Terminal, bar, launcher, notifications, files (the "starter" set) ---
 kitty                        # terminal
+nano                         # default text editor for personal-layer source actions
 waybar                       # status bar
 rofi-wayland                 # application launcher (rofi with native layer-shell)
 mako                         # notification daemon

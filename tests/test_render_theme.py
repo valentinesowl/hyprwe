@@ -232,6 +232,51 @@ def test_params_font_stays_aliased_to_the_family(render_theme, minimal_theme):
     assert ctx["params"]["font"] == "Iosevka"
 
 
+def test_ui_tokens_derive_a_consistent_geometry_and_type_scale(render_theme, minimal_theme):
+    minimal_theme["params"] = {"rounding": 12}
+    minimal_theme["font"] = {"launcher": 14}
+    ui = render_theme.build_context(minimal_theme, lenient=False)["ui"]
+    assert ui["width"] == render_theme.UI_DEFAULTS["width"]
+    assert ui["radius"] == 20 and ui["inner_radius"] == 12
+    assert ui["title"] == 22 and ui["meta"] == 12
+
+
+def test_a_theme_may_override_only_the_ui_tokens_it_needs(render_theme, minimal_theme):
+    minimal_theme["ui"] = {"width": 900, "row_padding": 16, "radius": 4}
+    ui = render_theme.build_context(minimal_theme, lenient=False)["ui"]
+    assert ui["width"] == 900 and ui["row_padding"] == 16 and ui["radius"] == 4
+    assert ui["padding"] == render_theme.UI_DEFAULTS["padding"]
+
+
+def test_an_unknown_ui_key_warns_and_is_dropped(render_theme, minimal_theme, capsys):
+    minimal_theme["ui"] = {"widht": 900}
+    ctx = render_theme.build_context(minimal_theme, lenient=False)
+    assert "widht" not in ctx["ui"]
+    assert "unknown [ui] key" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("value", [-1, True, "24", float("nan")])
+def test_a_malformed_ui_token_is_rejected(render_theme, minimal_theme, value):
+    minimal_theme["ui"] = {"padding": value}
+    assert any("ui.padding" in p for p in render_theme.check_values(minimal_theme))
+
+
+def test_ui_tokens_thread_into_the_command_center(render_theme, minimal_theme, templates_dir, tmp_path):
+    minimal_theme["ui"] = {
+        "width": 900, "padding": 30, "gap": 18, "row_padding": 16,
+        "row_gap": 8, "border": 2, "radius": 20, "inner_radius": 12,
+        "title": 24, "meta": 11,
+    }
+    out = _render(render_theme, minimal_theme, templates_dir, tmp_path)
+    rasi = (out / "rofi" / "center.rasi").read_text()
+    for declaration in (
+        "width:            900px", "padding:          30px", "spacing:          18px",
+        "padding:          16px 15px", "spacing:          8px", "border:           2px",
+        "border-radius:    20px", "border-radius:    12px", " 24\";", " 11\";",
+    ):
+        assert declaration in rasi
+
+
 def test_unfocused_opacity_is_derived_from_opacity(render_theme, minimal_theme):
     minimal_theme["params"] = {"opacity": 0.90}
     ctx = render_theme.build_context(minimal_theme, lenient=False)
@@ -641,7 +686,7 @@ def test_every_text_surface_renders_the_whole_chain(
     }
     out = _render(render_theme, minimal_theme, templates_dir, tmp_path)
     surfaces = [
-        "waybar/theme.css", "mako/config", "rofi/theme.rasi",
+        "waybar/theme.css", "mako/config", "rofi/theme.rasi", "rofi/center.rasi",
         "rofi/powermenu.rasi", "rofi/keys.rasi", "hypr/hyprlock.conf",
     ]
     for rel in surfaces:

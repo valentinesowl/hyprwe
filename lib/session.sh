@@ -21,7 +21,6 @@ session_main() {
     case "$action" in
         help|-h|--help|"") _session_usage; return 0 ;;
         mode)
-            notify info "Session mode" "1–9 save · Shift+1–9 restore · Esc cancel"
             _hyprctl dispatch 'hl.dsp.submap("session")'
             return
             ;;

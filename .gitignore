@@ -5,8 +5,9 @@
 # suite guards the index with an allowlist of HWE's own directories, so a stray
 # tree fails CI whatever it is called — see tests/test_repo_hygiene.py.
 
-# Claude Code — session state, worktrees, scratch (never part of the project).
+# Agent session state, debug archives, worktrees and scratch.
 /.claude/
+/kimi-debug-session_*.zip
 
 # Local Reddit OAuth credentials and unpublished outreach tooling.
 /praw.ini
@@ -88,6 +89,7 @@ config/gtk-4.0/gtk.css
 config/gtk-4.0/settings.ini
 config/kvantum/generalcolors.ini
 config/rofi/colors.rasi
+config/rofi/center.rasi
 config/rofi/wallpaper.rasi
 config/rofi/powermenu.rasi
 config/rofi/theme.rasi

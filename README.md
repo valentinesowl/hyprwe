@@ -6,7 +6,7 @@
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu_27.04_experimental-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
-[![Release](https://img.shields.io/badge/release-v2.1.1-blue)](../../releases/latest)
+[![Release](https://img.shields.io/badge/release-v2.2.0-blue)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 **A Hyprland workstation you can rehearse, reproduce, and safely update.**
@@ -55,7 +55,8 @@ Run the installer from a **TTY** (`Ctrl+Alt+F2`), not from a running graphical s
 Existing configuration files are preserved as `*.hwe-bak`. Changes to the login shell,
 networking and NVIDIA setup can be opted out.
 
-After installation, log in and press `SUPER + /` for the keybinding cheatsheet.
+After installation, log in and press `SUPER + SHIFT + Up` for the Control Shelf,
+`SUPER + A` for the command center, or `SUPER + /` for the keybinding cheatsheet.
 
 [Installation options, Ubuntu sources, GPU details and rollback →](docs/INSTALL.md)
 
@@ -83,6 +84,8 @@ HWE_VM_DISTRO=ubuntu ./bin/hwe vm up --uncommitted
 
 | Command | What it does |
 |---|---|
+| `hwe control` | open the live Control Shelf for appearance, sessions and system state |
+| `hwe center` | open themes, sessions, health checks, VM rehearsal and desktop tools |
 | `hwe theme pick` | choose and apply a theme |
 | `hwe session save 1` / `hwe session restore 1` | save or restore a desktop session |
 | `hwe update` | pull and reconcile the machine |
@@ -114,11 +117,11 @@ Machine-specific settings live in `~/.config/hwe/`, outside the checkout. Custom
 
 ## Status
 
-`v2.1.1` is the current release. Arch with Hyprland 0.57.2 is the verified reference target;
+`v2.2.0` is the current release. Arch with Hyprland 0.57.2 is the verified reference target;
 Ubuntu 27.04 remains experimental and has not passed the full release VM matrix.
 NVIDIA setup is still unverified on real hardware.
 
-The full suite currently covers **961 Python tests and 303 Bats tests**, with clean Arch and
+The full suite currently covers **982 Python tests and 321 Bats tests**, with clean Arch and
 Ubuntu VM deployments verified end-to-end in their tested x86_64 libvirt/QEMU configurations.
 
 ## License

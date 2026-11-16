@@ -177,6 +177,24 @@ def test_restore_launches_missing_applications_and_applies_layout(session, tmp_p
     assert any('window = "address:0xa"' in expression for expression in hypr.dispatches)
 
 
+def test_spawn_does_not_inject_the_panels_gtk4_library_into_applications(
+    session, monkeypatch
+):
+    monkeypatch.setenv(
+        "LD_PRELOAD", "/usr/lib/libgtk4-layer-shell.so:/opt/unrelated/preload.so"
+    )
+    captured = {}
+
+    def spawn(command, **kwargs):
+        captured["command"] = command
+        captured.update(kwargs)
+
+    monkeypatch.setattr(session.subprocess, "Popen", spawn)
+    session.default_spawn(["/usr/lib/firefox/firefox"])
+    assert captured["command"] == ["/usr/lib/firefox/firefox"]
+    assert captured["env"]["LD_PRELOAD"] == "/opt/unrelated/preload.so"
+
+
 def test_restore_requires_an_available_monitor(session, tmp_path):
     saved = snapshot(session)
     hypr = FakeHypr([], [])
@@ -213,7 +231,10 @@ def test_list_prints_snapshot_counts(session, capsys):
 
 def test_session_submap_only_saves_and_restores_slots(repo):
     binds = (repo / "config/hypr/keybindings.lua").read_text()
-    assert 'hl.define_submap("session"' in binds
+    assert 'hl.define_submap("session", "reset", function()' in binds
+    assert 'bind("SUPER + S", hl.dsp.submap("reset")' in binds
+    assert 'bind("catchall", hl.dsp.submap("reset")' in binds
+    assert "{ locked = true, submap_universal = true }" in binds
     assert "for slot = 1, 9 do" in binds
     assert 'session_command("save", slot)' in binds
     assert 'session_command("restore", slot)' in binds

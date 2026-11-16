@@ -88,6 +88,20 @@ FONT_ROLES = list(FONT_DEFAULTS)
 # The two [font] keys that are FAMILIES (strings), not point sizes.
 FONT_FAMILY_KEYS = ("family", "icon_family", "fallback_family", "ui_family")
 
+# Shared geometry for hyprwe's own interaction surfaces. The optional [ui] table
+# tunes the command center without making a custom theme edit Jinja templates.
+# Radii and type scale derive from the established [params]/[font] contracts.
+UI_DEFAULTS = {
+    "width":       780,
+    "padding":     24,
+    "gap":         14,
+    "row_padding": 13,
+    "row_gap":     6,
+    "border":      1,
+}
+UI_DERIVED_ROLES = ("radius", "inner_radius", "title", "meta")
+UI_ROLES = [*UI_DEFAULTS, *UI_DERIVED_ROLES]
+
 # ── Waybar workspace focus indicator ──────────────────────────────────────
 # How the ACTIVE tag is marked. GTK3 CSS has no `transform` (it is simply not a
 # registered property) and every tag is its own GtkButton, so an indicator that
@@ -241,6 +255,11 @@ FONT_SPEC = {
     **{key: _number(0.1) for key in FONT_DEFAULTS if key not in FONT_FAMILY_KEYS},
 }
 
+UI_SPEC = {
+    **{key: _number(0) for key in [*UI_DEFAULTS, "radius", "inner_radius"]},
+    **{key: _number(0.1) for key in ("title", "meta")},
+}
+
 
 def check_values(theme: dict) -> list[str]:
     """Return every malformed value in the theme ([] means all shapes are sound).
@@ -273,6 +292,10 @@ def check_values(theme: dict) -> list[str]:
         if key in FONT_SPEC:
             check(f"font.{key}", value, FONT_SPEC[key])
 
+    for key, value in sorted(theme.get("ui", {}).items()):
+        if key in UI_SPEC:
+            check(f"ui.{key}", value, UI_SPEC[key])
+
     # [palette] is the theme's private workbench — free-form by design and read
     # by no template. It still reaches the render context, so hold it to the one
     # rule that is about safety rather than shape.
@@ -289,6 +312,7 @@ def load_theme(path: Path) -> dict:
     data.setdefault("sem", {})
     data.setdefault("params", {})
     data.setdefault("font", {})
+    data.setdefault("ui", {})
     return data
 
 
@@ -452,6 +476,20 @@ def build_context(theme: dict, *, lenient: bool) -> dict:
     # Enough backing opacity to preserve small-text contrast on arbitrary wallpapers.
     params.setdefault("bar_opacity", 0.94)
 
+    # Shared geometry and type hierarchy for hyprwe's own interaction surfaces.
+    # Custom themes override only the tokens they need; unknown keys are typos
+    # worth surfacing, just as they are in [font].
+    ui = dict(UI_DEFAULTS)
+    for key, val in theme.get("ui", {}).items():
+        if key not in UI_ROLES:
+            sys.stderr.write(f"[theme] warning: unknown [ui] key '{key}' (ignored)\n")
+            continue
+        ui[key] = val
+    ui.setdefault("radius", params["rounding"] + 8)
+    ui.setdefault("inner_radius", params["rounding"])
+    ui.setdefault("title", round(font["launcher"]) + 8)
+    ui.setdefault("meta", max(10, round(font["launcher"]) - 2))
+
     # Desktop look-and-feel knobs that used to be hardcoded outside the theme:
     #   scheme        — light/dark preference handed to GTK (prefer-dark) and KDE.
     #   anim_speed    — a single multiplier over the window-animation durations in
@@ -491,7 +529,7 @@ def build_context(theme: dict, *, lenient: bool) -> dict:
     # template that wants it will fail loudly on StrictUndefined — the signal to
     # add it here AND tighten its check — rather than smuggle syntax silently.
     return {"name": theme["name"], "sem": sem, "params": params, "font": font,
-            "scripts_dir": scripts_dir}
+            "ui": ui, "scripts_dir": scripts_dir}
 
 
 # ── Jinja filters for the various config colour syntaxes ───────────────────

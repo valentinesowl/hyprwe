@@ -12,3 +12,5 @@ hl.layer_rule({ match = { namespace = "rofi" }, blur = true, ignore_alpha = 0 })
 -- would show as a translucent square outside that surface.
 hl.layer_rule({ match = { namespace = "^(mako|notifications)$" }, no_anim = true })
 hl.layer_rule({ match = { namespace = "waybar" }, blur = true, ignore_alpha = 0 })
+-- The shelf drives its own frame-clock slide; compositor layer animations would double it.
+hl.layer_rule({ match = { namespace = "^(hwe-control)$" }, no_anim = true })

@@ -28,7 +28,7 @@ for yourself without touching the repo. The path to your own root is overridden 
 
 ```
 <root>/<name>/
-├── theme.toml            # THE single source of truth: [palette] + [sem] + [params] + [font]
+├── theme.toml            # ONE source: [palette] + [sem] + [params] + [font] + [ui]
 ├── wallpaper.png         # generated wallpaper (genwall.py) — tracked in git for shipped themes
 ├── wallpaper.gif         # (opt.) animated mesh wallpaper for awww
 ├── preview.png           # preview card for the rofi gallery (genpreview.py)
@@ -97,8 +97,8 @@ and `theme.lua` is replaced atomically. A theme is data, not code.
 | theme folder name | letters/digits and `. _ -`, not starting with a dot or a hyphen |
 
 An unknown key in `[params]` is **not** an error: a theme written for a future HWE should
-degrade, not crash (the templates simply don't read it). A typo in `[font]`, on the other hand,
-gives a warning — there the full set of keys is known.
+degrade, not crash (the templates simply don't read it). A typo in `[font]` or `[ui]`, on the
+other hand, gives a warning — there the full set of keys is known.
 
 A shape violation is **not** forgiven by `--lenient`: it fills in what a theme *forgot*, not
 what it stated incorrectly.
@@ -142,7 +142,8 @@ Every parameter has a default — you can omit all of `[params]`, and the theme 
 | `gtk_theme` | `Adwaita` | GTK theme name (e.g. `adw-gtk3-dark`) |
 
 > `opacity_unfocused` is derived from `opacity` automatically — no need to set it.
-> The rofi window rounding is derived from `rounding` (`rounding + 6`); there is no separate key.
+> Existing Rofi pickers derive their window rounding from `rounding` (`rounding + 6`).
+> The command center instead uses the `[ui]` radii documented below.
 
 **Every theme's signature is its animated border:** the gradient rotates forever, and the colors
 "flow" around the active window. `neon` and `amethyst` use a slower rainbow (`border_animate = 60`),
@@ -178,6 +179,37 @@ launcher = 12        # and in the launcher
 > Change `family` and it changes across all mono surfaces at once (kitty/waybar/rofi/mako/
 > hyprlock). GTK has a separate `ui_family` (`Sans` by default, a UI font) so the mono font
 > doesn't creep into applications; the GTK size is the `gtk` key.
+
+## Interaction geometry `[ui]`
+
+The optional `[ui]` table is the shared design-token contract for hyprwe's own interaction
+surfaces, currently the command center (`hwe center`). It controls layout rather than colour:
+colours remain in `[sem]`, and the type scale derives from `[font].launcher` unless pinned.
+
+| Key | Default | Purpose |
+|---|---|---|
+| `width` | `780` | command-center window width |
+| `padding` | `24` | outer content padding |
+| `gap` | `14` | gap between the header, input and list |
+| `row_padding` | `13` | vertical padding of each action row |
+| `row_gap` | `6` | gap between action rows |
+| `border` | `1` | window, input and row border thickness |
+| `radius` | `rounding + 8` | outer window radius |
+| `inner_radius` | `rounding` | input and action-row radius |
+| `title` | `launcher + 8` | section-title size |
+| `meta` | `max(10, launcher - 2)` | secondary status text size |
+
+```toml
+[ui]
+width = 900
+padding = 30
+row_padding = 16
+radius = 20
+```
+
+Every key is optional. Numeric geometry must be zero or greater; `title` and `meta` must be
+positive. Unknown keys produce a warning and are ignored, like unknown `[font]` keys. Omitting
+`[ui]` gives every theme the same restrained, numbered-index interaction grammar.
 
 ## Light themes (`scheme = "light"`)
 
@@ -239,7 +271,7 @@ cd ~/.local/share/hwe/themes/mytheme
 rm -f wallpaper.png preview.png    # these are mocha's images, we'll make our own now
 
 # 2. Edit theme.toml
-#    → name, [sem] roles; [palette], [params], [font], [wallpaper] are optional
+#    → name, [sem] roles; [palette], [params], [font], [ui], [wallpaper] are optional
 
 # 3. Check the contract
 hwe theme validate mytheme

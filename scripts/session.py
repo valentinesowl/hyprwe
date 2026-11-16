@@ -321,6 +321,19 @@ def selector(client: dict[str, Any]) -> str:
     return f"address:{client['address']}"
 
 
+def application_environment() -> dict[str, str]:
+    env = os.environ.copy()
+    preloads = [
+        entry for entry in env.get("LD_PRELOAD", "").split(":")
+        if entry and Path(entry).name != "libgtk4-layer-shell.so"
+    ]
+    if preloads:
+        env["LD_PRELOAD"] = ":".join(preloads)
+    else:
+        env.pop("LD_PRELOAD", None)
+    return env
+
+
 def default_spawn(command: list[str]) -> None:
     subprocess.Popen(
         command,
@@ -328,6 +341,7 @@ def default_spawn(command: list[str]) -> None:
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         start_new_session=True,
+        env=application_environment(),
     )
 
 

@@ -75,6 +75,8 @@ hyprctl reload                     # SUPER+SHIFT+R
 `SUPER+Q` закрыть · `SUPER+V` плавающее · `SUPER+F` фуллскрин · `SUPER+←↑↓→` фокус ·
 `SUPER+SHIFT+←↑↓→` двигать окно · `SUPER+1..0` воркспейсы · `SUPER+X` scratchpad ·
 `SUPER+S`, затем `1..9` сохранить сессию · `SUPER+S`, затем `SHIFT+1..9` восстановить ·
+постоянный индикатор Waybar показывает активный режим; операция, повторный `SUPER+S`, Escape,
+посторонняя клавиша или клик по индикатору возвращают обычные биндинги ·
 `SUPER+L` / `SUPER+Escape` лок · `SUPER+Space` раскладка us↔ru ·
 `SUPER+SHIFT+T` тема · `SUPER+SHIFT+W` обои · `SUPER+SHIFT+E` меню питания ·
 `SUPER+/` шпаргалка биндов · `SUPER+C` буфер обмена · `SUPER+SHIFT+C` цветопипетка ·

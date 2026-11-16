@@ -20,6 +20,12 @@
 # --- session plumbing ---
 polkit	polkitd
 python-jinja	python3-jinja2
+python-gobject	python3-gi
+gtk4	libgtk-4-1 gir1.2-gtk-4.0
+# The Debian -dev package carries the pkg-config file hwe control uses and
+# depends on both the shared library and its GObject introspection data.
+gtk4-layer-shell	libgtk4-layer-shell-dev
+pkgconf	pkg-config
 qt5-wayland	qtwayland5
 kvantum	qt-style-kvantum
 

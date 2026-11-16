@@ -48,6 +48,11 @@ def render_theme():
 
 
 @pytest.fixture(scope="session")
+def control_state():
+    return _load("control_state")
+
+
+@pytest.fixture(scope="session")
 def wbstat():
     return _load("wbstat")
 

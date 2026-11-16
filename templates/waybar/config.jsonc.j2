@@ -10,7 +10,7 @@
     "margin-left": {{ params.bar_gap_x if params.bar_float else 0 }},
     "margin-right": {{ params.bar_gap_x if params.bar_float else 0 }},
 
-    "modules-left": ["hyprland/workspaces"],
+    "modules-left": ["hyprland/workspaces", "hyprland/submap"],
     "modules-center": ["clock"],
     "modules-right": ["tray", "custom/updates", "custom/cpu", "custom/memory", "custom/temp", "custom/record", "pulseaudio", "backlight", "battery", "hyprland/language", "custom/sunset"],
 
@@ -18,6 +18,12 @@
         "format": "{name}",
         "on-click": "activate",
         "sort-by-number": true
+    },
+
+    "hyprland/submap": {
+        "format": "{}  1–9 save · Shift+1–9 restore · Esc",
+        "tooltip-format": "Session mode captures number keys. Save/restore exits automatically.\nSUPER+S, Escape, unrelated input or this click returns to normal bindings.",
+        "on-click": "hyprctl dispatch 'hl.dsp.submap(\"reset\")'"
     },
 
     "clock": {
