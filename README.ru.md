@@ -14,11 +14,17 @@
 Полноценный Wayland desktop для Arch и Ubuntu вместе с инструментами установки, диагностики,
 персонализации и проверки — на реальной машине или в одноразовой VM.
 
-[Установка](#установка) · [Попробовать в VM](#попробовать-в-vm) · [Документация](#документация) · [Смотреть демо (1:47)](https://github.com/valentinesowl/hyprwe/releases/download/v2.2.0/rec_2026-11-16_16-59-05.mp4)
+[Установка](#установка) · [Попробовать в VM](#попробовать-в-vm) · [Документация](#документация)
 
 <p align="center">
   <img src="assets/hero.png" alt="Рабочий стол hyprwe: пикер тем, терминал, файловый менеджер и браузер в одной палитре" width="100%">
 </p>
+
+## Демо
+
+<video src="https://github.com/valentinesowl/hyprwe/releases/download/v2.2.0/rec_2026-11-16_16-59-05.mp4" controls muted playsinline poster="assets/hero.png" width="100%"></video>
+
+[Открыть или скачать демо (1:47)](https://github.com/valentinesowl/hyprwe/releases/download/v2.2.0/rec_2026-11-16_16-59-05.mp4)
 
 ## Почему hyprwe
 
