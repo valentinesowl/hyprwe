@@ -35,6 +35,10 @@ users:
 # when key auth is already available. lib/vm.sh fills this in.
 ssh_pwauth: @@SSH_PWAUTH@@
 package_update: true
+# Arch does not support installing from refreshed package databases onto an old
+# snapshot: shared-library transitions break the base before hwe can take over.
+# Ubuntu keeps its existing path; the unattended HWE installer upgrades it later.
+package_upgrade: @@PACKAGE_UPGRADE@@
 
 # Minimal set needed before the HWE installer can take over.
 packages:

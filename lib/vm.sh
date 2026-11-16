@@ -62,6 +62,7 @@ case "$HWE_VM_DISTRO" in
         HWE_VM_OSINFO=archlinux
         HWE_VM_ADMIN_GROUP=wheel
         HWE_VM_SHELL=/usr/bin/bash
+        HWE_VM_PACKAGE_UPGRADE=true
         ;;
     ubuntu)
         : "${HWE_VM_NAME:=hwe-dev-ubuntu}"
@@ -76,6 +77,7 @@ case "$HWE_VM_DISTRO" in
         HWE_VM_OSINFO="ubuntu$HWE_VM_UBUNTU_RELEASE"
         HWE_VM_ADMIN_GROUP=sudo
         HWE_VM_SHELL=/bin/bash
+        HWE_VM_PACKAGE_UPGRADE=false
         ;;
     *)
         # Not fatal at source time — `hwe theme` should still work on a machine
@@ -554,7 +556,7 @@ _vm_render_seed() {
         HOSTNAME="$HWE_VM_NAME" USER="$HWE_VM_USER" PASSWORD="$HWE_VM_PASSWORD" \
         BRANCH="$branch" SSH_KEYS="$ssh_keys" SSH_PWAUTH="$pwauth" \
         ADMIN_GROUP="$HWE_VM_ADMIN_GROUP" SHELL="$HWE_VM_SHELL" \
-        HYPR_SOURCE="$HWE_HYPR_SOURCE"
+        HYPR_SOURCE="$HWE_HYPR_SOURCE" PACKAGE_UPGRADE="$HWE_VM_PACKAGE_UPGRADE"
     _vm_subst "$HWE_ROOT/provision/cloud-init/meta-data.tmpl" "$ci/meta-data" \
         HOSTNAME="$HWE_VM_NAME" INSTANCE_ID="$instance_id"
 

@@ -147,7 +147,7 @@ gallery:
     magick -size 1280x640 xc:'#0d0d12' \
         \( assets/hero.png -resize '720x405^' -gravity center -extent 720x405 -bordercolor '#8a5cf5' -border 2 \) \
         -gravity northeast -geometry +48+118 -composite \
-        -font "$(fc-match -f '%{file}' 'JetBrains Mono')" -fill '#f4f1ff' -pointsize 86 -gravity northwest -annotate +56+80 'HWE' \
+        -font "$(fc-match -f '%{file}' 'JetBrains Mono')" -fill '#f4f1ff' -pointsize 86 -gravity northwest -annotate +56+80 'hyprwe' \
         -font "$(fc-match -f '%{file}' 'DejaVu Sans')" -fill '#c9c4d4' -pointsize 34 -annotate +60+194 'Hyprland Workstation' \
         -annotate +60+240 'Environment' \
         -fill '#9c96aa' -pointsize 25 -annotate +60+334 'A complete Wayland desktop' \

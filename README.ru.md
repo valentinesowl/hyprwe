@@ -6,7 +6,7 @@
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu_27.04_experimental-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
-[![Release](https://img.shields.io/badge/release-v2.1.0-blue)](../../releases/latest)
+[![Release](https://img.shields.io/badge/release-v2.1.1-blue)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 **Готовые dotfiles Hyprland для Arch Linux и Ubuntu: полноценный Wayland-рабочий стол
@@ -506,7 +506,7 @@ just gallery    # пересобрать assets/themes.png из превью
 
 ## Статус
 
-`v2.1.0` — текущий релиз. hyprwe работает только на Lua-конфиге Hyprland 0.57+ и больше не
+`v2.1.1` — текущий релиз. hyprwe работает только на Lua-конфиге Hyprland 0.57+ и больше не
 содержит legacy-конфиги композитора. Эталонная проверенная цель — Arch с Hyprland 0.57.2;
 Ubuntu 27.04 остаётся экспериментальной и не прошла полную релизную VM-матрицу.
 Настройка NVIDIA по-прежнему не проверена на реальном оборудовании.

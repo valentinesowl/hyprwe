@@ -9,6 +9,28 @@ the three sources cannot drift apart.
 
 ## [Unreleased]
 
+## [2.1.1] — 2026-11-16
+
+### Changed
+
+- **Public branding consistently uses hyprwe.** GitHub release titles and the social preview
+  use the project's public name, and the README hero and social card show the current desktop
+  and theme picker.
+
+### Fixed
+
+- **Fresh Arch VMs fully upgrade the base image before installing bootstrap packages.**
+  Refreshing package databases and selectively installing packages onto an old snapshot could
+  pull OpenSSL 4 beside libraries built for OpenSSL 3, failing cloud-init before HWE cloned or
+  installed the project. Ubuntu keeps its existing cloud-init upgrade path.
+
+### Verification
+
+- Clean Arch x86_64 deployment verified end-to-end through `hwe vm rebuild --uncommitted`:
+  cloud-init completes without errors, no systemd units fail, `hwe doctor` reports no drift,
+  and Hyprland 0.57.2 starts with its monitor, Waybar and Mako after the provisioning reboot.
+- The full `just check` suite passes: 961 Python tests, 303 Bats tests and all linters.
+
 ## [2.1.0] — 2026-11-15
 
 ### Added
@@ -681,7 +703,8 @@ to it only ship in 2.0.0.
   that environment's uninstaller. If the login screen looks foreign after
   `hwe theme sddm`, look at what is in that directory.
 
-[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/valentinesowl/hyprwe/compare/v2.1.1...HEAD
+[2.1.1]: https://github.com/valentinesowl/hyprwe/releases/tag/v2.1.1
 [2.1.0]: https://github.com/valentinesowl/hyprwe/releases/tag/v2.1.0
 [2.0.5]: https://github.com/valentinesowl/hyprwe/releases/tag/v2.0.5
 [2.0.4]: https://github.com/valentinesowl/hyprwe/releases/tag/v2.0.4

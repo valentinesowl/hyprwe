@@ -360,3 +360,27 @@ vm_failed_up() {
     run grep -F 'condition: true' "$template"
     assert_failure
 }
+
+@test "cloud-init fully upgrades an Arch base but leaves Ubuntu on its existing path" {
+    local pair distro expected dir
+    for pair in arch:true ubuntu:false; do
+        distro="${pair%%:*}"
+        expected="${pair##*:}"
+        dir="$BATS_TEST_TMPDIR/$distro"
+        mkdir -p "$dir"
+        run bash -c '
+            set -euo pipefail
+            export HWE_VM_DISTRO="$1"
+            HWE_ROOT="$HWE_REPO_ROOT"
+            source "$HWE_ROOT/lib/common.sh"
+            source "$HWE_ROOT/lib/vm.sh"
+            _vm_collect_ssh_keys() { :; }
+            _vm_build_bundle() { :; }
+            xorriso() { :; }
+            _vm_render_seed main "$2" >/dev/null
+            cat "$2/cloud-init/user-data"
+        ' _ "$distro" "$dir"
+        assert_success
+        [[ "$output" == *"package_upgrade: $expected"* ]]
+    done
+}

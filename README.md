@@ -6,7 +6,7 @@
 [![Arch Linux](https://img.shields.io/badge/Arch_Linux-1793D1?logo=archlinux&logoColor=white)](https://archlinux.org)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu_27.04_experimental-E95420?logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![Hyprland](https://img.shields.io/badge/Hyprland-58E1FF?logo=hyprland&logoColor=black)](https://hyprland.org)
-[![Release](https://img.shields.io/badge/release-v2.1.0-blue)](../../releases/latest)
+[![Release](https://img.shields.io/badge/release-v2.1.1-blue)](../../releases/latest)
 [![CI](https://github.com/valentinesowl/hyprwe/actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 **Preconfigured Hyprland dotfiles for Arch Linux and Ubuntu: a complete Wayland desktop
@@ -510,7 +510,7 @@ pipeline. How to contribute — [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Status
 
-`v2.1.0` is the current release. hyprwe is Lua-only on Hyprland 0.57+ and no longer ships
+`v2.1.1` is the current release. hyprwe is Lua-only on Hyprland 0.57+ and no longer ships
 legacy compositor configs. Arch with Hyprland 0.57.2 is the verified reference target;
 Ubuntu 27.04 remains experimental and has not passed the full release VM matrix.
 NVIDIA setup is still unverified on real hardware.
