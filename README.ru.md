@@ -22,7 +22,7 @@
 
 ## Демо
 
-<video src="https://github.com/user-attachments/assets/634d4569-f8ec-4cce-95be-49240111c173" controls muted playsinline poster="assets/demo-preview.png" width="100%"></video>
+<video src="https://github.com/user-attachments/assets/647d22e4-23b5-49fe-a956-6011b5689933" controls muted playsinline poster="assets/demo-preview.png" width="100%"></video>
 
 [Открыть или скачать демо (1:47)](https://github.com/valentinesowl/hyprwe/releases/download/v2.2.0/rec_2026-11-16_16-59-05.mp4)
 
