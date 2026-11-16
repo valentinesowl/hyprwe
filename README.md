@@ -22,9 +22,7 @@ inspect, personalize and test it — on a real machine or in a disposable VM.
 
 ## Demo
 
-<a href="https://github.com/valentinesowl/hyprwe/releases/download/v2.2.0/rec_2026-11-16_16-59-05.mp4">
-  <img src="assets/demo-preview.png" alt="Watch the hyprwe desktop demo" width="100%">
-</a>
+<video src="https://github.com/user-attachments/assets/634d4569-f8ec-4cce-95be-49240111c173" controls muted playsinline poster="assets/demo-preview.png" width="100%"></video>
 
 [Open or download the 1:47 demo](https://github.com/valentinesowl/hyprwe/releases/download/v2.2.0/rec_2026-11-16_16-59-05.mp4)
 
