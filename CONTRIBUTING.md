@@ -22,7 +22,7 @@ required).
 
 Configs inside the VM are deployed as **symlinks** into the repository, so edits in
 `~/hwe/config/...` show up immediately. Workflow details are in the
-[README](README.md#sandbox-and-development-vm).
+[VM guide](docs/VM.md).
 
 > **Never run `hwe install` / `hwe theme apply` / `hwe wall set` on your working machine
 > just to test something** — they restart the compositor and the bar, and they change your

@@ -17,8 +17,17 @@
 # Local VM base-image builds: downloads, loop-device workdir and qcow2 output.
 /build/
 
-# Local design and migration notes, not release documentation.
-docs/
+# Local design and outreach notes. The installation and user guides below are
+# release documentation and must stay visible to git.
+docs/*
+!docs/INSTALL.md
+!docs/INSTALL.ru.md
+!docs/CUSTOMIZATION.md
+!docs/CUSTOMIZATION.ru.md
+!docs/CLI.md
+!docs/CLI.ru.md
+!docs/VM.md
+!docs/VM.ru.md
 
 # Python bytecode — scripts/ are run directly; importing one in a test
 # (as a module, to exercise its functions) drops a __pycache__ next to it.
