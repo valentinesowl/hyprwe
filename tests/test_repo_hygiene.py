@@ -58,7 +58,7 @@ def test_only_our_own_directories_are_tracked(tracked):
     it is called. Adding a real top-level directory here is a one-line change.
     """
     ours = {
-        ".github", "assets", "bin", "config", "lib", "pkg",
+        ".github", "assets", "bin", "config", "docs", "lib", "pkg",
         "provision", "scripts", "templates", "tests", "themes",
     }
     stray = sorted({p.parts[0] for p in tracked if len(p.parts) > 1} - ours)
